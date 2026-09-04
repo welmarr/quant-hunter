@@ -241,7 +241,7 @@ Record the total number of candidate patterns searched. Treat spectacular result
 
 ## Canonical-reproduction validation
 
-Do not claim to have reproduced a paper when a proprietary or otherwise unavailable original dataset, universe, forecast history, feed, or implementation detail is material to the result. Classify the study accurately as an exact reproduction, partial reproduction, conceptual replication, or robustness study. State substitutions and their likely effect.
+Do not claim to have reproduced a paper when a proprietary or otherwise unavailable original dataset, universe, forecast history, feed, or implementation detail is material to the result. Record `REPRODUCED`, `PARTIALLY REPRODUCED`, or `NOT REPRODUCIBLE WITH AVAILABLE DATA` as the implementation outcome, and separately classify the study accurately as an exact reproduction, partial reproduction, conceptual replication, or robustness study. State substitutions and their likely effect.
 
 Published results are references, not acceptance targets. A failure to reproduce must be retained and investigated for data differences, vintages, specification ambiguity, costs, sample period, coding error, and publication or selection effects without tuning merely to match the paper.
 

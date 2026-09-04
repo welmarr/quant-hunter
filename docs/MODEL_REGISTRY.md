@@ -19,9 +19,11 @@ Each family, model, or strategy record must include:
 
 - permanent ID, name, version, type, lifecycle status, and parent/successor IDs;
 - hypothesis, research family, economic/statistical rationale, and academic or institutional basis;
-- mathematical definition, inputs, outputs, sampling frequency, universe, and assumptions;
+- authoritative source and citation, mathematical definition, inputs, outputs, horizon, sampling frequency, universe, and assumptions;
 - parameters and complete search space, including AI-generated variants;
-- data requirements and point-in-time constraints;
+- data requirements, point-in-time constraints, availability, licensing, and expected cost;
+- evidence quality, independent replication evidence, FX applicability, and known failures or decay;
+- implementation/reproduction outcome where applicable, using the classifications in `RESEARCH_METHODOLOGY.md`;
 - baseline comparators and distinctiveness from existing objects;
 - compatible validation plan and experiment IDs;
 - transaction-cost, capacity, risk, and regime sensitivities;

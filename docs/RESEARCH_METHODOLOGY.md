@@ -142,7 +142,7 @@ For every program, create a registered study dossier that identifies all of the 
 - applicability to FX; and
 - whether retail-accessible data is sufficient.
 
-Each reproduction must state which elements are exact, approximate, substituted, or unavailable. If the original proprietary dataset, universe construction, forecasts, order-flow feed, or other material input is unavailable, do not claim a paper reproduction. Label the work a partial reproduction, conceptual replication, or robustness study as appropriate, and state the limitation explicitly.
+Each reproduction must state which elements are exact, approximate, substituted, or unavailable. Record the implementation outcome as `REPRODUCED`, `PARTIALLY REPRODUCED`, or `NOT REPRODUCIBLE WITH AVAILABLE DATA`. Separately classify the study design as an exact reproduction, partial reproduction, conceptual replication, or robustness study where appropriate. If the original proprietary dataset, universe construction, forecasts, order-flow feed, or other material input is unavailable, do not claim an exact paper reproduction; state the limitation explicitly.
 
 ### Reproduction workflow
 

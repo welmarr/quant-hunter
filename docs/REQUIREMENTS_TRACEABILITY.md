@@ -27,6 +27,22 @@ This map records where the former 816-line Quant Hunter master specification now
 | Pattern Lab mandate and A–O (476–791) | `PATTERN_DISCOVERY.md` | First-class lab; all method families and submethods; outcome registry fields; multivariate example; nearest-state distribution; strict validation; deferred ML and simple baselines. |
 | Pattern Lab Principle (792–816) | `PATTERN_DISCOVERY.md`, `MODEL_REGISTRY.md` | Statistical objective, role as independent evidence family, and no duplicate votes for closely related pattern variants. |
 
+## Independent-Reviewer Correction Mapping
+
+| ID | Explicit requirement | Governing destination |
+|---|---|---|
+| QH-REV-001 | Algorithm Discovery Program as an operational stage | `ROADMAP.md` Stage 2A; canonical candidate records in `MODEL_REGISTRY.md` |
+| QH-REV-002 | Prioritized hierarchy of authoritative algorithm sources | `ROADMAP.md` Stage 2A |
+| QH-REV-003 | Registration-first canonical algorithm implementation with tests, point-in-time data, costs, IDs, variants, assumptions, and reproducible configuration | `ROADMAP.md` Stage 2B; `RESEARCH_METHODOLOGY.md`; `VALIDATION_STANDARD.md` |
+| QH-REV-004 | Honest reproduction outcomes, including unavailable-data failure | `ROADMAP.md` Stage 2B; `MODEL_REGISTRY.md`; `RESEARCH_METHODOLOGY.md`; `VALIDATION_STANDARD.md` |
+| QH-REV-005 | Pattern Lab as an explicit post-Stage-1 implementation/research sub-stage | `ROADMAP.md` Stage 2D; normative detail in `PATTERN_DISCOVERY.md` |
+| QH-REV-006 | Pattern Lab exit gate covering operational families, IDs, search volume, false-discovery controls, sealed OOS, reproducibility, stability, and rejection ability | `ROADMAP.md` Stage 2D; enforcement in `PATTERN_DISCOVERY.md` and `VALIDATION_STANDARD.md` |
+| QH-REV-007 | Long-term expansion toward approximately 200+ serious models, not a quota | `ROADMAP.md` Stage 3A; `PROJECT_CHARTER.md`; `MODEL_REGISTRY.md` |
+| QH-REV-008 | Evidence-family governance and protection against duplicate ensemble votes | `ROADMAP.md` Stage 3B; canonical taxonomy and lineage in `MODEL_REGISTRY.md` |
+| QH-REV-009 | Automated research pipeline from candidate proposal through scientific decision, with compatible statuses and no automatic promotion | `ROADMAP.md` Stage 3C; canonical statuses in `MODEL_REGISTRY.md` and `EXPERIMENT_LEDGER.md` |
+| QH-REV-010 | Permanent research backlog, including deferred, missing-data, expensive-data, infrastructure-bound, anomalous, and legitimately revisitable rejected ideas | `ROADMAP.md` Stage 3D |
+| QH-REV-011 | AI contributors to a hypothesis cannot access its sealed OOS data before freeze; sealed-result changes require a new experiment and genuinely untouched evidence where possible | `ROADMAP.md` Stage 4; `RESEARCH_METHODOLOGY.md`; `VALIDATION_STANDARD.md` |
+
 ## Added Non-Negotiable Clarifications
 
 The user's 20 explicit operating rules are retained verbatim in substance as the numbered rules in `AGENTS.md`. Detailed enforcement lives in the referenced domain documents, including immutable raw data, point-in-time macro vintages, reproducibility, permanent IDs, inaccessible sealed OOS data until freeze, methodology decisions, realistic execution, research/production isolation, secrets, AI limits, simple baselines, failure retention, and the approval-gated USD $400 budget.
@@ -35,6 +51,8 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 
 A requirement may be clarified or made stricter, but not silently weakened or deleted. Any methodological or statistical change requires `DECISIONS.md`; any move requires this table to be updated; any unresolved conflict applies the stricter scientific, safety, reproducibility, and spending constraint.
 
-## Stage 0 Refactor Audit
+## Initial Stage 0 Refactor Audit
 
 On 2026-09-04, the reorganized hierarchy was compared with the full source specification available during the refactor. Core and Pattern Lab audits found no missing or weakened substantive requirement after reconciliation. Automated checks confirmed all 16 Markdown files, all 15 README links, documentation-only scope, clean trailing whitespace, and 81 representative content checkpoints spanning the operating rules, registries, methods, metrics, data timing, execution assumptions, Pattern A–O, identifiers, budget, and stage boundaries.
+
+The independent-review correction passed 88 roadmap content checks plus all 11 QH-REV traceability checks. Cross-document references resolved, the governing status vocabularies remained compatible, no requirement was weakened, and the repository remained documentation-only. Stage 0 may therefore return to `COMPLETE`; this does not authorize Stage 1.

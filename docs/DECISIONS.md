@@ -53,6 +53,20 @@ Owner and approver:
 - **Supersedes / superseded by:** None.
 - **Owner and approver:** Project owner, through the explicit documentation-refactor request dated 2026-09-04.
 
+### DEC-0003 — Make Algorithm Discovery and Expansion Operational Stages
+
+- **Date:** 2026-09-04
+- **Status:** ACCEPTED
+- **Scope:** governance / methodology / validation
+- **Context:** An independent review found that algorithm discovery, canonical implementation, large-scale model expansion, the Pattern Lab, automated research flow, and AI sealed-data restrictions were present as intentions or domain rules but were not explicit operational roadmap sub-stages.
+- **Decision:** Define Stage 2A–2D and Stage 3A–3D with registration-first discovery, a source hierarchy, canonical implementation outcomes, the unchanged ten-area reproduction set, a gated Pattern Lab, evidence-family governance, a status-compatible automated pipeline, and a permanent research backlog. Strengthen Stage 4 so AI contributors to a hypothesis cannot access its sealed OOS evidence before freeze.
+- **Alternatives considered:** Leave the requirements implicit across domain documents, or duplicate all domain specifications inside the roadmap. The first is not operational; the second would create competing authorities and drift.
+- **Scientific/statistical consequences:** Candidate-search exposure becomes visible earlier; reproduction claims use honest outcome labels; Pattern Lab and AI work remain bound to multiple-testing, sealed-OOS, and reproducibility controls.
+- **Reproducibility and cost consequences:** This is documentation-only and adds no code, dependency, service, data purchase, or spend. Canonical schemas remain in the registries and detailed methods remain in their governing documents.
+- **References:** `ROADMAP.md`, `REQUIREMENTS_TRACEABILITY.md`, `MODEL_REGISTRY.md`, `EXPERIMENT_LEDGER.md`, `RESEARCH_METHODOLOGY.md`, `VALIDATION_STANDARD.md`, `PATTERN_DISCOVERY.md`.
+- **Supersedes / superseded by:** Extends DEC-0002; supersedes no requirement.
+- **Owner and approver:** Project owner, through the explicit independent-review correction request dated 2026-09-04.
+
 ## Open Decisions Before Scaffolding
 
 - Select and record the supported modern Python version.
