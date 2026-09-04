@@ -50,6 +50,8 @@ Future AI agents may research literature, generate hypotheses, inspect experimen
 
 Month-1 total spending is capped at USD $400, including ChatGPT, OpenAI API use, servers, data, and every paid service. No purchase may occur without explicit user approval. Prefer open-source libraries and authoritative free data; avoid GPUs unless quantitatively justified; document expected cost before recommending a paid dependency; and reserve expensive AI models for selective use.
 
+`BUDGET_LEDGER.md` is the canonical aggregate record for the budget, approval evidence, commitments, spending, and headroom. Until its open window/baseline decisions are resolved, do not assume funds are available.
+
 ## Governance
 
 The permanent rules in `../AGENTS.md` control all work. Methodological changes require a decision record. Experiments, models, strategies, and patterns require permanent identifiers. Data provenance and failures remain auditable. `ROADMAP.md` owns stage gates; no later-stage capability is authorized merely because its interface has been discussed.

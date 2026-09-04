@@ -22,7 +22,7 @@ This map records where the former 816-line Quant Hunter master specification now
 | Metrics (356–390) | `VALIDATION_STANDARD.md` | The complete standard-report metric inventory, calibration, confidence, regime and cost sensitivity. |
 | AI Boundary (391–410) | `AGENTS.md`, `PROJECT_CHARTER.md`, `RESEARCH_METHODOLOGY.md` | Allowed research assistance; no LLM execution; equal validation; every AI variant counted. |
 | Security (411–420) | `AGENTS.md`, `ARCHITECTURE.md` | No secrets; sanitized `.env.example`; credentials excluded from history; paper credentials deferred. |
-| Cost Constraint (421–433) | `AGENTS.md`, `PROJECT_CHARTER.md`, `DATA_SOURCE_REGISTRY.md`, `RISK_REGISTER.md` | USD $400 Month-1 total; no purchase without approval; open/free preference; GPU and paid-dependency restraint; selective expensive AI. |
+| Cost Constraint (421–433) | `AGENTS.md`, `PROJECT_CHARTER.md`, `BUDGET_LEDGER.md`, `DATA_SOURCE_REGISTRY.md`, `RISK_REGISTER.md` | USD $400 Month-1 aggregate total; approval evidence and headroom; no purchase without approval; open/free preference; GPU and paid-dependency restraint; selective expensive AI. |
 | What To Do Now and Success (434–475) | `ROADMAP.md`, `DECISIONS.md` | Original ordered foundation work, tests/linters, completion-report fields, no strategy-first coding, no execution-only success, Stage 1 definition. |
 | Pattern Lab mandate and A–O (476–791) | `PATTERN_DISCOVERY.md` | First-class lab; all method families and submethods; outcome registry fields; multivariate example; nearest-state distribution; strict validation; deferred ML and simple baselines. |
 | Pattern Lab Principle (792–816) | `PATTERN_DISCOVERY.md`, `MODEL_REGISTRY.md` | Statistical objective, role as independent evidence family, and no duplicate votes for closely related pattern variants. |
@@ -34,3 +34,7 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 ## Coverage Maintenance Rule
 
 A requirement may be clarified or made stricter, but not silently weakened or deleted. Any methodological or statistical change requires `DECISIONS.md`; any move requires this table to be updated; any unresolved conflict applies the stricter scientific, safety, reproducibility, and spending constraint.
+
+## Stage 0 Refactor Audit
+
+On 2026-09-04, the reorganized hierarchy was compared with the full source specification available during the refactor. Core and Pattern Lab audits found no missing or weakened substantive requirement after reconciliation. Automated checks confirmed all 16 Markdown files, all 15 README links, documentation-only scope, clean trailing whitespace, and 81 representative content checkpoints spanning the operating rules, registries, methods, metrics, data timing, execution assumptions, Pattern A–O, identifiers, budget, and stage boundaries.

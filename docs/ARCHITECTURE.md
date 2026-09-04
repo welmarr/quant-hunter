@@ -18,11 +18,13 @@ quant-hunter/
 │   ├── features/
 │   ├── experiments/
 │   ├── models/
+│   ├── patterns/
 │   ├── backtesting/
 │   ├── validation/
 │   ├── portfolio/
 │   ├── execution_costs/
 │   ├── reporting/
+│   ├── meta/              # future, not Stage 1
 │   └── interfaces/
 ├── tests/
 ├── configs/
@@ -41,16 +43,22 @@ Stage 1 architecture must support:
 - deterministic feature engineering;
 - experiment definitions and an append-only experiment ledger;
 - permanent strategy/model and pattern interfaces and registries;
+- a first-class pattern-discovery research boundary;
 - configuration-driven backtesting;
 - statistical validation and multiple-testing accounting;
 - portfolio and risk analysis;
 - transaction-cost and execution modeling;
 - reproducible environments, manifests, seeds, and artifacts;
 - reports linked to experiment IDs;
-- future paper-trading adapters behind explicit gates; and
-- future AI research-agent interfaces without execution authority.
+- future paper-trading adapters behind explicit gates;
+- future AI research-agent interfaces without execution authority; and
+- a future dependence-aware Meta Engine interface, without Stage 1 implementation.
 
 The intended flow is `source → immutable raw → validated/normalized → point-in-time features → registered experiment → backtest → statistical validation → report`. Every derived artifact must point backward to source versions, transformations, code revision, and configuration.
+
+### Future Meta Engine
+
+The Quant Hunter Meta Engine is a later-stage, dependence-aware evidence aggregation layer for validated trend, momentum, carry, value, macro, volatility, statistical-arbitrage, microstructure, cross-asset, regime, machine-learning, and pattern families. It is not a strategy quota or a majority-vote shortcut: lineage and correlation must prevent related variants from receiving duplicate influence. Defining this boundary does not authorize its implementation during Stage 1.
 
 ## Isolation and Leakage Controls
 

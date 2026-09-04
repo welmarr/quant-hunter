@@ -4,7 +4,7 @@ Quant Hunter is a planned quantitative-research and market-discovery platform. I
 
 ## Current Status
 
-The repository is in its documentation-architecture phase. It contains no trading strategies, Python project scaffold, verified setup commands, data connections, broker connections, or live-trading capability. Stage 1 implementation must not begin until this documentation set has been reviewed and a later task explicitly authorizes it.
+The Stage 0 documentation architecture is complete and audited. The repository remains documentation-only and contains no trading strategies, Python project scaffold, verified setup commands, data connections, broker connections, or live-trading capability. Stage 1 implementation requires a later task that explicitly authorizes it.
 
 ## Documentation Map
 
@@ -16,6 +16,7 @@ The repository is in its documentation-architecture phase. It contains no tradin
 - Register durable objects in [`docs/MODEL_REGISTRY.md`](docs/MODEL_REGISTRY.md) and [`docs/EXPERIMENT_LEDGER.md`](docs/EXPERIMENT_LEDGER.md).
 - Follow [`docs/PATTERN_DISCOVERY.md`](docs/PATTERN_DISCOVERY.md) for structural-recognition research.
 - Record changes and uncertainty in [`docs/DECISIONS.md`](docs/DECISIONS.md) and [`docs/RISK_REGISTER.md`](docs/RISK_REGISTER.md).
+- Record every proposed or actual project cost in [`docs/BUDGET_LEDGER.md`](docs/BUDGET_LEDGER.md).
 - Use [`docs/ROADMAP.md`](docs/ROADMAP.md) for stage gates and [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md) for specification coverage.
 
 ## Development Commands

@@ -6,6 +6,8 @@ Progression is evidence-gated, not calendar-gated. No later stage is authorized 
 
 ## Stage 0 — Documentation Architecture
 
+**Status: COMPLETE (2026-09-04).** This status confirms documentation coverage only and does not authorize Stage 1.
+
 Deliver and cross-link the persistent operating rules, charter, architecture, research methodology, validation standard, data specifications, registries, pattern-lab requirements, decisions, risks, roadmap, and traceability map. Audit the hierarchy against the former master specification.
 
 **Exit gate:** all requirements have a governing home, all required documents exist, links and required rule phrases pass review, and no strategy or Stage 1 code has been introduced.

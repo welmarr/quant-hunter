@@ -255,8 +255,9 @@ For each pattern, store at minimum:
 - stability through time;
 - parameter sensitivity;
 - out-of-sample performance;
-- discovery dataset;
-- untouched validation dataset; and
+- discovery dataset and exact training/development partition manifest;
+- development-validation dataset;
+- untouched, sealed out-of-sample validation dataset and recorded access-release event; and
 - number of candidate patterns searched.
 
 The identifier and metadata must remain stable so results, failures, revisions, and dependent experiments can be traced over time.

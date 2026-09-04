@@ -135,6 +135,6 @@ Suspect records enter quarantine with reason codes. Imputation, filtering, winso
 - Future paper-trading and production adapters must be separate from research storage and permissions. Research code must not be capable of self-promotion or live execution.
 - Credentials are supplied outside Git through approved secret management. No API, broker, or paid-data credential may appear in data files, manifests, logs, notebooks, fixtures, or repository history.
 
-## Stage 1 acceptance criteria
+## Stage 1 Data-Domain Prerequisites
 
-The foundation is ready only when the project has documented schemas for the four timestamps, provenance and dataset manifests; an immutable raw-data convention; deterministic normalized/curated build conventions; quality and quarantine rules; vintage-aware macro handling; source-registry linkage; and a sealed-holdout access design. Stage 1 may use small authoritative free samples, but must not purchase data or start live trading.
+The data domain is ready for the Stage 1 gate only when the project has documented schemas for the four timestamps, provenance and dataset manifests; an immutable raw-data convention; deterministic normalized/curated build conventions; quality and quarantine rules; vintage-aware macro handling; source-registry linkage; and a sealed-holdout access design. These are necessary, not sufficient, conditions; `ROADMAP.md` owns the complete Stage 1 gate. Stage 1 may use small authoritative free samples, but must not purchase data or start live trading.

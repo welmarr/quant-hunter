@@ -4,6 +4,8 @@
 
 Review this register at each stage gate and whenever evidence, scope, cost, or controls change. Use permanent IDs; retain closed risks. Link mitigations to decisions, experiments, data sources, and tests. `OPEN` means the risk requires active control, not that work is authorized.
 
+Every operational risk record must include ID, cause and consequence, likelihood, impact/severity, owner, controls, early-warning indicators, linked decisions/experiments/sources/tests, target and next-review dates, residual risk, status, and closure evidence. The summary entries below are the documentation-phase baseline; their detailed fields must be assigned before Stage 1 authorization. Scientific governance owns RISK-001–009 and RISK-014–016, data governance co-owns RISK-004–005, RISK-012, and RISK-014, architecture/security owns RISK-010–011 and RISK-015, and project budget governance owns RISK-013. All open risks are next reviewed at the Stage 1 authorization gate.
+
 | ID | Risk | Required controls | Status |
 |---|---|---|---|
 | RISK-001 | Targeting a requested 75% win rate creates selection bias or fabricated claims. | Treat win rate as descriptive; preregister hypotheses and decision criteria; prioritize expectancy, robustness, calibration, drawdown, costs, sample size, regimes, and OOS evidence. | OPEN |
