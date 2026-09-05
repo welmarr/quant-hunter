@@ -26,68 +26,162 @@
     "code_revision",
     "configuration_digest",
     "environment_digest",
-    "author"
+    "author",
+    "academic_institutional_basis",
+    "dataset_vintages",
+    "source_registry_ids",
+    "provenance_artifact_digests",
+    "instruments",
+    "sampling_frequency",
+    "feature_definitions",
+    "label_definitions",
+    "candidate_universe",
+    "parameters_considered",
+    "variants_attempted",
+    "variant_accounting",
+    "multiple_testing",
+    "sealed_data_release",
+    "results",
+    "result_artifact_locations",
+    "reason_for_decision",
+    "earlier_experiment_ids",
+    "configuration_location",
+    "baselines",
+    "result_artifact_digests",
+    "failure_modes"
   ],
   "properties": {
-    "schema_version": {"const": "1.0.0"},
-    "experiment_id": {"$ref": "common.schema.json#/$defs/experiment_id"},
-    "revision": {"$ref": "common.schema.json#/$defs/revision"},
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "experiment_id": {
+      "$ref": "common.schema.json#/$defs/experiment_id"
+    },
+    "revision": {
+      "$ref": "common.schema.json#/$defs/revision"
+    },
     "previous_revision_digest": {
       "oneOf": [
-        {"type": "null"},
-        {"$ref": "common.schema.json#/$defs/digest"}
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
       ]
     },
-    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
-    "lifecycle_status": {
-      "enum": ["DRAFT", "REGISTERED", "FROZEN", "RUNNING", "EVALUATED", "DECIDED"]
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
     },
-    "study_type": {"enum": ["EXPLORATORY", "CONFIRMATORY", "REPRODUCTION", "OPERATIONAL_VALIDATION"]},
-    "hypothesis": {"type": "string", "minLength": 1},
-    "research_family_id": {"$ref": "common.schema.json#/$defs/family_id"},
+    "lifecycle_status": {
+      "enum": [
+        "DRAFT",
+        "REGISTERED",
+        "FROZEN",
+        "RUNNING",
+        "EVALUATED",
+        "DECIDED"
+      ]
+    },
+    "study_type": {
+      "enum": [
+        "EXPLORATORY",
+        "CONFIRMATORY",
+        "REPRODUCTION",
+        "OPERATIONAL_VALIDATION"
+      ]
+    },
+    "hypothesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "research_family_id": {
+      "$ref": "common.schema.json#/$defs/family_id"
+    },
     "referenced_object_ids": {
       "type": "array",
-      "items": {"$ref": "common.schema.json#/$defs/any_object_id"},
+      "items": {
+        "$ref": "common.schema.json#/$defs/any_object_id"
+      },
       "uniqueItems": true
     },
     "dataset_ids": {
       "type": "array",
       "minItems": 1,
-      "items": {"$ref": "common.schema.json#/$defs/dataset_id"},
+      "items": {
+        "$ref": "common.schema.json#/$defs/dataset_id"
+      },
       "uniqueItems": true
     },
     "partitions": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["training", "validation", "sealed_out_of_sample"],
+      "required": [
+        "training",
+        "validation",
+        "sealed_out_of_sample"
+      ],
       "properties": {
-        "training": {"$ref": "#/$defs/interval"},
-        "validation": {"$ref": "#/$defs/interval"},
-        "sealed_out_of_sample": {"$ref": "#/$defs/interval"}
+        "training": {
+          "$ref": "#/$defs/interval"
+        },
+        "validation": {
+          "$ref": "#/$defs/interval"
+        },
+        "sealed_out_of_sample": {
+          "$ref": "#/$defs/interval"
+        }
       }
     },
-    "search_space": {"type": "string", "minLength": 1},
-    "variants_planned": {"type": "integer", "minimum": 1},
+    "search_space": {
+      "type": "string",
+      "minLength": 1
+    },
+    "variants_planned": {
+      "type": "integer",
+      "minimum": 1
+    },
     "evaluation_metrics": {
       "type": "array",
       "minItems": 1,
-      "items": {"type": "string", "minLength": 1},
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true
     },
     "statistical_tests": {
       "type": "array",
-      "items": {"type": "string", "minLength": 1},
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true
     },
-    "decision_criteria": {"type": "string", "minLength": 1},
+    "decision_criteria": {
+      "type": "string",
+      "minLength": 1
+    },
     "execution_cost_assumptions": {
       "type": "array",
-      "items": {"type": "string", "minLength": 1}
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
-    "code_revision": {"$ref": "common.schema.json#/$defs/git_revision"},
-    "configuration_digest": {"$ref": "common.schema.json#/$defs/digest"},
-    "environment_digest": {"$ref": "common.schema.json#/$defs/digest"},
-    "random_seed": {"type": "integer", "minimum": 0},
+    "code_revision": {
+      "$ref": "common.schema.json#/$defs/git_revision"
+    },
+    "configuration_digest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "environment_digest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "random_seed": {
+      "type": "integer",
+      "minimum": 0
+    },
     "decision": {
       "enum": [
         "CONTINUE_RESEARCH",
@@ -101,34 +195,555 @@
     },
     "result_artifact_digests": {
       "type": "array",
-      "items": {"$ref": "common.schema.json#/$defs/digest"},
+      "items": {
+        "$ref": "common.schema.json#/$defs/digest"
+      },
       "uniqueItems": true
     },
     "failure_modes": {
       "type": "array",
-      "items": {"type": "string", "minLength": 1}
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
-    "author": {"type": "string", "minLength": 1}
+    "author": {
+      "type": "string",
+      "minLength": 1
+    },
+    "academic_institutional_basis": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "dataset_vintages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dataset_id",
+          "record_digest",
+          "vintage"
+        ],
+        "properties": {
+          "dataset_id": {
+            "$ref": "common.schema.json#/$defs/dataset_id"
+          },
+          "record_digest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "vintage": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "source_registry_ids": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/source_id"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "provenance_artifact_digests": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "instruments": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "sampling_frequency": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "feature_definitions": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "label_definitions": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "candidate_universe": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "parameters_considered": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "variants_attempted": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total exposure, including failed runs, retries, implicit searches and AI-generated variants."
+    },
+    "variant_accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ai_generated_attempts",
+        "failed_attempts",
+        "accounting_basis"
+      ],
+      "properties": {
+        "ai_generated_attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accounting_basis": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "multiple_testing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family_id",
+        "budget",
+        "correction_plan"
+      ],
+      "properties": {
+        "family_id": {
+          "$ref": "common.schema.json#/$defs/family_id"
+        },
+        "budget": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "correction_plan": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "sealed_data_release": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "event_digest"
+          ],
+          "properties": {
+            "status": {
+              "const": "RELEASED"
+            },
+            "event_digest": {
+              "$ref": "common.schema.json#/$defs/digest"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "const": "UNRELEASED"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        }
+      ]
+    },
+    "results": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "result_artifact_locations": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "reason_for_decision": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "earlier_experiment_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/experiment_id"
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "configuration_location": {
+      "type": "string",
+      "format": "uri"
+    },
+    "baselines": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        {
+          "$ref": "#/$defs/unavailable"
+        }
+      ]
+    },
+    "decision_pending_reason": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "random_seed_not_applicable_reason": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "frozen_manifest_digest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    }
   },
   "$defs": {
     "interval": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["start", "end"],
+      "required": [
+        "start",
+        "end"
+      ],
       "properties": {
-        "start": {"$ref": "common.schema.json#/$defs/timestamp"},
-        "end": {"$ref": "common.schema.json#/$defs/timestamp"}
+        "start": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "end": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        }
+      }
+    },
+    "unavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "UNKNOWN",
+            "NOT_APPLICABLE",
+            "PENDING"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
       }
     }
   },
   "allOf": [
     {
-      "if": {"properties": {"revision": {"const": 1}}},
-      "then": {"properties": {"previous_revision_digest": {"type": "null"}}},
+      "if": {
+        "properties": {
+          "revision": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "previous_revision_digest": {
+            "type": "null"
+          }
+        }
+      },
       "else": {
         "properties": {
-          "previous_revision_digest": {"$ref": "common.schema.json#/$defs/digest"}
+          "previous_revision_digest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
         }
+      }
+    },
+    {
+      "oneOf": [
+        {
+          "required": [
+            "decision"
+          ],
+          "not": {
+            "required": [
+              "decision_pending_reason"
+            ]
+          }
+        },
+        {
+          "required": [
+            "decision_pending_reason"
+          ],
+          "not": {
+            "required": [
+              "decision"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "required": [
+            "random_seed"
+          ],
+          "not": {
+            "required": [
+              "random_seed_not_applicable_reason"
+            ]
+          }
+        },
+        {
+          "required": [
+            "random_seed_not_applicable_reason"
+          ],
+          "not": {
+            "required": [
+              "random_seed"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "FROZEN",
+              "RUNNING",
+              "EVALUATED",
+              "DECIDED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "frozen_manifest_digest"
+        ],
+        "properties": {
+          "feature_definitions": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "label_definitions": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "candidate_universe": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "parameters_considered": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "baselines": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "DRAFT",
+              "REGISTERED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sealed_data_release": {
+            "properties": {
+              "status": {
+                "const": "UNRELEASED"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_for_decision": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "const": "DECIDED"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "decision"
+        ]
       }
     }
   ]

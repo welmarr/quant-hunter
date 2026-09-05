@@ -148,3 +148,74 @@ def test_non_finite_numeric_value_is_rejected() -> None:
 
     assert errors
     assert "type" in {error.validator for error in errors}
+
+
+BATCH2_FIX_CASES = load_object_list(FIXTURE_DIRECTORY / "batch2_fix_cases.json")
+
+
+@pytest.mark.parametrize("case", BATCH2_FIX_CASES, ids=lambda case: case["case"])
+def test_batch2_required_metadata(case: JsonObject) -> None:
+    """Each isolated mutation fails for its declared constraint."""
+    instance = deepcopy(VALID_OBJECTS[case["schema"]])
+    path = cast(list[str], case["remove"] if "remove" in case else case["set"])
+    target = instance
+    for key in path[:-1]:
+        target = target[key]
+    if "remove" in case:
+        del target[path[-1]]
+    else:
+        target[path[-1]] = case["value"]
+    errors = list(validator_for(case["schema"]).iter_errors(instance))
+    assert case["validator"] in {error.validator for error in errors}
+
+
+@pytest.mark.parametrize("status", ["FROZEN", "RUNNING", "EVALUATED", "DECIDED"])
+def test_completed_experiment_metadata(status: str) -> None:
+    """Frozen definitions and later results have concrete, reproducible references."""
+    instance = deepcopy(VALID_OBJECTS["experiment.schema.json"])
+    instance["lifecycle_status"] = status
+    instance["frozen_manifest_digest"] = "sha256:" + "a" * 64
+    for field in [
+        "feature_definitions",
+        "label_definitions",
+        "candidate_universe",
+        "parameters_considered",
+    ]:
+        instance[field] = "Fixed synthetic conformance definition."
+    instance["baselines"] = ["Synthetic identity baseline"]
+    if status in {"EVALUATED", "DECIDED"}:
+        instance["sealed_data_release"] = {
+            "status": "RELEASED",
+            "event_digest": "sha256:" + "b" * 64,
+        }
+        instance["results"] = "Synthetic conformance result only."
+        instance["result_artifact_digests"] = ["sha256:" + "c" * 64]
+        instance["result_artifact_locations"] = ["https://example.invalid/result.json"]
+        instance["variants_attempted"] = 3
+        instance["variant_accounting"]["failed_attempts"] = 1
+        instance["variant_accounting"]["ai_generated_attempts"] = 2
+    if status == "DECIDED":
+        del instance["decision_pending_reason"]
+        instance["decision"] = "INCONCLUSIVE"
+        instance["reason_for_decision"] = (
+            "Synthetic fixture supplies no market evidence."
+        )
+    validator_for("experiment.schema.json").validate(instance)
+
+
+@pytest.mark.parametrize(
+    ("kind", "prefix"),
+    [("RESEARCH_FAMILY", "FAM"), ("MODEL", "MOD"), ("STRATEGY", "STRAT")],
+)
+def test_research_types_with_implementation(kind: str, prefix: str) -> None:
+    """All three types retain identity constraints with implementation evidence."""
+    instance = deepcopy(VALID_OBJECTS["research-object.schema.json"])
+    instance["object_type"] = kind
+    instance["object_id"] = prefix + "-01990f30-7f5e-7b34-9b21-3d74c513c844"
+    instance["implementation"] = {
+        "exists": True,
+        "location": "https://example.invalid/synthetic.py",
+        "code_revision": "a" * 40,
+    }
+    instance["reproduction_outcome"] = "PARTIALLY REPRODUCED"
+    validator_for("research-object.schema.json").validate(instance)

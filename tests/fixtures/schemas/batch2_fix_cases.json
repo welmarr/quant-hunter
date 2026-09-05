@@ -1,0 +1,502 @@
+[
+  {
+    "case": "experiment.schema.json missing academic_institutional_basis",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "academic_institutional_basis"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing dataset_vintages",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "dataset_vintages"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing source_registry_ids",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "source_registry_ids"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing provenance_artifact_digests",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "provenance_artifact_digests"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing instruments",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "instruments"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing sampling_frequency",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "sampling_frequency"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing feature_definitions",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "feature_definitions"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing label_definitions",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "label_definitions"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing candidate_universe",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "candidate_universe"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing parameters_considered",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "parameters_considered"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing variants_attempted",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "variants_attempted"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing variant_accounting",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "variant_accounting"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing multiple_testing",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "multiple_testing"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing sealed_data_release",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "sealed_data_release"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing results",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "results"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing result_artifact_locations",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "result_artifact_locations"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing reason_for_decision",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "reason_for_decision"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing earlier_experiment_ids",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "earlier_experiment_ids"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing configuration_location",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "configuration_location"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing baselines",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "baselines"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing result_artifact_digests",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "result_artifact_digests"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json missing failure_modes",
+    "schema": "experiment.schema.json",
+    "remove": [
+      "failure_modes"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing academic_institutional_basis",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "academic_institutional_basis"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing evidence_quality",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "evidence_quality"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing independent_replication_evidence",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "independent_replication_evidence"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing fx_applicability",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "fx_applicability"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing known_failures_or_decay",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "known_failures_or_decay"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing distinctiveness",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "distinctiveness"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing validation_plan",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "validation_plan"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing transaction_cost_sensitivity",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "transaction_cost_sensitivity"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing capacity_sensitivity",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "capacity_sensitivity"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing risk_sensitivity",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "risk_sensitivity"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing regime_sensitivity",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "regime_sensitivity"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing decision",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "decision"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing limitations",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "limitations"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing failure_modes",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "failure_modes"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing parameters",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "parameters"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing research_family_id",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "research_family_id"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing successor_ids",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "successor_ids"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing experiment_ids",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "experiment_ids"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing parameter_search_accounting",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "parameter_search_accounting"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing implementation",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "implementation"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing reproduction_outcome",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "reproduction_outcome"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json missing parent_ids",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "parent_ids"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "missing data availability",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "data_requirements",
+      "availability"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "missing data licensing",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "data_requirements",
+      "licensing"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "missing data expected_cost",
+    "schema": "research-object.schema.json",
+    "remove": [
+      "data_requirements",
+      "expected_cost"
+    ],
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json invalid variants_attempted",
+    "schema": "experiment.schema.json",
+    "set": [
+      "variants_attempted"
+    ],
+    "value": -1,
+    "validator": "minimum"
+  },
+  {
+    "case": "experiment.schema.json invalid variant_accounting.failed_attempts",
+    "schema": "experiment.schema.json",
+    "set": [
+      "variant_accounting",
+      "failed_attempts"
+    ],
+    "value": -1,
+    "validator": "minimum"
+  },
+  {
+    "case": "experiment.schema.json invalid variant_accounting.ai_generated_attempts",
+    "schema": "experiment.schema.json",
+    "set": [
+      "variant_accounting",
+      "ai_generated_attempts"
+    ],
+    "value": -1,
+    "validator": "minimum"
+  },
+  {
+    "case": "experiment.schema.json invalid academic_institutional_basis",
+    "schema": "experiment.schema.json",
+    "set": [
+      "academic_institutional_basis"
+    ],
+    "value": {
+      "status": "UNKNOWN"
+    },
+    "validator": "oneOf"
+  },
+  {
+    "case": "experiment.schema.json invalid sealed_data_release",
+    "schema": "experiment.schema.json",
+    "set": [
+      "sealed_data_release"
+    ],
+    "value": {
+      "status": "RELEASED"
+    },
+    "validator": "oneOf"
+  },
+  {
+    "case": "experiment.schema.json invalid lifecycle_status",
+    "schema": "experiment.schema.json",
+    "set": [
+      "lifecycle_status"
+    ],
+    "value": "FROZEN",
+    "validator": "required"
+  },
+  {
+    "case": "experiment.schema.json invalid lifecycle_status",
+    "schema": "experiment.schema.json",
+    "set": [
+      "lifecycle_status"
+    ],
+    "value": "DECIDED",
+    "validator": "required"
+  },
+  {
+    "case": "research-object.schema.json invalid implementation",
+    "schema": "research-object.schema.json",
+    "set": [
+      "implementation"
+    ],
+    "value": {
+      "exists": true,
+      "location": "https://example.invalid/code"
+    },
+    "validator": "oneOf"
+  },
+  {
+    "case": "research-object.schema.json invalid reproduction_outcome",
+    "schema": "research-object.schema.json",
+    "set": [
+      "reproduction_outcome"
+    ],
+    "value": "SUCCESS",
+    "validator": "oneOf"
+  },
+  {
+    "case": "research-object.schema.json invalid object_type",
+    "schema": "research-object.schema.json",
+    "set": [
+      "object_type"
+    ],
+    "value": "MODEL",
+    "validator": "pattern"
+  },
+  {
+    "case": "research-object.schema.json invalid evidence_quality",
+    "schema": "research-object.schema.json",
+    "set": [
+      "evidence_quality"
+    ],
+    "value": {
+      "status": "UNKNOWN",
+      "reason": ""
+    },
+    "validator": "oneOf"
+  },
+  {
+    "case": "research-object.schema.json invalid parameter_search_accounting.combination_count",
+    "schema": "research-object.schema.json",
+    "set": [
+      "parameter_search_accounting",
+      "combination_count"
+    ],
+    "value": -1,
+    "validator": "minimum"
+  }
+]

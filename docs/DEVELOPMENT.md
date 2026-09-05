@@ -135,3 +135,26 @@ version selected the intended installer and release, but did not independently
 pin the downloaded platform artifact. Both CI jobs now pass the official
 platform-specific uv 0.12.10 SHA-256 through the action's supported `checksum`
 input. This satisfies DEC-0005 without adding a custom installer.
+
+## Batch 2 Fix validation
+
+On 2026-09-05, the experiment and research-object v1 schemas were corrected
+against their governing minimum records under DEC-0012. No registered research
+records exist to migrate. Required metadata now includes explicit reason-bearing
+pending/unavailable values, attempted-search accounting, evidence and sensitivity
+records, and conditional freeze/implementation references. The remaining Batch 3
+and behavioral registry/release controls remain unauthorized and unstarted.
+
+The locked local quality gate passed: lock check, Ruff formatting and lint,
+strict mypy (three files), and 87 pytest cases with 100% package coverage.
+The package still has no substantive branch paths; coverage does not establish
+research or release-control correctness. The fixtures add 59 isolated invalid
+metadata cases and seven lifecycle/type positive cases, and extend the two
+existing valid records. Local schema references remain offline.
+
+The initial build attempt failed because PyPI access was blocked. Repeating
+`uv build --no-sources --offline` succeeded from the existing cache for both
+source and wheel distributions. Package import returned `0.1.0`.
+`git diff --check` passed. Hosted CI was not triggered during this fix.
+No dependencies, purchases, or paid commitments were added; aggregate budget
+headroom remains unknown pending the existing subscription/API accounting inputs.

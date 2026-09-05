@@ -189,3 +189,17 @@ The seven Stage 1A design decisions are resolved. The following are factual inpu
 - retain the verified ephemeral exact-path Git trust method for `D:/quant-hunter`, or obtain owner approval for a persistent repository-specific ownership/trust correction; wildcard or silent global trust is prohibited.
 
 Until the first two values are recorded, budget headroom remains `UNKNOWN` and no paid action is permitted. These factual inputs do not invalidate the design. Separately authorized, local, zero-cost Stage 1B work may use the verified exact-path Git method; hosted CI remains conditional on confirmed free entitlement.
+
+### DEC-0012 — Correct Batch 2 Minimum Metadata Contracts
+
+- **Date:** 2026-09-05
+- **Status:** ACCEPTED
+- **Scope:** governance / validation / reproducibility
+- **Context:** Independent review identified missing normative metadata in the experiment and research-object schemas. No experiments, models, or strategies have been registered.
+- **Decision:** Under the explicit Batch 2 Fix authorization, correct the two v1 foundation schemas in place and update their synthetic fixtures. This is a narrowly scoped exception to the retained-version policy in DEVELOPMENT.md: old incomplete synthetic records must be replaced, not silently accepted. No persistent research records require migration. Future incompatible changes still require a retained version and migration decision. Require explicit reason-bearing unavailable metadata; require concrete frozen definitions and a freeze-manifest reference from FROZEN onward. Preserve existing enums, typed identities, closed shapes, and revision constraints. Existing implementations require location and immutable code revision together; reproduction outcomes retain the methodology vocabulary.
+- **Alternatives considered:** Leaving missing fields optional contradicts the normative minima. Creating a second schema generation before the foundation has registered records adds unnecessary migration surface.
+- **Scientific/statistical consequences:** Record attempted search exposure including failed and AI attempts, evidence, sensitivities, provenance, decisions, and limitations. Counts and references are structural contracts only: cross-record consistency, digest verification, actual freeze transitions, and sealed-access enforcement remain deferred. No research evaluation or trading behavior is introduced.
+- **Reproducibility and cost consequences:** Synthetic conformance tests use the existing lock and dependencies; no purchase or new paid commitment. Budget headroom remains unknown.
+- **References:** EXPERIMENT_LEDGER.md Required Metadata and Lifecycle; MODEL_REGISTRY.md Minimum Record; RESEARCH_METHODOLOGY.md reproduction classifications; schemas/v1/experiment.schema.json; schemas/v1/research-object.schema.json; tests/test_schemas.py.
+- **Supersedes / superseded by:** Narrow pre-use v1 correction exception only; no scientific standard superseded.
+- **Owner and approver:** Project owner through explicit Stage 1B Batch 2 Fix request.

@@ -125,23 +125,114 @@
     "name": "Synthetic baseline family",
     "hypothesis": "A registered synthetic family can exercise schema controls.",
     "rationale": "Tests identity and provenance without empirical claims.",
-    "source_citations": ["https://example.invalid/research-reference"],
+    "source_citations": [
+      "https://example.invalid/research-reference"
+    ],
     "mathematical_definition": "No estimator; schema-conformance fixture only.",
-    "inputs": ["synthetic_feature"],
-    "outputs": ["synthetic_measure"],
+    "inputs": [
+      "synthetic_feature"
+    ],
+    "outputs": [
+      "synthetic_measure"
+    ],
     "horizon": "one synthetic interval",
     "sampling_frequency": "daily",
     "universe": "synthetic instruments",
-    "assumptions": ["contains no market evidence"],
+    "assumptions": [
+      "contains no market evidence"
+    ],
     "search_space": "one fixed synthetic definition",
     "parent_ids": [],
     "baseline_ids": [],
     "data_requirements": {
-      "source_ids": ["SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"],
-      "dataset_ids": ["DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842"],
-      "point_in_time_constraints": "all timestamps are explicit"
+      "source_ids": [
+        "SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"
+      ],
+      "dataset_ids": [
+        "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842"
+      ],
+      "point_in_time_constraints": "all timestamps are explicit",
+      "availability": "Synthetic fixture; freely available at USD 0.",
+      "licensing": "Synthetic fixture; freely available at USD 0.",
+      "expected_cost": "Synthetic fixture; freely available at USD 0."
     },
-    "owner": "test-suite"
+    "owner": "test-suite",
+    "academic_institutional_basis": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "evidence_quality": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "independent_replication_evidence": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "fx_applicability": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "known_failures_or_decay": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "distinctiveness": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "validation_plan": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "transaction_cost_sensitivity": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "capacity_sensitivity": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "risk_sensitivity": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "regime_sensitivity": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "decision": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "limitations": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "failure_modes": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "parameters": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "research_family_id": "FAM-01990f30-7f5e-7b34-9b21-3d74c513c844",
+    "successor_ids": [],
+    "experiment_ids": [],
+    "parameter_search_accounting": {
+      "complete_search_space": "One fixed synthetic definition; no parameters.",
+      "ai_generated_variants": "None attempted.",
+      "combination_count": 1
+    },
+    "implementation": {
+      "exists": false,
+      "reason": "Definition fixture only."
+    },
+    "reproduction_outcome": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    }
   },
   "pattern.schema.json": {
     "schema_version": "1.0.0",
@@ -177,8 +268,12 @@
     "study_type": "CONFIRMATORY",
     "hypothesis": "Schema controls reject malformed research records.",
     "research_family_id": "FAM-01990f30-7f5e-7b34-9b21-3d74c513c844",
-    "referenced_object_ids": ["PATTERN-01990f30-7f5e-7b34-9b21-3d74c513c845"],
-    "dataset_ids": ["DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842"],
+    "referenced_object_ids": [
+      "PATTERN-01990f30-7f5e-7b34-9b21-3d74c513c845"
+    ],
+    "dataset_ids": [
+      "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842"
+    ],
     "partitions": {
       "training": {
         "start": "2020-01-01T00:00:00Z",
@@ -195,15 +290,98 @@
     },
     "search_space": "one fixed schema-conformance case",
     "variants_planned": 1,
-    "evaluation_metrics": ["validation outcome"],
+    "evaluation_metrics": [
+      "validation outcome"
+    ],
     "statistical_tests": [],
     "decision_criteria": "all declared validation cases behave as specified",
-    "execution_cost_assumptions": ["not applicable to schema conformance"],
+    "execution_cost_assumptions": [
+      "not applicable to schema conformance"
+    ],
     "code_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "configuration_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
     "environment_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "random_seed": 0,
-    "author": "test-suite"
+    "author": "test-suite",
+    "academic_institutional_basis": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "dataset_vintages": [
+      {
+        "dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
+        "record_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "vintage": "synthetic-v1"
+      }
+    ],
+    "source_registry_ids": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "provenance_artifact_digests": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "instruments": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "sampling_frequency": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "feature_definitions": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "label_definitions": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "candidate_universe": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "parameters_considered": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "variants_attempted": 0,
+    "variant_accounting": {
+      "ai_generated_attempts": 0,
+      "failed_attempts": 0,
+      "accounting_basis": "No attempts; all failed and AI attempts count in total exposure."
+    },
+    "multiple_testing": {
+      "family_id": "FAM-01990f30-7f5e-7b34-9b21-3d74c513c844",
+      "budget": 1,
+      "correction_plan": "One synthetic case; no empirical testing."
+    },
+    "sealed_data_release": {
+      "status": "UNRELEASED",
+      "reason": "Not evaluated."
+    },
+    "results": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "result_artifact_locations": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "reason_for_decision": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "earlier_experiment_ids": [],
+    "configuration_location": "https://example.invalid/config.json",
+    "baselines": {
+      "status": "PENDING",
+      "reason": "Synthetic definition has not been evaluated."
+    },
+    "result_artifact_digests": [],
+    "failure_modes": [],
+    "decision_pending_reason": "Not evaluated."
   },
   "research-backlog.schema.json": {
     "schema_version": "1.0.0",
