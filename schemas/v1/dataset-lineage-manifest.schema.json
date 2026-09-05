@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/dataset-lineage-manifest.schema.json",
+  "title": "Quant Hunter Derived Dataset Lineage Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "layer",
+    "created_at",
+    "physical_object_digest",
+    "physical_artifact_manifest_digest",
+    "logical_schema",
+    "schema_digest",
+    "logical_content_fingerprint",
+    "row_ordering",
+    "writer_profile",
+    "writer_profile_digest",
+    "parent_ordering",
+    "parent_evidence",
+    "transformation",
+    "producer",
+    "source_ids",
+    "references",
+    "quality_disposition"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
+    "layer": {"enum": ["normalized", "curated", "features", "experiment_snapshot"]},
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "physical_object_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "physical_artifact_manifest_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "logical_schema": {"$ref": "#/$defs/logical_schema"},
+    "schema_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "logical_content_fingerprint": {"$ref": "common.schema.json#/$defs/digest"},
+    "row_ordering": {"$ref": "#/$defs/ordering"},
+    "writer_profile": {"$ref": "#/$defs/writer_profile"},
+    "writer_profile_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "parent_ordering": {"$ref": "#/$defs/ordering"},
+    "parent_evidence": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/parent_evidence"}
+    },
+    "transformation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "configuration_digest"],
+      "properties": {
+        "identity": {"type": "string", "minLength": 1},
+        "configuration_digest": {"$ref": "common.schema.json#/$defs/digest"}
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code_revision", "environment_digest"],
+      "properties": {
+        "code_revision": {"$ref": "common.schema.json#/$defs/git_revision"},
+        "environment_digest": {"$ref": "common.schema.json#/$defs/digest"}
+      }
+    },
+    "source_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/source_id"},
+      "uniqueItems": true
+    },
+    "references": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "quality_disposition": {"enum": ["PENDING", "APPROVED", "QUARANTINED", "REJECTED"]}
+  },
+  "$defs": {
+    "ordering": {"enum": ["ORDERED", "UNORDERED"]},
+    "logical_type": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "precision", "scale", "timestamp_unit", "timezone"],
+      "properties": {
+        "name": {
+          "enum": [
+            "boolean", "int8", "int16", "int32", "int64",
+            "uint8", "uint16", "uint32", "uint64", "float64",
+            "utf8", "decimal128", "timestamp"
+          ]
+        },
+        "precision": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1, "maximum": 38}]},
+        "scale": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0, "maximum": 38}]},
+        "timestamp_unit": {"oneOf": [{"type": "null"}, {"enum": ["s", "ms", "us", "ns"]}]},
+        "timezone": {"oneOf": [{"type": "null"}, {"const": "UTC"}]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"name": {"const": "decimal128"}}},
+          "then": {
+            "properties": {
+              "precision": {"type": "integer"},
+              "scale": {"type": "integer"},
+              "timestamp_unit": {"type": "null"},
+              "timezone": {"type": "null"}
+            }
+          },
+          "else": {
+            "if": {"properties": {"name": {"const": "timestamp"}}},
+            "then": {
+              "properties": {
+                "precision": {"type": "null"},
+                "scale": {"type": "null"},
+                "timestamp_unit": {"enum": ["s", "ms", "us", "ns"]},
+                "timezone": {"const": "UTC"}
+              }
+            },
+            "else": {
+              "properties": {
+                "precision": {"type": "null"},
+                "scale": {"type": "null"},
+                "timestamp_unit": {"type": "null"},
+                "timezone": {"type": "null"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "logical_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "row_ordering", "fields"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "row_ordering": {"$ref": "#/$defs/ordering"},
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "type", "nullable"],
+            "properties": {
+              "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+              "type": {"$ref": "#/$defs/logical_type"},
+              "nullable": {"type": "boolean"}
+            }
+          }
+        }
+      }
+    },
+    "writer_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_version", "profile_name", "library", "library_version",
+        "row_group_size", "compression", "compression_level", "use_dictionary",
+        "write_statistics", "parquet_version", "data_page_version", "data_page_size",
+        "write_batch_size", "dictionary_pagesize_limit", "use_byte_stream_split",
+        "column_encoding", "use_deprecated_int96_timestamps", "timestamp_coercion",
+        "allow_truncated_timestamps", "use_compliant_nested_type", "flavor",
+        "filesystem", "encryption", "store_schema", "write_page_index",
+        "write_page_checksum", "sorting_columns", "store_decimal_as_integer",
+        "write_time_adjusted_to_utc", "max_rows_per_page", "bloom_filters",
+        "metadata_policy", "null_policy"
+      ],
+      "properties": {
+        "profile_version": {"const": "1.0.0"},
+        "profile_name": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+        "library": {"const": "pyarrow"},
+        "library_version": {"const": "25.0.1"},
+        "row_group_size": {"type": "integer", "minimum": 1},
+        "compression": {"enum": ["NONE", "zstd"]},
+        "compression_level": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1, "maximum": 19}]},
+        "use_dictionary": {"type": "boolean"},
+        "write_statistics": {"type": "boolean"},
+        "parquet_version": {"const": "2.6"},
+        "data_page_version": {"enum": ["1.0", "2.0"]},
+        "data_page_size": {"type": "integer", "minimum": 1},
+        "write_batch_size": {"type": "integer", "minimum": 1},
+        "dictionary_pagesize_limit": {"type": "integer", "minimum": 1},
+        "use_byte_stream_split": {"type": "boolean"},
+        "column_encoding": {"type": "null"},
+        "use_deprecated_int96_timestamps": {"const": false},
+        "timestamp_coercion": {"type": "null"},
+        "allow_truncated_timestamps": {"const": false},
+        "use_compliant_nested_type": {"type": "boolean"},
+        "flavor": {"type": "null"},
+        "filesystem": {"type": "null"},
+        "encryption": {"type": "null"},
+        "store_schema": {"type": "boolean"},
+        "write_page_index": {"type": "boolean"},
+        "write_page_checksum": {"type": "boolean"},
+        "sorting_columns": {"const": []},
+        "store_decimal_as_integer": {"type": "boolean"},
+        "write_time_adjusted_to_utc": {"type": "boolean"},
+        "max_rows_per_page": {"type": "null"},
+        "bloom_filters": {"type": "null"},
+        "metadata_policy": {"const": "REJECT_INPUT_WRITE_ARROW_SCHEMA_ONLY"},
+        "null_policy": {"const": "PRESERVE_DECLARED_NULLS"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"compression": {"const": "NONE"}}},
+          "then": {"properties": {"compression_level": {"type": "null"}}},
+          "else": {"properties": {"compression_level": {"type": "integer"}}}
+        }
+      ]
+    },
+    "parent_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset_id", "registry_revision_digest", "physical_object_digest",
+        "provenance_lineage_digest", "logical_content_fingerprint"
+      ],
+      "properties": {
+        "dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
+        "registry_revision_digest": {"$ref": "common.schema.json#/$defs/digest"},
+        "physical_object_digest": {"$ref": "common.schema.json#/$defs/digest"},
+        "provenance_lineage_digest": {"$ref": "common.schema.json#/$defs/digest"},
+        "logical_content_fingerprint": {"$ref": "common.schema.json#/$defs/digest"}
+      }
+    }
+  }
+}

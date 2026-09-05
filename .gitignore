@@ -15,5 +15,4 @@ dist/
 
 # Generated research data and artifact objects never belong in Git.
 artifacts/objects/
-data/
-
+/data/

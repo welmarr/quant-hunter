@@ -80,6 +80,7 @@ def test_schema_catalog_is_complete_and_meta_valid() -> None:
         "artifact-manifest.schema.json",
         "configuration.schema.json",
         "dataset.schema.json",
+        "dataset-lineage-manifest.schema.json",
         "environment-manifest.schema.json",
         "experiment.schema.json",
         "pattern.schema.json",

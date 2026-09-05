@@ -71,3 +71,15 @@ portable checks reject intermediate link-like components on publication and
 authoritative reads, but their check-to-use window does not claim protection
 from a machine administrator. Labelled secret-text rejection supplements field
 name and URI checks without attempting entropy-based secret discovery.
+
+## Batch 4B.1 Evidence
+
+On 2026-09-05, synthetic tests separated exact Parquet-byte identity, canonical
+lineage identity, and logical table identity. They cover deterministic repeated
+writes, different valid physical profiles with equal logical content, schema and
+value changes, ordered and unordered row semantics, duplicate multiplicity,
+unsupported and non-finite values, explicit decimal/timestamp representation,
+complete parent/config/code/environment/quality lineage sensitivity, immutable
+publication, and dataset-schema binding. This reduces the derived-identity part
+of RISK-019. RISK-019 remains `OPEN` pending hosted Ubuntu comparison, future
+environment/version upgrades, and Batch 4B.2 point-in-time and vintage controls.

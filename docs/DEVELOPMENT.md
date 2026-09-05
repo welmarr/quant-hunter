@@ -40,6 +40,7 @@ and types-jsonschema 4.26.0.20260518 for local Draft 2020-12 conformance,
 reference resolution, semantic timestamp checks, and strict typing. Batch 3B
 makes the three runtime validation packages direct runtime dependencies and
 adds the exact runtime pin `rfc8785==0.1.4` for standards-conformant JCS.
+Batch 4B.1 adds exact `pyarrow==25.0.1` for deterministic Parquet encoding.
 Exact resolved versions and transitive dependencies are authoritative in
 `uv.lock`. No quantitative, market-data, broker, backtest, optimizer,
 portfolio, or AI library is installed.
@@ -281,3 +282,48 @@ not reach PyPI; the established `uv build --no-sources --offline` path then
 built both distributions from the pinned local cache. No dependency or paid
 service was added. Hosted Windows and Ubuntu CI remain for independent review
 after push.
+
+## Batch 4B.1 derived-data identity and deterministic Parquet validation
+
+On 2026-09-05, Batch 4B.1 implemented only deterministic derived-table
+identity and Parquet publication within roadmap item 7. PyArrow 25.0.1 is
+exact-pinned after verifying Apache-2.0 licensing, CPython 3.14 compatibility,
+and published Windows x86-64 and manylinux wheels. Arrow primitives are used
+directly; pandas and other convenience dependencies were not added. The locked
+Windows import reports PyArrow 25.0.1.
+
+The versioned writer profile explicitly records column/schema and ordering
+inputs plus row-group, compression/level, dictionary, statistics, Parquet/data
+page versions, page/batch sizes, timestamp, metadata, null, page checksum,
+schema-storage, nested-type, encoding, sorting, encryption, filesystem, bloom,
+and decimal-storage choices. Input Arrow schema/field metadata is rejected.
+Repeated local writes with the same explicit table, profile, and environment
+produce identical bytes. Different governed profiles may produce different
+physical digests and do not claim physical equivalence.
+
+The logical fingerprint uses versioned length framing, JCS schema bytes,
+type-tagged values, big-endian lengths and float64 bytes, declared-scale decimal
+strings, and fixed-unit UTC timestamp strings. Ordered and unordered row modes
+are explicit; unordered mode sorts framed rows while retaining duplicates.
+Fixed expected schema, profile, ordered-content, and unordered-content digests
+provide platform-independent regression vectors. The canonical lineage manifest
+binds physical and artifact identities, full parent identities under declared
+ordering, transformation/configuration, code/environment, logical schema and
+content, writer profile, sources/references, creation time, and quality without
+including its own digest.
+
+The locked Windows gate passed: `uv lock --check`; Ruff format and lint over 50
+files; strict mypy over 27 source files; and 241 pytest cases with 93.27%
+combined statement/branch coverage. The offline governed build produced the
+source and wheel distributions, package/PyArrow imports returned `0.1.0` and
+`25.0.1`, archive inspection passed over 96 combined members, and
+`git diff --check` passed. Hosted Ubuntu and Windows CI
+remain for independent review after push. Physical-byte equality across
+platforms, Arrow versions, or other Parquet libraries is not claimed; exact
+physical digests identify observed files and logical vectors must remain stable.
+
+Roadmap item 7 remains `IN PROGRESS`. Batch 4B.2 still owns the four timestamp
+semantics, point-in-time/as-of eligibility, future-publication exclusion,
+revision/vintage eligibility, and normalized/curated PIT selection tests. No
+real data, connector, experiment, sealed release, model, backtest, strategy,
+broker, Web, AI, or cloud capability was added.

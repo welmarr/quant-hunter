@@ -109,7 +109,36 @@ Each normalized, curated, or feature dataset must additionally record parent dat
 
 Every experiment must reference an immutable dataset manifest containing the exact dataset versions and vintages used. Re-running that manifest from the same inputs must reproduce the same records, or fail loudly with an auditable explanation.
 
-Under DEC-0007, metadata manifests are schema-validated JCS JSON and use SHA-256 identities. Raw objects are identified by exact received bytes. Batch 4A implements only exact-byte object publication, generic artifact sidecars, and separate raw-capture metadata. Batch 4B must record three distinct digests for derived Parquet data: (1) a physical-object digest over the exact file bytes, (2) a provenance/lineage digest over the canonical manifest and ordered parent evidence, and (3) a logical-content fingerprint over the normalized logical schema and canonical row content using the declared order or unordered semantics. The logical fingerprint identifies equivalent rows across different valid Parquet encodings; it never substitutes for byte identity or lineage. Transformation configuration, code revision, environment, and quality disposition remain part of lineage. The three-digest derived-data contract is not implemented in Batch 4A.
+Under DEC-0007, metadata manifests are schema-validated JCS JSON and use SHA-256 identities. Raw objects are identified by exact received bytes. Batch 4A implements exact-byte object publication, generic artifact sidecars, and separate raw-capture metadata. Batch 4B.1 records three strictly distinct identities for derived Parquet data:
+
+1. `physical_object_digest` is SHA-256 over the exact final Parquet bytes. It identifies one physical encoding and cannot claim equivalence across writer profiles, Arrow versions, or platforms.
+2. `provenance_lineage_digest` is SHA-256 over the RFC 8785 JCS bytes of the versioned lineage manifest. That closed manifest includes the physical object and artifact-sidecar digests, complete parent dataset/revision/physical/lineage/logical identities under declared parent ordering, transformation and configuration identity, code revision, environment digest, full logical schema and its digest, row ordering, the complete writer profile and its digest, source/reference provenance, creation time, and quality disposition. It excludes its own digest, avoiding circular hashing.
+3. `logical_content_fingerprint` is SHA-256 over a versioned binary framing of the JCS logical-schema document and every normalized logical row. Eight-byte unsigned big-endian lengths frame the schema, rows, and cells; the row count and type tags are explicit. Integers use ASCII decimal, finite float64 values use big-endian IEEE 754 bytes, UTF-8 strings retain exact code points, decimal128 values use declared-scale strings, and UTC timestamps use fixed-unit RFC 3339 strings. Null and Boolean values have dedicated tags. `ORDERED` retains rows; `UNORDERED` sorts framed rows bytewise while retaining duplicate multiplicity. The fingerprint has no Parquet metadata, Python `repr`, locale, native newline, pickle, or built-in `hash()` dependency.
+
+The logical schema orders fields and records normalized type, nullability,
+decimal precision/scale, UTC timestamp unit/timezone, and row-order semantics.
+Batch 4B.1 supports Boolean, signed and unsigned 8/16/32/64-bit integers,
+float64, UTF-8, decimal128 with nonnegative scale no greater than precision, and
+UTC timestamps at second, millisecond, microsecond, or nanosecond units. It
+rejects inferred-schema mismatch, ambiguous metadata, unsupported/nested types,
+invalid nulls, NaN, and Infinity. Logical equivalence never substitutes for
+physical identity or lineage.
+
+The `qh-parquet-v1-zstd` profile pins PyArrow 25.0.1, Parquet 2.6, data pages
+2.0, 65,536-row groups, Zstandard level 9, disabled dictionary/statistics/byte
+stream split/page index/decimal-integer storage/time adjustment, enabled page
+checksums and Arrow-schema storage, explicit page/batch/dictionary sizes, no
+timestamp coercion or truncation, and no custom metadata, flavor, filesystem,
+encryption, sorting, bloom filter, column encoding, or row-per-page override.
+Input schema metadata is rejected. Identical input, declared ordering, profile,
+and pinned environment must reproduce exact bytes or fail. Different valid
+profiles may produce different physical digests while retaining one logical
+fingerprint. Cross-version, cross-library, and unverified cross-platform exact
+byte equality are not claimed.
+
+Batch 4B.2 still owns the four timestamp semantics, point-in-time/as-of
+eligibility, future-publication exclusion, revision/vintage eligibility, and
+normalized/curated PIT selection tests.
 
 ## Quality controls
 

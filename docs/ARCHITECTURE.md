@@ -9,8 +9,10 @@ registry revisions, JCS canonicalization, SHA-256 contracts, governed registry
 validation, and generic freeze manifests using synthetic tests only. Data,
 experiment-lifecycle, sealed-release, simulation, and trading behavior remain
 unimplemented. Batch 4A adds only the immutable exact-byte object store, generic
-artifact sidecars, and byte-faithful synthetic raw-capture foundation. Derived
-data and point-in-time contracts remain for Batch 4B. The design must be modular,
+artifact sidecars, and byte-faithful synthetic raw-capture foundation. Batch 4B.1
+adds deterministic Parquet publication and separate physical, lineage, and
+logical-content identities for explicitly typed synthetic tables. Point-in-time
+and as-of selection remain for Batch 4B.2. The design must be modular,
 reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
@@ -36,7 +38,7 @@ quant-hunter/
 │   ├── provenance/           # SHA-256 and generic freeze-manifest foundation
 │   ├── storage/              # exact-byte objects, sidecars, and raw capture
 │   ├── isolation/            # sealed-release contract; no embedded credentials
-│   ├── data/
+│   ├── data/                 # deterministic derived-table identity and Parquet
 │   ├── features/
 │   ├── experiments/
 │   ├── models/

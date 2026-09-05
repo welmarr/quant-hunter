@@ -45,8 +45,9 @@ do not resolve the unknown pre-existing subscription/API baseline, so headroom
 remains `UNKNOWN`.
 
 Batch 4A uses only the Python standard library and existing locked dependencies
-for local immutable object and synthetic raw-capture foundations. Incremental
-direct cost is USD 0, and no storage service or other commitment was enabled.
+for local immutable object and synthetic raw-capture foundations. Batch 4B.1 adds
+Apache-2.0 PyArrow 25.0.1 at USD 0 direct cost for deterministic local Parquet
+encoding. It adds no service, data, storage, subscription, or usage commitment.
 
 Paid-source proposals must also satisfy `DATA_SOURCE_REGISTRY.md`; infrastructure, API, subscription, and tooling proposals use this ledger even when no data source is involved.
 

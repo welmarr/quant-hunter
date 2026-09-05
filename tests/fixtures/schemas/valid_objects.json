@@ -113,6 +113,83 @@
     "limitations": ["not empirical data"],
     "owner": "test-suite"
   },
+  "dataset-lineage-manifest.schema.json": {
+    "schema_version": "1.0.0",
+    "dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
+    "layer": "normalized",
+    "created_at": "2026-09-05T06:00:00Z",
+    "physical_object_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "physical_artifact_manifest_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "logical_schema": {
+      "schema_version": "1.0.0",
+      "row_ordering": "ORDERED",
+      "fields": [
+        {
+          "name": "synthetic_value",
+          "type": {
+            "name": "int64",
+            "precision": null,
+            "scale": null,
+            "timestamp_unit": null,
+            "timezone": null
+          },
+          "nullable": false
+        }
+      ]
+    },
+    "schema_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "logical_content_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "row_ordering": "ORDERED",
+    "writer_profile": {
+      "profile_version": "1.0.0",
+      "profile_name": "qh-parquet-v1-zstd",
+      "library": "pyarrow",
+      "library_version": "25.0.1",
+      "row_group_size": 65536,
+      "compression": "zstd",
+      "compression_level": 9,
+      "use_dictionary": false,
+      "write_statistics": false,
+      "parquet_version": "2.6",
+      "data_page_version": "2.0",
+      "data_page_size": 65536,
+      "write_batch_size": 1024,
+      "dictionary_pagesize_limit": 1048576,
+      "use_byte_stream_split": false,
+      "column_encoding": null,
+      "use_deprecated_int96_timestamps": false,
+      "timestamp_coercion": null,
+      "allow_truncated_timestamps": false,
+      "use_compliant_nested_type": true,
+      "flavor": null,
+      "filesystem": null,
+      "encryption": null,
+      "store_schema": true,
+      "write_page_index": false,
+      "write_page_checksum": true,
+      "sorting_columns": [],
+      "store_decimal_as_integer": false,
+      "write_time_adjusted_to_utc": false,
+      "max_rows_per_page": null,
+      "bloom_filters": null,
+      "metadata_policy": "REJECT_INPUT_WRITE_ARROW_SCHEMA_ONLY",
+      "null_policy": "PRESERVE_DECLARED_NULLS"
+    },
+    "writer_profile_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "parent_ordering": "ORDERED",
+    "parent_evidence": [],
+    "transformation": {
+      "identity": "synthetic normalization",
+      "configuration_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "producer": {
+      "code_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "environment_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "source_ids": ["SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"],
+    "references": ["synthetic://lineage/reference"],
+    "quality_disposition": "APPROVED"
+  },
   "dataset.schema.json": {
     "schema_version": "1.0.0",
     "dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
