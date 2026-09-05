@@ -6,6 +6,6 @@ requires `schema_version: "1.0.0"`; a version change requires a new directory,
 new `$id`, migration decision, and retained prior schema.
 
 `common.schema.json` defines shared timestamp, digest, normalized-decimal, and
-typed UUIDv7 formats. Registry-shaped schemas include revision metadata for
-future append-only records, but this batch implements no allocation, persistence,
-canonicalization, hashing, or registry behavior.
+typed UUIDv7 formats. Registry-shaped schemas include revision metadata used by
+the append-only registry. Governed writes validate these schemas before emitting
+RFC 8785 canonical revisions; kinds without an authoritative schema fail closed.

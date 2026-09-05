@@ -77,7 +77,7 @@ def test_identity_rejects_wrong_kind_version_and_unknown_prefix() -> None:
 
 def test_unique_allocation_creates_exclusive_first_revisions(tmp_path: Path) -> None:
     """Default allocation creates unique IDs and fixed v000001 paths."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
 
     allocations = [
         store.allocate(RegistryKind.BACKLOG, synthetic_record()) for _ in range(8)
@@ -96,7 +96,7 @@ def test_collision_retries_and_logs(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """An existing generated ID is logged and replaced by a fresh UUIDv7."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     existing = store.allocate(
         RegistryKind.SOURCE,
         synthetic_record(),
@@ -116,7 +116,7 @@ def test_collision_retries_and_logs(
 
 def test_collision_retry_limit_is_enforced(tmp_path: Path) -> None:
     """Repeated collisions stop at the caller's explicit retry bound."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     store.allocate(RegistryKind.COST, synthetic_record(), uuid_factory=lambda: UUID_1)
 
     with pytest.raises(AllocationExhaustedError, match="after 2 attempts"):
@@ -132,7 +132,7 @@ def test_collision_retry_limit_is_enforced(tmp_path: Path) -> None:
 
 def test_exclusive_first_revision_never_overwrites(tmp_path: Path) -> None:
     """Creating an allocated first revision a second time preserves its bytes."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     object_id = new_typed_id(RegistryKind.DATASET, uuid_factory=lambda: UUID_1)
     original = store.create_initial(RegistryKind.DATASET, object_id, synthetic_record())
     original_bytes = original.path.read_bytes()
@@ -147,7 +147,7 @@ def test_exclusive_first_revision_never_overwrites(tmp_path: Path) -> None:
 
 def test_append_is_zero_padded_chained_and_non_overwriting(tmp_path: Path) -> None:
     """Append writes the next file and links it to exact prior file bytes."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     first = store.allocate(RegistryKind.PATTERN, synthetic_record()).revision
     first_bytes = first.path.read_bytes()
 
@@ -169,7 +169,7 @@ def test_append_is_zero_padded_chained_and_non_overwriting(tmp_path: Path) -> No
 
 def test_stale_writer_is_rejected_without_creating_revision(tmp_path: Path) -> None:
     """A stale digest cannot fork or advance the authoritative chain."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     first = store.allocate(RegistryKind.EXPERIMENT, synthetic_record()).revision
     object_id = cast(str, first.record["experiment_id"])
     second = store.append(object_id, first.digest, synthetic_record("FAILED"))
@@ -183,7 +183,7 @@ def test_stale_writer_is_rejected_without_creating_revision(tmp_path: Path) -> N
 
 def test_concurrent_writers_allow_one_compare_and_swap_winner(tmp_path: Path) -> None:
     """Two writers with one head digest yield one append and one stale writer."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     first = store.allocate(RegistryKind.MODEL, synthetic_record()).revision
     object_id = cast(str, first.record["object_id"])
     barrier = Barrier(2)
@@ -206,7 +206,7 @@ def test_concurrent_writers_allow_one_compare_and_swap_winner(tmp_path: Path) ->
 
 def test_concurrent_allocation_is_unique_and_complete(tmp_path: Path) -> None:
     """Concurrent allocators serialize safely and leave complete first revisions."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     barrier = Barrier(12)
 
     def allocate(_: int) -> str:
@@ -222,7 +222,7 @@ def test_concurrent_allocation_is_unique_and_complete(tmp_path: Path) -> None:
 
 def test_concurrent_initial_creation_has_one_winner(tmp_path: Path) -> None:
     """Exclusive directory creation prevents duplicate first-revision writers."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     object_id = new_typed_id(RegistryKind.FAMILY, uuid_factory=lambda: UUID_1)
     barrier = Barrier(2)
 
@@ -245,7 +245,7 @@ def test_concurrent_initial_creation_has_one_winner(tmp_path: Path) -> None:
 
 def test_broken_previous_digest_chain_is_rejected(tmp_path: Path) -> None:
     """Verification detects a revision whose prior digest was altered."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     first = store.allocate(RegistryKind.SOURCE, synthetic_record()).revision
     object_id = cast(str, first.record["source_id"])
     second = store.append(object_id, first.digest, synthetic_record("REJECTED"))
@@ -259,7 +259,7 @@ def test_broken_previous_digest_chain_is_rejected(tmp_path: Path) -> None:
 
 def test_duplicate_identifier_detection_is_global(tmp_path: Path) -> None:
     """The same full permanent ID in two locations invalidates the registry."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     allocation = store.allocate(RegistryKind.BACKLOG, synthetic_record())
     duplicate = tmp_path / "unexpected-kind" / allocation.object_id
     shutil.copytree(allocation.revision.path.parent, duplicate)
@@ -272,7 +272,7 @@ def test_duplicate_identifier_detection_is_global(tmp_path: Path) -> None:
 
 def test_rejected_and_failed_history_remains_immutable(tmp_path: Path) -> None:
     """Later outcomes cannot erase rejected or failed synthetic revisions."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     first = store.allocate(
         RegistryKind.EXPERIMENT, synthetic_record("REJECTED")
     ).revision
@@ -294,7 +294,7 @@ def test_rejected_and_failed_history_remains_immutable(tmp_path: Path) -> None:
 
 def test_generated_index_is_disposable_and_non_authoritative(tmp_path: Path) -> None:
     """Generated views identify themselves as non-authoritative and rebuild."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     allocation = store.allocate(RegistryKind.COST, synthetic_record())
 
     index_path = store.rebuild_index()
@@ -318,7 +318,7 @@ def test_record_validation_and_managed_fields_fail_before_write(tmp_path: Path) 
         if record.get("status") == "INVALID":
             raise RegistryIntegrityError("synthetic validation failure")
 
-    store = RegistryStore(tmp_path, validator=validator)
+    store = RegistryStore.for_synthetic_tests(tmp_path, validator=validator)
     allocation = store.allocate(RegistryKind.DATASET, synthetic_record())
     assert validations == [RegistryKind.DATASET]
 
@@ -341,7 +341,7 @@ def test_integrity_errors_cover_wrong_location_sequence_and_content(
     tmp_path: Path,
 ) -> None:
     """Malformed locations, gaps, envelopes, and JSON all fail closed."""
-    store = RegistryStore(tmp_path)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     allocation = store.allocate(RegistryKind.BACKLOG, synthetic_record())
     object_id = allocation.object_id
     object_directory = allocation.revision.path.parent
@@ -367,7 +367,7 @@ def test_integrity_errors_cover_wrong_location_sequence_and_content(
 
 def test_unknown_empty_object_and_lock_timeout_fail_closed(tmp_path: Path) -> None:
     """Absent, incomplete, and locked objects cannot be treated as valid chains."""
-    store = RegistryStore(tmp_path, lock_timeout_seconds=0.01)
+    store = RegistryStore.for_synthetic_tests(tmp_path, lock_timeout_seconds=0.01)
     unknown = new_typed_id(RegistryKind.COST, uuid_factory=lambda: UUID_1)
     with pytest.raises(RegistryIntegrityError, match="Unknown"):
         store.verify_object(unknown)
@@ -388,10 +388,12 @@ def test_registry_configuration_and_non_json_values_are_rejected(
     tmp_path: Path,
 ) -> None:
     """Invalid configuration and non-finite JSON cannot enter the registry."""
+    with pytest.raises(TypeError, match=r"RegistryStore[.]governed"):
+        RegistryStore(tmp_path, validator=lambda _kind, _record: None)
     with pytest.raises(ValueError, match="lock_timeout_seconds"):
-        RegistryStore(tmp_path, lock_timeout_seconds=0)
-    store = RegistryStore(tmp_path)
+        RegistryStore.for_synthetic_tests(tmp_path, lock_timeout_seconds=0)
+    store = RegistryStore.for_synthetic_tests(tmp_path)
     bad = synthetic_record()
     bad["value"] = float("nan")
-    with pytest.raises(RegistryIntegrityError, match="finite JSON"):
+    with pytest.raises(RegistryIntegrityError, match="valid I-JSON"):
         store.allocate(RegistryKind.FAMILY, bad)

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import os
 import re
@@ -13,26 +11,31 @@ from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final, cast
+from typing import Final
 from uuid import uuid7
 
+from quant_hunter.config.canonical import (
+    CanonicalJsonError,
+    JsonRecord,
+    JsonValue,
+    canonicalize_json,
+    parse_json_document,
+)
 from quant_hunter.identity.ids import (
     RegistryKind,
     UuidFactory,
     kind_for_id,
     new_typed_id,
 )
+from quant_hunter.provenance.hashing import sha256_bytes
 
-type JsonValue = (
-    bool | int | float | str | list[JsonValue] | dict[str, JsonValue] | None
-)
-type JsonRecord = dict[str, JsonValue]
 type RecordValidator = Callable[[RegistryKind, Mapping[str, JsonValue]], None]
 
 LOGGER = logging.getLogger(__name__)
 REVISION_PATTERN: Final = re.compile(r"^v(?P<number>[0-9]{6})[.]json$")
 FIRST_REVISION: Final = "v000001.json"
 LOCK_RETRY_SECONDS: Final = 0.005
+_CONSTRUCTION_TOKEN: Final = object()
 
 
 class RegistryError(RuntimeError):
@@ -83,36 +86,26 @@ class Allocation:
 
 
 def _revision_digest(content: bytes) -> str:
-    """Hash exact revision-file bytes for registry chaining only."""
-    return f"sha256:{hashlib.sha256(content).hexdigest()}"
+    """Hash exact revision-file bytes for the registry chain."""
+    return sha256_bytes(content)
 
 
 def _encode_record(record: Mapping[str, JsonValue]) -> bytes:
-    """Serialize a registry record; this is deliberately not RFC 8785 JCS."""
+    """Serialize a new registry revision as RFC 8785 canonical UTF-8 bytes."""
     try:
-        text = json.dumps(
-            record,
-            allow_nan=False,
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-            separators=(",", ": "),
-        )
-    except (TypeError, ValueError) as error:
-        raise RegistryIntegrityError(
-            "Registry records must contain finite JSON"
-        ) from error
-    return f"{text}\n".encode()
+        return canonicalize_json(dict(record))
+    except CanonicalJsonError as error:
+        raise RegistryIntegrityError("Registry record is not valid I-JSON") from error
 
 
 def _decode_record(content: bytes, path: Path) -> JsonRecord:
     try:
-        value = json.loads(content)
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        value = parse_json_document(content)
+    except CanonicalJsonError as error:
         raise RegistryIntegrityError(f"Invalid UTF-8 JSON revision: {path}") from error
     if not isinstance(value, dict):
         raise RegistryIntegrityError(f"Revision is not a JSON object: {path}")
-    return cast(JsonRecord, value)
+    return value
 
 
 def _exclusive_write(path: Path, content: bytes) -> None:
@@ -160,14 +153,53 @@ class RegistryStore:
         self,
         root: Path,
         *,
-        validator: RecordValidator | None = None,
+        validator: RecordValidator,
         lock_timeout_seconds: float = 5.0,
+        _construction_token: object | None = None,
     ) -> None:
+        if _construction_token is not _CONSTRUCTION_TOKEN:
+            raise TypeError(
+                "Use RegistryStore.governed or RegistryStore.for_synthetic_tests"
+            )
         if lock_timeout_seconds <= 0:
             raise ValueError("lock_timeout_seconds must be positive")
         self.root = root
         self.validator = validator
         self.lock_timeout_seconds = lock_timeout_seconds
+
+    @classmethod
+    def governed(
+        cls,
+        root: Path,
+        schema_directory: Path,
+        *,
+        lock_timeout_seconds: float = 5.0,
+    ) -> RegistryStore:
+        """Create an authoritative store using the existing versioned schemas."""
+        from quant_hunter.config.schema import GovernedSchemaValidator
+
+        return cls(
+            root,
+            validator=GovernedSchemaValidator(schema_directory),
+            lock_timeout_seconds=lock_timeout_seconds,
+            _construction_token=_CONSTRUCTION_TOKEN,
+        )
+
+    @classmethod
+    def for_synthetic_tests(
+        cls,
+        root: Path,
+        *,
+        validator: RecordValidator | None = None,
+        lock_timeout_seconds: float = 5.0,
+    ) -> RegistryStore:
+        """Create an explicitly ungoverned store for isolated low-level tests."""
+        return cls(
+            root,
+            validator=validator or (lambda _kind, _record: None),
+            lock_timeout_seconds=lock_timeout_seconds,
+            _construction_token=_CONSTRUCTION_TOKEN,
+        )
 
     def allocate(
         self,
@@ -377,8 +409,7 @@ class RegistryStore:
 
     def _validate(self, kind: RegistryKind, record: Mapping[str, JsonValue]) -> None:
         _encode_record(record)
-        if self.validator is not None:
-            self.validator(kind, record)
+        self.validator(kind, record)
 
     def _require_id_kind(self, kind: RegistryKind, object_id: str) -> None:
         actual = kind_for_id(object_id)

@@ -31,11 +31,12 @@ Rejected and cancelled entries remain visible. Approval of one item does not app
 
 ## Entries
 
-No purchases or paid commitments are recorded. Stage 1B Batches 1–3A use
+No purchases or paid commitments are recorded. Stage 1B Batches 1–3B use
 free/open-source CPython, uv, Hatchling, Ruff, mypy, pytest, pytest-cov,
 coverage.py, jsonschema, referencing, rfc3339-validator, and types-jsonschema at
-USD 0 direct cost. Batch 3A added only standard-library runtime code and no
-dependency. On 2026-09-05 the repository was verified public and GitHub's
+USD 0 direct cost. Batch 3B adds the Apache-2.0 `rfc8785` 0.1.4 package at USD 0
+and creates no service, subscription, or usage commitment. On 2026-09-05 the
+repository was verified public and GitHub's
 current documentation stated that standard GitHub-hosted runners are free for
 public repositories; the workflow uses only standard Ubuntu/Windows runners,
 no cache, and no artifact upload. Larger runners are prohibited, and visibility

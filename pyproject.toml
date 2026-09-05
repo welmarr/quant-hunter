@@ -8,17 +8,19 @@ version = "0.1.0"
 description = "Scientifically governed quantitative-research foundation"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
-dependencies = []
+dependencies = [
+    "jsonschema>=4.25,<5",
+    "referencing>=0.36,<1",
+    "rfc3339-validator>=0.1,<1",
+    "rfc8785==0.1.4",
+]
 
 [dependency-groups]
 dev = [
     "hatchling>=1.27,<2",
-    "jsonschema>=4.25,<5",
     "mypy>=1.18,<2",
     "pytest>=8.4,<9",
     "pytest-cov>=7,<8",
-    "referencing>=0.36,<1",
-    "rfc3339-validator>=0.1,<1",
     "ruff>=0.12,<1",
     "types-jsonschema>=4.25,<5",
 ]

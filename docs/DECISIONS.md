@@ -217,3 +217,17 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** DEC-0007, DEC-0009, `ARCHITECTURE.md`, `ROADMAP.md` Stage 1B items 5–6, `src/quant_hunter/identity/`, and `tests/test_registry.py`.
 - **Supersedes / superseded by:** Stages, and does not supersede, DEC-0007 or DEC-0009.
 - **Owner and approver:** Project owner through explicit Stage 1B Batch 3A authorization dated 2026-09-05.
+
+### DEC-0014 — Use a Pinned RFC 8785 Implementation for Canonical Identity
+
+- **Date:** 2026-09-05
+- **Status:** ACCEPTED
+- **Scope:** architecture / validation / reproducibility
+- **Context:** Batch 3B authorizes DEC-0007 canonicalization and hashing. Python's standard JSON encoder does not implement RFC 8785 number serialization or UTF-16 property ordering, and a local partial serializer would create a high-risk identity contract.
+- **Decision:** Pin the small, pure-Python, Apache-2.0 `rfc8785` package at 0.1.4 for JCS serialization. Wrap it with strict project ingestion that rejects duplicate object keys, NaN/Infinity, invalid Unicode, unresolved `${...}` tokens, integers outside the interoperable IEEE 754 safe range, non-string keys, and non-JSON values. Keep exact-byte SHA-256 and canonical-JSON SHA-256 as separate public contracts using `sha256:<64 lowercase hex>`. New registry revisions use JCS, while chain validation continues to hash exact stored revision bytes so history is never rewritten. Governed registry writes require the existing versioned JSON Schemas and fail closed for unmapped kinds; a named synthetic-only constructor isolates low-level registry tests. Freeze-manifest construction binds the DEC-0007 inputs but performs no lifecycle or sealed-data action.
+- **Alternatives considered:** `json.dumps(sort_keys=True)` is not JCS. A custom ECMAScript binary64 serializer is rejected as an unnecessary correctness risk. Silent normalization of historical registry files would violate append-only history. Duplicating registry validation rules outside the schemas would create drift.
+- **Scientific/statistical consequences:** Canonically equivalent metadata has one stable identity, malformed inputs fail before hashing, and freeze inputs can be bound deterministically. This adds no model, data, experiment execution, sealed release, or trading behavior.
+- **Reproducibility and cost consequences:** RFC 8785 examples and Appendix B vectors verify the dependency under pinned CPython 3.14.7. The dependency and its source are recorded in `uv.lock`; direct cost is USD 0. JSON Schema runtime packages move from development-only classification because governed writes now require them. No service or paid commitment is introduced.
+- **References:** DEC-0007, DEC-0008, DEC-0009, DEC-0013, RFC 8785, `pyproject.toml`, `uv.lock`, `src/quant_hunter/config/`, `src/quant_hunter/provenance/`, and the JCS/freeze/governed-registry tests.
+- **Supersedes / superseded by:** Completes the Batch 3B transition required by DEC-0013 without changing its exact-file history rule.
+- **Owner and approver:** Project owner through explicit Stage 1B Batch 3B authorization dated 2026-09-05.

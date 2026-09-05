@@ -36,8 +36,10 @@ Direct development dependencies are intentionally limited to Hatchling 1.32.0
 (packaging), Ruff 0.16.6 (format/lint), mypy 1.20.2 (strict typing), pytest
 8.4.2 (tests), and pytest-cov 7.1.0 with coverage.py 7.16.0 (branch coverage).
 Batch 2 adds jsonschema 4.26.0, referencing 0.37.0, rfc3339-validator 0.1.4,
-and types-jsonschema 4.26.0.20260518 solely for local Draft 2020-12
-conformance, reference resolution, semantic timestamp checks, and strict typing.
+and types-jsonschema 4.26.0.20260518 for local Draft 2020-12 conformance,
+reference resolution, semantic timestamp checks, and strict typing. Batch 3B
+makes the three runtime validation packages direct runtime dependencies and
+adds the exact runtime pin `rfc8785==0.1.4` for standards-conformant JCS.
 Exact resolved versions and transitive dependencies are authoritative in
 `uv.lock`. No quantitative, market-data, broker, backtest, optimizer,
 portfolio, or AI library is installed.
@@ -189,3 +191,33 @@ history, and disposable index rebuilds. Combined statement/branch coverage was
 behaviors required by DEC-0008 are directly exercised. `git diff --check` and
 the offline source/wheel build passed. Hosted CI was not triggered. No runtime
 or development dependency, purchase, service, or paid commitment was added.
+
+## Batch 3B canonicalization and hashing validation
+
+On 2026-09-05, Batch 3B implemented only Stage 1B roadmap item 6. The
+`quant_hunter.config` package strictly ingests I-JSON, rejects duplicate keys,
+non-finite numbers, unsupported values, invalid Unicode, and unresolved
+environment tokens, then delegates number and property serialization to pinned
+`rfc8785` 0.1.4. The `quant_hunter.provenance` package separates exact-byte
+SHA-256 from canonical-JSON SHA-256 and constructs a generic deterministic
+DEC-0007 freeze manifest. This does not implement experiment lifecycle or data
+storage.
+
+New registry revisions are canonical JCS bytes. Governed writes must pass the
+existing Draft 2020-12 schema catalog; an unmapped kind fails closed. The
+explicit low-level synthetic test constructor remains available for registry
+mechanics. Chain verification hashes each stored file exactly, so historical
+bytes are neither normalized nor rewritten. No real persistent record exists or
+requires migration.
+
+The locked Windows gate passed with 160 tests and 96.60% combined
+statement/branch coverage. The dedicated canonicalization and hashing suite
+achieved 100% statement and branch coverage. It includes the RFC 8785 primary
+example, UTF-16 property ordering, 24 finite Appendix B binary64 vectors,
+Unicode and escaping, NaN/Infinity and duplicate-key rejection, digest
+stability/change and mismatch cases, schema-invalid governed writes,
+historical-byte preservation, and deterministic freeze manifests. Ruff
+format/lint and strict mypy passed; the offline build and final exact results are
+recorded with the Batch 3B change. Hosted CI remains for independent review
+after push. The new dependency is open source and costs USD 0; no paid
+commitment was created.

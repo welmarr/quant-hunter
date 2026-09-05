@@ -6,11 +6,12 @@ Quant Hunter is a planned quantitative-research and market-discovery platform. I
 
 Stage 0 and Stage 1A are complete. Stage 1B is in progress: Batches 1–2
 provide the minimal Python scaffold, locked quality gate, public-repository CI
-workflow, and versioned JSON Schema foundation. Batch 3A adds typed UUIDv7
-allocation and an append-only file-backed registry core with synthetic integrity
-and concurrency tests. No real registry object, trading strategy, quantitative
-algorithm, data or broker connection, backtest engine, portfolio logic, or
-live-trading capability exists.
+workflow, and versioned JSON Schema foundation. Batches 3A–3B add typed UUIDv7
+allocation, append-only file-backed registries, RFC 8785 canonicalization,
+separate exact-byte and canonical-JSON SHA-256 contracts, mandatory governed
+registry validation, and generic freeze-manifest construction. No real registry
+object, trading strategy, quantitative algorithm, data or broker connection,
+backtest engine, portfolio logic, or live-trading capability exists.
 
 ## Documentation Map
 

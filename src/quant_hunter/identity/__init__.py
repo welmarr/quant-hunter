@@ -1,5 +1,6 @@
 """Typed identities and append-only registry storage."""
 
+from quant_hunter.config.canonical import JsonRecord, JsonValue
 from quant_hunter.identity.ids import (
     IdentityError,
     RegistryKind,
@@ -11,8 +12,6 @@ from quant_hunter.identity.registry import (
     Allocation,
     AllocationExhaustedError,
     DuplicateIdentifierError,
-    JsonRecord,
-    JsonValue,
     ObjectAlreadyExistsError,
     RegistryIntegrityError,
     RegistryLockTimeoutError,
