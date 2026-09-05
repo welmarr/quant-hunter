@@ -11,7 +11,8 @@
     "media_type",
     "byte_size",
     "created_at",
-    "producer"
+    "producer",
+    "provenance"
   ],
   "properties": {
     "schema_version": {"const": "1.0.0"},
@@ -33,6 +34,39 @@
         "code_revision": {"$ref": "common.schema.json#/$defs/git_revision"},
         "command": {"type": "string", "minLength": 1},
         "environment_digest": {"$ref": "common.schema.json#/$defs/digest"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ids",
+        "dataset_ids",
+        "references",
+        "configuration_digest"
+      ],
+      "properties": {
+        "source_ids": {
+          "type": "array",
+          "items": {"$ref": "common.schema.json#/$defs/source_id"},
+          "uniqueItems": true
+        },
+        "dataset_ids": {
+          "type": "array",
+          "items": {"$ref": "common.schema.json#/$defs/dataset_id"},
+          "uniqueItems": true
+        },
+        "references": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "configuration_digest": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "common.schema.json#/$defs/digest"}
+          ]
+        }
       }
     },
     "parent_digests": {

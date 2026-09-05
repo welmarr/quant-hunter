@@ -221,3 +221,28 @@ format/lint and strict mypy passed; the offline build and final exact results ar
 recorded with the Batch 3B change. Hosted CI remains for independent review
 after push. The new dependency is open source and costs USD 0; no paid
 commitment was created.
+
+## Batch 4A immutable object and raw-capture validation
+
+On 2026-09-05, Batch 4A implemented only the first half of Stage 1B roadmap
+item 7. Exact bytes publish under the DEC-0007 SHA-256 layout through a verified
+same-directory staging file and exclusive atomic hard-link finalization. Existing
+valid content deduplicates; mismatched content, unsafe roots, traversal,
+link-like components, malformed descriptors, and partial staging names fail
+closed. The abstraction exposes no mutation, replacement, or deletion method.
+
+Generic artifact sidecars and raw-capture metadata use the existing strict JSON,
+JCS, SHA-256, and versioned schema catalog. Payload bytes, artifact metadata,
+and capture metadata remain separate immutable objects. Synthetic tests cover
+distinct correction provenance, physical deduplication, quarantine retention,
+and credential-shaped metadata rejection. No external request or real data was
+used.
+
+The locked Windows gate passed with 200 tests and 96.46% combined
+statement/branch coverage. The focused storage suite gives 100% coverage
+to raw capture, artifact manifests, and credential controls, and 95% to the
+object store including atomic races and filesystem failure paths. Ruff,
+strict mypy, build, import, archive inspection, and diff checks also passed.
+Hosted Windows and Ubuntu CI remain for independent review after push. Batch 4B
+retains every derived-Parquet, three-digest, normalized/curated, timestamp, and
+point-in-time obligation. No dependency or paid commitment was added.

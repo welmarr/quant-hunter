@@ -10,8 +10,12 @@ workflow, and versioned JSON Schema foundation. Batches 3A–3B add typed UUIDv7
 allocation, append-only file-backed registries, RFC 8785 canonicalization,
 separate exact-byte and canonical-JSON SHA-256 contracts, mandatory governed
 registry validation, and generic freeze-manifest construction. No real registry
-object, trading strategy, quantitative algorithm, data or broker connection,
-backtest engine, portfolio logic, or live-trading capability exists.
+object exists. Batch 4A adds only local immutable exact-byte object publication,
+generic artifact sidecars, and synthetic byte-faithful raw capture with separate
+quarantine/provenance metadata. Roadmap item 7 remains in progress; no real data,
+Parquet, point-in-time selection, trading strategy, quantitative algorithm,
+broker connection, backtest engine, portfolio logic, or live-trading capability
+exists.
 
 ## Documentation Map
 

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/raw-capture.schema.json",
+  "title": "Quant Hunter Byte-Faithful Raw Capture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_id",
+    "dataset_id",
+    "provider",
+    "source_endpoint",
+    "request",
+    "payload_digest",
+    "payload_size",
+    "storage_reference",
+    "media_type",
+    "compression",
+    "ingestion_time",
+    "source_native_references",
+    "coverage_references",
+    "retrieval_status",
+    "quality_disposition",
+    "warnings",
+    "artifact_manifest_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "source_id": {"$ref": "common.schema.json#/$defs/source_id"},
+    "dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
+    "provider": {"type": "string", "minLength": 1},
+    "source_endpoint": {"type": "string", "format": "uri"},
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parameters", "reference"],
+      "properties": {
+        "parameters": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^(?!.*(?:authorization|cookie|password|secret|token|credential|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret))[a-z][a-z0-9_-]*$"
+          },
+          "additionalProperties": {"$ref": "#/$defs/request_value"}
+        },
+        "reference": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "minLength": 1}
+          ]
+        }
+      }
+    },
+    "payload_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "payload_size": {"type": "integer", "minimum": 0},
+    "storage_reference": {
+      "type": "string",
+      "pattern": "^objects/sha256/[0-9a-f]{2}/[0-9a-f]{64}$"
+    },
+    "media_type": {
+      "type": "string",
+      "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"
+    },
+    "compression": {
+      "enum": ["NONE", "GZIP", "ZIP", "BZIP2", "XZ", "ZSTANDARD", "OTHER", "UNKNOWN"]
+    },
+    "ingestion_time": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "source_native_references": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "coverage_references": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "retrieval_status": {"enum": ["SUCCEEDED", "PARTIAL", "FAILED"]},
+    "quality_disposition": {"enum": ["PENDING", "APPROVED", "QUARANTINED", "REJECTED"]},
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "artifact_manifest_digest": {"$ref": "common.schema.json#/$defs/digest"}
+  },
+  "$defs": {
+    "request_scalar": {
+      "oneOf": [
+        {"type": "string", "not": {"pattern": "[$][{][^}]+[}]"}},
+        {"type": "integer"},
+        {"type": "boolean"},
+        {"type": "null"}
+      ]
+    },
+    "request_value": {
+      "oneOf": [
+        {"$ref": "#/$defs/request_scalar"},
+        {
+          "type": "array",
+          "items": {"$ref": "#/$defs/request_scalar"},
+          "maxItems": 1000
+        }
+      ]
+    }
+  }
+}

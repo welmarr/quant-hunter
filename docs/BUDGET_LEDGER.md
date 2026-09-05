@@ -31,7 +31,7 @@ Rejected and cancelled entries remain visible. Approval of one item does not app
 
 ## Entries
 
-No purchases or paid commitments are recorded. Stage 1B Batches 1–3B use
+No purchases or paid commitments are recorded. Stage 1B Batches 1–4A use
 free/open-source CPython, uv, Hatchling, Ruff, mypy, pytest, pytest-cov,
 coverage.py, jsonschema, referencing, rfc3339-validator, and types-jsonschema at
 USD 0 direct cost. Batch 3B adds the Apache-2.0 `rfc8785` 0.1.4 package at USD 0
@@ -43,6 +43,10 @@ no cache, and no artifact upload. Larger runners are prohibited, and visibility
 or billing-policy changes require immediate reassessment. These zero-cost tools
 do not resolve the unknown pre-existing subscription/API baseline, so headroom
 remains `UNKNOWN`.
+
+Batch 4A uses only the Python standard library and existing locked dependencies
+for local immutable object and synthetic raw-capture foundations. Incremental
+direct cost is USD 0, and no storage service or other commitment was enabled.
 
 Paid-source proposals must also satisfy `DATA_SOURCE_REGISTRY.md`; infrastructure, API, subscription, and tooling proposals use this ledger even when no data source is involved.
 

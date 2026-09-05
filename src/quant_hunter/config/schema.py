@@ -1,4 +1,4 @@
-"""Mandatory validation of governed registry records against versioned schemas."""
+"""Offline validation against the authoritative versioned schema catalog."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
-from jsonschema import Draft202012Validator, FormatChecker, ValidationError
+from jsonschema import Draft202012Validator, FormatChecker, SchemaError, ValidationError
 from referencing import Registry, Resource
 
 from quant_hunter.config.canonical import (
@@ -50,19 +50,34 @@ def _load_schema(path: Path) -> dict[str, Any]:
     return cast(dict[str, Any], value)
 
 
-class GovernedSchemaValidator:
-    """Resolve and apply the existing Draft 2020-12 schema catalog offline."""
+class VersionedSchemaCatalog:
+    """Load and validate the complete local Draft 2020-12 schema catalog."""
 
     def __init__(self, schema_directory: Path) -> None:
-        required_names = set(SCHEMA_BY_KIND.values()) | {"common.schema.json"}
+        paths = sorted(schema_directory.glob("*.schema.json"))
+        if not paths:
+            raise SchemaCatalogError(
+                f"Required governed schemas are missing: {schema_directory}"
+            )
         schemas: dict[str, dict[str, Any]] = {}
-        for name in sorted(required_names):
-            path = schema_directory / name
-            if not path.is_file():
-                raise SchemaCatalogError(f"Required governed schema is missing: {path}")
+        schema_ids: set[str] = set()
+        for path in paths:
             schema = _load_schema(path)
-            Draft202012Validator.check_schema(schema)
-            schemas[name] = schema
+            try:
+                Draft202012Validator.check_schema(schema)
+            except SchemaError as error:
+                raise SchemaCatalogError(f"Invalid governed schema: {path}") from error
+            schema_id = schema.get("$id")
+            if not isinstance(schema_id, str) or schema_id in schema_ids:
+                raise SchemaCatalogError(
+                    f"Governed schema has a missing or duplicate $id: {path}"
+                )
+            schema_ids.add(schema_id)
+            schemas[path.name] = schema
+        if "common.schema.json" not in schemas:
+            raise SchemaCatalogError(
+                f"Required governed schema is missing: {schema_directory / 'common.schema.json'}"
+            )
         registry = Registry().with_resources(
             [
                 (
@@ -74,12 +89,34 @@ class GovernedSchemaValidator:
         )
         self._validators = {
             name: Draft202012Validator(
-                schemas[name],
+                schema,
                 registry=registry,
                 format_checker=FormatChecker(),
             )
-            for name in set(SCHEMA_BY_KIND.values())
+            for name, schema in schemas.items()
+            if name != "common.schema.json"
         }
+
+    def validate(self, schema_name: str, document: Mapping[str, JsonValue]) -> None:
+        """Validate one document or fail closed for an unknown schema name."""
+        validator = self._validators.get(schema_name)
+        if validator is None:
+            raise MissingGovernedSchemaError(
+                f"No authoritative schema named {schema_name!r}"
+            )
+        try:
+            validator.validate(dict(document))
+        except ValidationError as error:
+            raise RecordSchemaError(
+                f"Document failed {schema_name} at {error.json_path}: {error.message}"
+            ) from error
+
+
+class GovernedSchemaValidator:
+    """Resolve and apply the existing Draft 2020-12 schema catalog offline."""
+
+    def __init__(self, schema_directory: Path) -> None:
+        self._catalog = VersionedSchemaCatalog(schema_directory)
 
     def __call__(self, kind: RegistryKind, record: Mapping[str, JsonValue]) -> None:
         """Validate a governed record or fail closed for an unmapped kind."""
@@ -88,10 +125,4 @@ class GovernedSchemaValidator:
             raise MissingGovernedSchemaError(
                 f"No authoritative registry schema exists for {kind.name}"
             )
-        try:
-            self._validators[schema_name].validate(dict(record))
-        except ValidationError as error:
-            raise RecordSchemaError(
-                f"{kind.name} record failed {schema_name} at "
-                f"{error.json_path}: {error.message}"
-            ) from error
+        self._catalog.validate(schema_name, record)

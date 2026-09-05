@@ -11,7 +11,36 @@
       "command": "synthetic-fixture",
       "environment_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     },
+    "provenance": {
+      "source_ids": [],
+      "dataset_ids": [],
+      "references": ["synthetic://artifact/fixture"],
+      "configuration_digest": null
+    },
     "parent_digests": []
+  },
+  "raw-capture.schema.json": {
+    "schema_version": "1.0.0",
+    "source_id": "SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841",
+    "dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
+    "provider": "Synthetic Public Provider",
+    "source_endpoint": "https://example.invalid/synthetic-payload",
+    "request": {
+      "parameters": {"series": "SYNTHETIC"},
+      "reference": "synthetic-request-1"
+    },
+    "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "payload_size": 128,
+    "storage_reference": "objects/sha256/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "media_type": "application/octet-stream",
+    "compression": "NONE",
+    "ingestion_time": "2026-09-05T06:00:00Z",
+    "source_native_references": ["synthetic-series"],
+    "coverage_references": ["synthetic-window"],
+    "retrieval_status": "SUCCEEDED",
+    "quality_disposition": "PENDING",
+    "warnings": [],
+    "artifact_manifest_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "configuration.schema.json": {
     "schema_version": "1.0.0",

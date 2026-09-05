@@ -56,3 +56,15 @@ registry writes. Exact-byte and canonical-JSON identities are separate, and
 new registry revisions use JCS without rewriting historical bytes. RISK-019
 remains `OPEN` because deterministic Parquet, row ordering, logical dataset
 fingerprints, cross-platform CI, and the wider Stage 1B audit remain incomplete.
+
+## Batch 4A Evidence
+
+On 2026-09-05, synthetic tests exercised exact-byte object identity, exclusive
+atomic publication, concurrent deduplication, corruption refusal, staging
+cleanup, unsafe-root/traversal/link rejection, manifest/object binding, separate
+raw metadata, provider corrections, and quarantine retention. Credential-shaped
+request fields and URI credentials are rejected before capture publication.
+These controls reduce RISK-005, RISK-011, RISK-018, and the physical-object part
+of RISK-019. They remain `OPEN` pending Batch 4B derived-data controls, hosted
+cross-platform CI, later secret scanning, and the full Stage 1B audit. The
+portable checks do not claim protection from a machine administrator.

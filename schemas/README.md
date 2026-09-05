@@ -9,3 +9,9 @@ new `$id`, migration decision, and retained prior schema.
 typed UUIDv7 formats. Registry-shaped schemas include revision metadata used by
 the append-only registry. Governed writes validate these schemas before emitting
 RFC 8785 canonical revisions; kinds without an authoritative schema fail closed.
+
+Batch 4A adds the raw-capture metadata schema and strengthens the generic
+artifact manifest with explicit source, dataset, reference, and configuration
+provenance. Raw payload bytes remain separate exact-byte objects; the schema
+governs metadata only. Derived Parquet and logical-content contracts remain for
+Batch 4B.

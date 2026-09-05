@@ -22,10 +22,12 @@ Do not implement the proposed 200 strategies.
 
 ### Stage 1B — Foundation Implementation
 
-**Status: IN PROGRESS — BATCH 3B COMPLETE (2026-09-05).** Batches 1–2
-completed items 1–4 below, Batch 3A completed item 5, and Batch 3B completed
-item 6 only. Items 7–13 remain unauthorized and unstarted. Execute future work
-only through a separate explicit batch authorization:
+**Status: IN PROGRESS — BATCH 4A COMPLETE (2026-09-05).** Batches 1–2
+completed items 1–4 below, Batch 3A completed item 5, Batch 3B completed item 6,
+and Batch 4A completed only the immutable-object and byte-faithful raw-capture
+half of item 7. Item 7 remains `IN PROGRESS`; its derived-data and point-in-time
+half and items 8–13 remain unauthorized and unstarted. Execute future work only
+through a separate explicit batch authorization:
 
 1. **Preflight and boundary evidence:** reread governing documents; inventory the host without exposing data; reverify Git through the exact-path ephemeral trust method or an owner-approved persistent repository-specific remedy (never a wildcard); record the repository/CI state and budget facts; verify that a separate encrypted NTFS location, OS identities, ACLs, and auditing are feasible. Obtain explicit host-admin approval before persistent ownership/trust, account, volume, audit-policy, or ACL mutations.
 2. **Minimal package scaffold:** create only the `src/quant_hunter` foundation package, `tests`, `schemas`, `registries`, `configs`, and manifest directories; configure CPython 3.14, PEP 621/Hatchling, `.python-version`, pinned uv bootstrap metadata, `.venv` exclusion, and committed `uv.lock`.
@@ -33,7 +35,7 @@ only through a separate explicit batch authorization:
 4. **Versioned schemas:** define Draft 2020-12 schemas and conformance fixtures for configurations, artifacts, environments, sources, datasets, model/family/strategy/pattern objects, experiments, backlog items, and release events. Unknown fields and schema upgrades must fail or follow an explicit migration.
 5. **Identity and registry core:** implement typed UUIDv7 allocation, exclusive creation, append-only zero-padded revisions, prior-digest compare-and-swap, global duplicate detection, chain verification, and generated non-authoritative indexes. Test concurrent allocation and stale-writer rejection.
 6. **Canonicalization and hashing:** implement JCS validation/canonicalization, normalized precision/timestamp conventions, SHA-256 identifiers, standard test vectors, and freeze-manifest construction. Reject duplicate keys, NaN/Infinity, unresolved substitutions, and digest mismatches.
-7. **Immutable artifact and point-in-time data contracts:** implement content-addressed objects, atomic publish, sidecars, byte-faithful raw captures, deterministic Parquet-manifest rules, quarantine metadata, and provenance links using synthetic fixtures only. Define the four distinct timestamp types and an as-of eligibility contract; prove future publications/revisions are excluded and prior raw objects cannot be overwritten.
+7. **Immutable artifact and point-in-time data contracts — IN PROGRESS:** Batch 4A implements content-addressed exact-byte objects, atomic publication, generic artifact sidecars, byte-faithful raw captures, quarantine metadata, and provenance links using synthetic fixtures only. Batch 4B remains responsible for deterministic Parquet-manifest rules, physical/provenance/logical three-digest semantics, normalized and curated data contracts, the four distinct timestamp types, an as-of eligibility contract, future publication/revision exclusion, and related derived-data tests.
 8. **Experiment controls:** implement preregistration lifecycle, multiple-testing counters (including AI variants and failures), freeze transition, immutable freeze digest, release-event reference, result/failure retention, and deterministic `rerun EXP-<uuidv7>` resolution. Do not implement a backtesting engine or strategy.
 9. **Validation and simulation interfaces only:** define typed, configuration-driven contracts for chronological splits, purging/embargo, multiple-testing accounting, baselines, metrics, and decision reports. Define backtest inputs/outputs and a pluggable transaction-cost protocol covering bid/ask, spread, commissions, financing/carry, slippage, latency, order/fill behavior, sessions, and gaps. Test interface invariants with synthetic stubs; do not implement strategies, a backtest engine, optimizer, or market simulator.
 10. **Sealed OOS boundary:** with approved host changes, create custodian/research identities and allow-only audited ACLs outside repository/cache/index/sync roots. Implement the custodian-only release adapter and hash-chained ledger. With synthetic data, prove research/AI denial before freeze, controlled read-only release after freeze, one-way `EXPOSED` status, and invalidation on boundary failure.
