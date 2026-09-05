@@ -94,7 +94,7 @@ Alternative data is deferred until evidence justifies its incremental value, pro
 
 At minimum, each raw capture or dataset version must record:
 
-- permanent source identifier and provider;
+- permanent `DATASET-<uuidv7>` identifier, permanent source identifier, and provider;
 - source endpoint, request parameters, and documentation reference where applicable;
 - instruments/series, coverage, granularity, and source-native identifiers;
 - event, publication, ingestion, and revision timestamps when applicable;
@@ -108,6 +108,8 @@ At minimum, each raw capture or dataset version must record:
 Each normalized, curated, or feature dataset must additionally record parent dataset versions and checksums, transformation/configuration version, source-code commit, schema version, dependency environment, and deterministic build identifier. Manual corrections require an explicit correction record with reason and lineage; they must not alter the raw capture.
 
 Every experiment must reference an immutable dataset manifest containing the exact dataset versions and vintages used. Re-running that manifest from the same inputs must reproduce the same records, or fail loudly with an auditable explanation.
+
+Under DEC-0007, metadata manifests are schema-validated JCS JSON and use SHA-256 identities. Raw objects are identified by exact received bytes. Derived Parquet objects record the physical file digest plus a canonical manifest digest covering ordered parent digests, logical schema, stable row ordering or explicit unordered semantics, transformation configuration, code revision, environment, and quality disposition. A different byte stream is a different object even when its rows appear equivalent.
 
 ## Quality controls
 
@@ -134,6 +136,14 @@ Suspect records enter quarantine with reason codes. Imputation, filtering, winso
 - Development workflows receive only their declared train/validation intervals. Sealed intervals are exposed only through the documented freeze-and-release process.
 - Future paper-trading and production adapters must be separate from research storage and permissions. Research code must not be capable of self-promotion or live execution.
 - Credentials are supplied outside Git through approved secret management. No API, broker, or paid-data credential may appear in data files, manifests, logs, notebooks, fixtures, or repository history.
+
+### Stage 1 sealed-holdout profile
+
+The sealed vault is a configured path outside the repository, worktrees, ordinary artifact/cache roots, indexing, and consumer-sync locations. It must be on an encrypted NTFS volume. An inheritance-disabled, allow-only DACL grants the dedicated `qh-oos-custodian` identity the minimum required rights; the `qh-research` identity used by development, notebooks, agents, and reports has no read, list, traverse, write, ownership, or ACL-change permission. Equivalent protections apply to backups. SACL auditing records access and permission changes.
+
+Only a custodian-run release command may expose data. Before release it verifies an `EXP-<uuidv7>` record at `FROZEN`, the intended sealed dataset/partition, and the bound code, configuration, environment, and manifest digests. It then exclusive-creates an immutable, read-only experiment release and a JCS/SHA-256 event containing actor, UTC time, reason, previous-event digest, and every relevant identifier/digest. The source partition is permanently labeled `EXPOSED`; it is never re-sealed. Any unauthorized or pre-freeze exposure invalidates affected experiments and must be recorded in the experiment ledger, risk register, and decision log.
+
+Tests use synthetic fixtures and two effective identities. A same-account path convention, configuration toggle, hidden folder, or shared archive password does not satisfy this boundary. Administrators remain outside the Stage 1 accidental/workflow-access threat model, so privileged-account use must be minimized and audited.
 
 ## Stage 1 Data-Domain Prerequisites
 

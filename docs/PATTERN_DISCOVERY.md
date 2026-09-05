@@ -231,7 +231,7 @@ LOW VOLATILITY
 
 ### L. Pattern-to-Outcome Database
 
-Every discovered pattern must become a durable research object with a permanent identifier, for example `PATTERN-MP-0042`. Patterns must not remain arbitrary chart labels.
+Every discovered pattern must become a durable research object with a permanent DEC-0009 identifier, `PATTERN-<uuidv7>`. Algorithm family and method remain explicit metadata rather than mutable ID components. Patterns must not remain arbitrary chart labels.
 
 For each pattern, store at minimum:
 
@@ -260,7 +260,7 @@ For each pattern, store at minimum:
 - untouched, sealed out-of-sample validation dataset and recorded access-release event; and
 - number of candidate patterns searched.
 
-The identifier and metadata must remain stable so results, failures, revisions, and dependent experiments can be traced over time.
+The identifier must remain stable and metadata changes must form an append-only JCS revision chain at `registries/patterns/<id>/vNNNNNN.json` so results, failures, revisions, and dependent experiments can be traced over time. Generated human-readable pattern tables are non-authoritative views.
 
 ### M. Nearest-Historical-State Engine
 

@@ -2,9 +2,9 @@
 
 ## Status and Design Goals
 
-This is the planned architecture for Stage 1; no application scaffold exists yet. The design must be modular, reproducible, testable, and difficult to misuse. Prefer explicit local components and clean interfaces over premature services, distributed systems, or operational complexity.
+Stage 1A planning is complete; no application scaffold exists yet and Stage 1B has not begun. The design must be modular, reproducible, testable, and difficult to misuse. Prefer explicit local components and clean interfaces over premature services, distributed systems, or operational complexity.
 
-Before scaffolding, record the supported Python version and package-management decision in `DECISIONS.md`, then document exact setup, build, test, lint, and run commands in `README.md`. Use modern Python engineering practices. Dockerize only components for which isolation or reproducibility provides a concrete benefit; do not introduce unnecessary distributed infrastructure during Stage 1.
+The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
 
 ## Planned Repository Layout
 
@@ -12,8 +12,20 @@ Before scaffolding, record the supported Python version and package-management d
 quant-hunter/
 ├── AGENTS.md
 ├── README.md
+├── pyproject.toml
+├── uv.lock
+├── .python-version
 ├── docs/
+├── schemas/                  # versioned JSON Schemas
+├── registries/               # append-only JCS records and generated indexes
+├── artifacts/
+│   └── manifests/            # small, reviewable artifact manifests; objects stay outside Git
 ├── src/quant_hunter/
+│   ├── config/               # schema validation and canonicalization
+│   ├── identity/             # UUIDv7 allocation and registry revisions
+│   ├── provenance/           # manifests, hashes, and rerun resolution
+│   ├── storage/              # immutable raw/derived/artifact contracts
+│   ├── isolation/            # sealed-release contract; no embedded credentials
 │   ├── data/
 │   ├── features/
 │   ├── experiments/
@@ -31,7 +43,18 @@ quant-hunter/
 └── .env.example
 ```
 
-This tree is a design target, not permission to implement it during the documentation phase.
+This tree is a Stage 1B design target, not permission to implement it under the completed Stage 1A planning scope.
+
+## Stage 1 Technology Profile
+
+- Runtime: 64-bit standard CPython `>=3.14,<3.15`; every run records its exact patch/build and platform.
+- Project/environment: PEP 621 `pyproject.toml`, Hatchling, uv, committed `uv.lock`, ignored `.venv`, and version/checksum-pinned uv bootstrap.
+- Evidence metadata: JSON Schema Draft 2020-12, RFC 8785 JCS, UTF-8, and `sha256:<hex>` digests. Precision-sensitive values are normalized strings.
+- Tabular data: deterministic Parquet plus a canonical lineage manifest; raw inputs retain exact provider bytes and byte hashes.
+- Persistent IDs: typed UUIDv7 identifiers and append-only per-object JSON revisions under `registries/`.
+- Quality gate: Ruff, strict mypy, pytest, branch-aware coverage, and provider-neutral `uv run --locked` commands; hosted CI is conditional on free entitlement.
+
+`DECISIONS.md` is authoritative for alternatives, edge cases, cost consequences, and change control.
 
 ## Required Component Boundaries
 
@@ -62,13 +85,15 @@ The Quant Hunter Meta Engine is a later-stage, dependence-aware evidence aggrega
 
 ## Isolation and Leakage Controls
 
-Research workflows may read development data only. Sealed out-of-sample partitions require separate paths and access controls and remain inaccessible until an experiment definition is frozen. Release is a recorded event, not a developer convenience. Point-in-time joins must enforce event, publication, ingestion, and revision semantics described in `DATA_ARCHITECTURE.md`.
+Research workflows may read development data only. Under DEC-0006, sealed partitions live outside the repository and normal artifact/cache roots on an encrypted NTFS volume. An allow-only DACL grants a dedicated custodian identity access and grants the separate research/AI identity none; SACLs audit access and permission changes. The custodian-only release path verifies the frozen experiment and all bound digests, creates an experiment-specific read-only release, and appends a hash-chained event. Release is one-way and recorded, not a developer convenience. Synthetic data must prove both denial and authorized release before the Stage 1 gate. Point-in-time joins must enforce event, publication, ingestion, and revision semantics described in `DATA_ARCHITECTURE.md`.
 
 Research components must not import, invoke, or possess deployment capability. Paper-trading and future production execution are separate adapters, credentials, processes, and authorization boundaries. No live trading or broker credentials are allowed in initial research stages, and no research result may self-promote across a gate.
 
 ## Security and Configuration
 
 Configuration must be explicit, validated, and reproducible. When environment configuration is introduced, create a sanitized `.env.example`; keep API, brokerage, and paid-data credentials out of files, logs, fixtures, and Git history. Paper-trading credentials are deferred to a later authorized milestone. Private or license-restricted data must never be committed.
+
+Immutable artifact objects are content-addressed outside Git at `<artifact-root>/objects/sha256/<first-two>/<digest>` (with the root supplied by validated configuration). Small manifests and schemas may be committed. Configuration cannot point a research process at the sealed vault, and environment variables cannot alter a frozen manifest after hashing. Research code may consume an authorized release but may not hold custodian credentials or alter release records.
 
 ## Contracts with Governance Documents
 

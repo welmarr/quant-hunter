@@ -4,7 +4,7 @@ Quant Hunter is a planned quantitative-research and market-discovery platform. I
 
 ## Current Status
 
-The Stage 0 documentation architecture, including independent-review corrections, is complete and audited. The repository remains documentation-only and contains no trading strategies, Python project scaffold, verified setup commands, data connections, broker connections, or live-trading capability. Stage 1 implementation requires a later task that explicitly authorizes it.
+Stage 0 and Stage 1A foundational planning are complete. The repository remains documentation-only and contains no trading strategies, Python project scaffold, verified setup commands, data connections, broker connections, or live-trading capability. Stage 1B implementation requires a later task that explicitly authorizes it.
 
 ## Documentation Map
 
@@ -21,4 +21,4 @@ The Stage 0 documentation architecture, including independent-review corrections
 
 ## Development Commands
 
-No build, test, lint, or run command is valid yet because no implementation or package manifest exists. Stage 1 must select and document the Python version, package manager, environment setup, task commands, and CI checks before code is treated as reproducible.
+No build, test, lint, or run command is valid yet because no implementation or package manifest exists. DEC-0004–DEC-0008 select the future CPython 3.14, uv, locked environment, serialization, and quality conventions; Stage 1B must implement and verify them before any command is reported as operational.

@@ -8,7 +8,7 @@ Research current, legitimate sources and prefer authoritative primary providers 
 
 ## Permanent records
 
-Assign each source a stable identifier such as `SOURCE-0001`. Never recycle identifiers. Preserve superseded, rejected, unavailable, and failed-source evaluations with their status and reason; do not silently delete them. Material source changes create a new version of the registry record and require impact review for affected datasets and experiments.
+Assign each source a typed UUIDv7 identifier such as `SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841` under DEC-0009. Never recycle identifiers. Preserve superseded, rejected, unavailable, and failed-source evaluations with their status and reason; do not silently delete them. Material source changes create a new append-only revision with the prior revision digest and require impact review for affected datasets and experiments. Machine authority is the schema-validated JCS chain at `registries/sources/<id>/vNNNNNN.json`; Markdown and generated indexes are views.
 
 ## Required fields
 

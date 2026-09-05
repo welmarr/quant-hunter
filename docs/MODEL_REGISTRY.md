@@ -2,7 +2,7 @@
 
 ## Purpose and Identity
 
-Every research family, model, and strategy must be a durable research object before evaluation or use. Allocate non-reusable identifiers such as `FAM-0001`, `MOD-000001`, and `STRAT-000001`; pattern identifiers follow `PATTERN_DISCOVERY.md`, and experiment identifiers follow `EXPERIMENT_LEDGER.md`. Renaming, rejection, or replacement never reuses an ID. Material definition changes create a version or successor record rather than rewriting history.
+Every research family, model, and strategy must be a durable research object before evaluation or use. Under DEC-0009, allocate typed UUIDv7 identifiers such as `FAM-01990f30-7f5e-7b34-9b21-3d74c513c841`, `MOD-<uuidv7>`, and `STRAT-<uuidv7>`; pattern identifiers follow `PATTERN_DISCOVERY.md`, and experiment identifiers follow `EXPERIMENT_LEDGER.md`. Renaming, rejection, or replacement never reuses an ID. Material definition changes create a new append-only revision or successor record rather than rewriting history.
 
 The registry distinguishes:
 
@@ -60,4 +60,4 @@ Registry lineage must expose parameter siblings, common data, shared labels, ove
 
 ## Registry Entries
 
-No models or strategies are registered yet. Do not add implementations during the documentation-architecture phase. Future entries must be append-only or explicitly superseded and cross-linked to decisions and experiments.
+No models or strategies are registered yet. Do not add implementations during Stage 1A. Machine authority will be a schema-validated JCS record at `registries/<kind>/<id>/vNNNNNN.json`, linked to its prior revision digest. Human-readable tables in this file and generated indexes are views only. Future entries must be append-only or explicitly superseded and cross-linked to decisions and experiments.

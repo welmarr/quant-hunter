@@ -2,7 +2,7 @@
 
 ## Mission and Current Scope
 
-Quant Hunter is a long-horizon project to build an independent, scientifically defensible quantitative-research and market-discovery laboratory. It is not currently a trading bot. The Stage 0 documentation architecture, including independent-review corrections, is complete, but the repository remains pre-Stage 1; do not implement trading strategies or begin Stage 1 infrastructure work without a subsequent, explicit request.
+Quant Hunter is a long-horizon project to build an independent, scientifically defensible quantitative-research and market-discovery laboratory. It is not currently a trading bot. Stage 0 and Stage 1A planning are complete; Stage 1B implementation has not begun. Do not implement Stage 1B infrastructure, trading strategies, or later-stage systems without a subsequent explicit request and the applicable roadmap gate.
 
 Agents working here must combine the responsibilities of principal quantitative systems architect, quantitative researcher, data engineer, statistician, and senior Python engineer, while respecting the stage and authorization boundaries below.
 

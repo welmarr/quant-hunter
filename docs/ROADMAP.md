@@ -14,22 +14,33 @@ Deliver and cross-link the persistent operating rules, charter, architecture, re
 
 ## Stage 1 — Reproducible Research Foundation
 
-Do not implement the proposed 200 strategies. After explicit authorization, perform the following ordered work:
+Do not implement the proposed 200 strategies.
 
-1. Reinspect the repository and governing documents.
-2. Refine `AGENTS.md` only if an invariant or navigation rule changed.
-3. Review and approve the full Stage 1 architecture; resolve open decisions.
-4. Maintain the project documentation structure and traceability.
-5. Select the supported Python version and package manager, then create the minimal project scaffold.
-6. Create machine-readable experiment, model, pattern, and data-registry schemas with permanent IDs.
-7. Research and populate legitimate data sources; do not purchase anything without explicit approval.
-8. Create validation interfaces, sealed-holdout controls, test scaffolding, and reproducibility checks.
-9. Prioritize implementation work and update this roadmap.
-10. Record every unresolved assumption in `DECISIONS.md` rather than silently guessing.
+### Stage 1A — Foundational Planning
 
-After planning, implement only the foundational infrastructure necessary for Stage 1. Use tests, and run every documented test and linter. Do not claim success simply because code executes.
+**Status: COMPLETE (2026-09-04).** DEC-0004–DEC-0010 resolve the runtime, environment/lockfile, sealed OOS boundary, canonical configuration/artifact hashing, engineering quality gate, permanent identifier/registry design, and Month-1 accounting policy. `ARCHITECTURE.md` reflects the material consequences. Completion makes the zero-cost implementation plan ready for a separate authorization; it does not authorize Stage 1B.
 
-**Exit gate:** Quant Hunter is a reproducible quantitative-research laboratory in which it is difficult to accidentally fool ourselves. Evidence must demonstrate immutable/provenanced data, frozen experiments, inaccessible sealed OOS data, realistic backtest interfaces, multiple-testing accounting, registries, deterministic reruns, tests, and security/deployment separation.
+### Stage 1B — Foundation Implementation
+
+**Status: NOT STARTED / NOT AUTHORIZED.** After an explicit Stage 1B request, execute in this order:
+
+1. **Preflight and boundary evidence:** reread governing documents; inventory the host without exposing data; reverify Git through the exact-path ephemeral trust method or an owner-approved persistent repository-specific remedy (never a wildcard); record the repository/CI state and budget facts; verify that a separate encrypted NTFS location, OS identities, ACLs, and auditing are feasible. Obtain explicit host-admin approval before persistent ownership/trust, account, volume, audit-policy, or ACL mutations.
+2. **Minimal package scaffold:** create only the `src/quant_hunter` foundation package, `tests`, `schemas`, `registries`, `configs`, and manifest directories; configure CPython 3.14, PEP 621/Hatchling, `.python-version`, pinned uv bootstrap metadata, `.venv` exclusion, and committed `uv.lock`.
+3. **Quality gate first:** configure Ruff, strict mypy, pytest, branch coverage, deterministic/offline markers, and the documented `uv run --locked` commands. Add least-privilege, SHA-pinned GitHub Actions only if free hosted CI is confirmed; otherwise retain provider-neutral local gate evidence.
+4. **Versioned schemas:** define Draft 2020-12 schemas and conformance fixtures for configurations, artifacts, environments, sources, datasets, model/family/strategy/pattern objects, experiments, backlog items, and release events. Unknown fields and schema upgrades must fail or follow an explicit migration.
+5. **Identity and registry core:** implement typed UUIDv7 allocation, exclusive creation, append-only zero-padded revisions, prior-digest compare-and-swap, global duplicate detection, chain verification, and generated non-authoritative indexes. Test concurrent allocation and stale-writer rejection.
+6. **Canonicalization and hashing:** implement JCS validation/canonicalization, normalized precision/timestamp conventions, SHA-256 identifiers, standard test vectors, and freeze-manifest construction. Reject duplicate keys, NaN/Infinity, unresolved substitutions, and digest mismatches.
+7. **Immutable artifact and point-in-time data contracts:** implement content-addressed objects, atomic publish, sidecars, byte-faithful raw captures, deterministic Parquet-manifest rules, quarantine metadata, and provenance links using synthetic fixtures only. Define the four distinct timestamp types and an as-of eligibility contract; prove future publications/revisions are excluded and prior raw objects cannot be overwritten.
+8. **Experiment controls:** implement preregistration lifecycle, multiple-testing counters (including AI variants and failures), freeze transition, immutable freeze digest, release-event reference, result/failure retention, and deterministic `rerun EXP-<uuidv7>` resolution. Do not implement a backtesting engine or strategy.
+9. **Validation and simulation interfaces only:** define typed, configuration-driven contracts for chronological splits, purging/embargo, multiple-testing accounting, baselines, metrics, and decision reports. Define backtest inputs/outputs and a pluggable transaction-cost protocol covering bid/ask, spread, commissions, financing/carry, slippage, latency, order/fill behavior, sessions, and gaps. Test interface invariants with synthetic stubs; do not implement strategies, a backtest engine, optimizer, or market simulator.
+10. **Sealed OOS boundary:** with approved host changes, create custodian/research identities and allow-only audited ACLs outside repository/cache/index/sync roots. Implement the custodian-only release adapter and hash-chained ledger. With synthetic data, prove research/AI denial before freeze, controlled read-only release after freeze, one-way `EXPOSED` status, and invalidation on boundary failure.
+11. **Production separation:** add import/dependency tests proving the research package has no broker, live-order, credential, deployment, or self-promotion capability. Do not create broker adapters or production infrastructure.
+12. **Reproducibility audit:** recreate a clean `.venv` from the lock, run all gates, rerun synthetic manifests twice, compare expected digests, inspect secret/license exclusions, and document every failure or environment-specific limitation.
+13. **Closeout:** update `README.md`, affected registries/ledgers/risks/decisions, requirement traceability, and the repository tree; report commands and exact results. Do not ingest paid data, build connectors, implement strategies/pattern algorithms/backtesting, or proceed to Stage 2.
+
+**Stage 1B implementation exit gate:** all selected quality commands pass; clean locked setup and synthetic reruns reproduce expected digests; registry concurrency/history tests pass; raw mutation fails safely; the research identity cannot discover/read sealed fixtures; release requires a matching frozen manifest and is auditable/one-way; research code has no production authority; no secret or paid commitment exists; documentation and risk evidence match the implementation. A missing host isolation capability, unknown digest, mutable history, or claimed-but-unrun check fails the gate.
+
+**Stage 1 exit gate:** Quant Hunter is a reproducible quantitative-research laboratory in which it is difficult to accidentally fool ourselves. Evidence must demonstrate immutable/provenanced data, frozen experiments, inaccessible sealed OOS data, realistic future backtest interfaces, multiple-testing accounting, registries, deterministic reruns, tests, and security/deployment separation.
 
 ## Stage 2 — Algorithm Discovery, Canonical Implementation, and Pattern Lab
 

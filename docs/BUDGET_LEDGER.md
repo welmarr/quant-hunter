@@ -4,11 +4,11 @@
 
 This is the canonical aggregate record for project spending, commitments, approvals, and remaining Month-1 headroom across every category—not only data. Total Month-1 cost must not exceed USD $400, including ChatGPT subscriptions, OpenAI API use, servers/infrastructure, market or economic data, and all other paid services. No agent may purchase, subscribe, start a charge-converting trial, or otherwise commit funds without explicit user approval.
 
-The exact Month-1 calendar window and treatment of pre-existing subscriptions are open decisions in `DECISIONS.md`. Until resolved and the baseline is entered here, treat available headroom as unknown and do not authorize a purchase. Currency conversion, taxes, setup fees, usage exposure, and recurring charges count toward the cap.
+DEC-0010 defines Month 1 as `[2026-09-04T00:00:00-04:00, 2026-10-04T00:00:00-04:00)` in `America/New_York`. Pre-existing fixed subscriptions materially used by Quant Hunter are allocated by actual invoiced cost, including tax, across overlapping service days; when service dates are unavailable, the full invoice or renewal charged in the window counts. Project API usage, currency conversion, taxes, setup and cancellation fees, usage exposure, and non-cancelable recurring obligations count under DEC-0010. Until all material baseline facts are entered, headroom is unknown and no purchase is allowed.
 
 ## Required Entry Schema
 
-Every proposed or actual cost receives a permanent ID such as `COST-0001` and records:
+Every proposed or actual cost receives a permanent ID such as `COST-<uuidv7>` and records:
 
 - category, provider, product, purpose, and linked research or infrastructure requirement;
 - cost class and pricing date, currency, conversion basis, taxes/fees, Month-1 maximum, recurring amount, and cancellation terms;
@@ -25,9 +25,9 @@ Rejected and cancelled entries remain visible. Approval of one item does not app
 
 | Window | Cap | Recorded baseline | Approved/committed | Spent | Remaining headroom |
 |---|---:|---:|---:|---:|---:|
-| Awaiting `DECISIONS.md` resolution | USD 400 | UNKNOWN | USD 0 | USD 0 | UNKNOWN |
+| 2026-09-04 00:00 EDT (inclusive) to 2026-10-04 00:00 EDT (exclusive) | USD 400 | UNKNOWN | USD 0 | USD 0 | UNKNOWN |
 
-`USD 0` above means no new project commitment or spend is recorded in this repository; it does not assert that existing subscriptions have zero cost. Resolve the baseline before evaluating any purchase.
+`USD 0` above means no new project commitment or spend is recorded in this repository; it does not assert that existing subscriptions or project API usage have zero cost. The owner must provide relevant invoice amount/service dates and project-attributable API usage. For each item, the ledger counts actual Month-1 spend when final, otherwise its approved or committed maximum; any unknown material amount keeps headroom `UNKNOWN`.
 
 ## Entries
 

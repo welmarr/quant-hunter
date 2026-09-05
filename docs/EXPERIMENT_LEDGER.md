@@ -2,7 +2,7 @@
 
 ## Policy
 
-Every reproduction, hypothesis test, model comparison, parameter search, pattern search, ablation, and AI-generated candidate evaluation must be preregistered under a permanent, non-reusable identifier such as `EXP-YYYY-NNNN`. Allocate the ID before results are inspected. Rejected, failed, null, invalidated, and inconclusive experiments remain visible; corrections append a new version or superseding record rather than erasing history.
+Every reproduction, hypothesis test, model comparison, parameter search, pattern search, ablation, and AI-generated candidate evaluation must be preregistered under a permanent, non-reusable `EXP-<uuidv7>` identifier allocated under DEC-0009 before results are inspected. Rejected, failed, null, invalidated, and inconclusive experiments remain visible; corrections append a new revision or superseding record rather than erasing history.
 
 The ledger is the authoritative inventory of attempted research. It must support reconstruction of what was known, planned, searched, executed, observed, and decided.
 
@@ -42,7 +42,7 @@ These fields extend, but do not weaken, the original minimum schema. Unknown val
 
 Use an auditable lifecycle such as `DRAFT → REGISTERED → FROZEN → RUNNING → EVALUATED → DECIDED`. The decision vocabulary is `CONTINUE_RESEARCH`, `REVISE_NEW_EXPERIMENT`, `REJECT`, `INCONCLUSIVE`, `DEFER`, `INVALIDATED`, or `SUPERSEDED`. `CONTINUE_RESEARCH` authorizes only the next research step; no ledger decision authorizes deployment or live trading.
 
-Before `FROZEN`, record the hypothesis, data partitions, feature/label definitions, candidate universe, parameter/search budget, evaluation metrics, statistical tests, baselines, cost assumptions, and decision criteria. The sealed out-of-sample partition must be technically inaccessible to development workflows during this period. Freezing produces an immutable configuration fingerprint.
+Before `FROZEN`, record the hypothesis, data partitions, feature/label definitions, candidate universe, parameter/search budget, evaluation metrics, statistical tests, baselines, cost assumptions, and decision criteria. The sealed out-of-sample partition must be technically inaccessible to development workflows during this period. Freezing produces an immutable manifest and SHA-256 fingerprint binding the experiment record, code revision, configuration, environment, datasets, seeds, search budget, baselines, and decision criteria.
 
 Opening sealed data is a one-way, timestamped event. After it is opened, changes inspired by its results require a new experiment ID and a new sealed dataset; the old holdout becomes ordinary research data. Never tune against an already opened holdout while continuing to call it out-of-sample.
 
@@ -56,4 +56,4 @@ A result is not complete until another controlled run can reproduce it from reco
 
 ## Ledger Entries
 
-No experiments are registered yet. Documentation work is not a trading experiment, and no strategy experiment may begin until Stage 1 controls in `ROADMAP.md` exist and the work is explicitly authorized.
+No experiments are registered yet. Documentation work is not a trading experiment, and no strategy experiment may begin until Stage 1 controls in `ROADMAP.md` exist and the work is explicitly authorized. Machine authority will be the schema-validated JCS revision chain at `registries/experiments/<id>/vNNNNNN.json`; generated summaries are non-authoritative views.
