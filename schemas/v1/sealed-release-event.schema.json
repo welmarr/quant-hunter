@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/sealed-release-event.schema.json",
+  "title": "Quant Hunter Sealed Out-of-Sample Release Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_digest",
+    "previous_event_digest",
+    "experiment_id",
+    "sealed_dataset_id",
+    "occurred_at",
+    "actor",
+    "reason",
+    "frozen_manifest_digest",
+    "code_revision",
+    "configuration_digest",
+    "environment_digest",
+    "released_artifact_digest",
+    "source_partition_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "event_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "previous_event_digest": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "common.schema.json#/$defs/digest"}
+      ]
+    },
+    "experiment_id": {"$ref": "common.schema.json#/$defs/experiment_id"},
+    "sealed_dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
+    "occurred_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "actor": {"type": "string", "minLength": 1},
+    "reason": {"type": "string", "minLength": 1},
+    "frozen_manifest_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "code_revision": {"$ref": "common.schema.json#/$defs/git_revision"},
+    "configuration_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "environment_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "released_artifact_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "source_partition_status": {"const": "EXPOSED"}
+  }
+}

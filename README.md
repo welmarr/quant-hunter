@@ -4,7 +4,7 @@ Quant Hunter is a planned quantitative-research and market-discovery platform. I
 
 ## Current Status
 
-Stage 0 and Stage 1A are complete. Stage 1B is in progress: Batch 1 adds only the minimal Python scaffold, locked development environment, quality gate, and public-repository CI workflow. No trading strategy, quantitative algorithm, data or broker connection, backtest engine, portfolio logic, or live-trading capability exists.
+Stage 0 and Stage 1A are complete. Stage 1B is in progress: Batches 1–2 provide the minimal Python scaffold, locked quality gate, public-repository CI workflow, and versioned JSON Schema foundation with synthetic conformance tests. No registry behavior, trading strategy, quantitative algorithm, data or broker connection, backtest engine, portfolio logic, or live-trading capability exists.
 
 ## Documentation Map
 

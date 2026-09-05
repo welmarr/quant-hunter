@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/environment-manifest.schema.json",
+  "title": "Quant Hunter Environment Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "created_at", "python", "uv", "platform", "lock_digest"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "python": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["implementation", "version", "architecture", "gil_enabled", "build"],
+      "properties": {
+        "implementation": {"const": "CPython"},
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+[.][0-9]+[.][0-9]+$"
+        },
+        "architecture": {"type": "string", "minLength": 1},
+        "gil_enabled": {"type": "boolean"},
+        "build": {"type": "string", "minLength": 1}
+      }
+    },
+    "uv": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "executable_digest"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+[.][0-9]+[.][0-9]+$"
+        },
+        "executable_digest": {"$ref": "common.schema.json#/$defs/digest"}
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operating_system", "version", "architecture"],
+      "properties": {
+        "operating_system": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "architecture": {"type": "string", "minLength": 1}
+      }
+    },
+    "lock_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "native_libraries": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    }
+  }
+}

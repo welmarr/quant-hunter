@@ -1,0 +1,99 @@
+[
+  {
+    "case": "missing mandatory field",
+    "schema": "configuration.schema.json",
+    "expected_validator": "required",
+    "instance": {
+      "schema_version": "1.0.0",
+      "configuration_name": "missing_created_at",
+      "values": {}
+    }
+  },
+  {
+    "case": "unknown field",
+    "schema": "configuration.schema.json",
+    "expected_validator": "additionalProperties",
+    "instance": {
+      "schema_version": "1.0.0",
+      "configuration_name": "unknown_field",
+      "created_at": "2026-09-05T06:00:00Z",
+      "values": {},
+      "unexpected": true
+    }
+  },
+  {
+    "case": "malformed typed id",
+    "schema": "research-backlog.schema.json",
+    "expected_validator": "pattern",
+    "instance": {
+      "schema_version": "1.0.0",
+      "backlog_id": "BACKLOG-not-a-uuid",
+      "revision": 1,
+      "previous_revision_digest": null,
+      "created_at": "2026-09-05T06:00:00Z",
+      "status": "DEFERRED",
+      "category": "INFRASTRUCTURE",
+      "title": "Malformed ID fixture",
+      "rationale": "Exercises typed ID rejection.",
+      "provenance_uris": [],
+      "prerequisites": [],
+      "related_object_ids": [],
+      "owner": "test-suite"
+    }
+  },
+  {
+    "case": "malformed timestamp",
+    "schema": "configuration.schema.json",
+    "expected_validator": "format",
+    "instance": {
+      "schema_version": "1.0.0",
+      "configuration_name": "bad_timestamp",
+      "created_at": "2026-99-99T99:99:99Z",
+      "values": {}
+    }
+  },
+  {
+    "case": "schema version mismatch",
+    "schema": "configuration.schema.json",
+    "expected_validator": "const",
+    "instance": {
+      "schema_version": "2.0.0",
+      "configuration_name": "wrong_version",
+      "created_at": "2026-09-05T06:00:00Z",
+      "values": {}
+    }
+  },
+  {
+    "case": "secret-shaped configuration key",
+    "schema": "configuration.schema.json",
+    "expected_validator": "pattern",
+    "instance": {
+      "schema_version": "1.0.0",
+      "configuration_name": "secret_key",
+      "created_at": "2026-09-05T06:00:00Z",
+      "values": {
+        "api_key": "synthetic-placeholder"
+      }
+    }
+  },
+  {
+    "case": "revision two without prior digest",
+    "schema": "research-backlog.schema.json",
+    "expected_validator": "type",
+    "instance": {
+      "schema_version": "1.0.0",
+      "backlog_id": "BACKLOG-01990f30-7f5e-7b34-9b21-3d74c513c849",
+      "revision": 2,
+      "previous_revision_digest": null,
+      "created_at": "2026-09-05T06:00:00Z",
+      "status": "DEFERRED",
+      "category": "INFRASTRUCTURE",
+      "title": "Broken revision chain fixture",
+      "rationale": "Exercises append-only revision metadata.",
+      "provenance_uris": [],
+      "prerequisites": [],
+      "related_object_ids": [],
+      "owner": "test-suite"
+    }
+  }
+]

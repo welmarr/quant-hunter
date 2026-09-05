@@ -87,7 +87,7 @@ Owner and approver:
 - **Status:** ACCEPTED
 - **Scope:** architecture / reproducibility / operations
 - **Context:** Dependency resolution, tool execution, and environment creation need one cross-platform workflow.
-- **Decision:** Use PEP 621 metadata in `pyproject.toml`, uv as the sole dependency/environment manager, a committed `uv.lock`, and an uncommitted project-local `.venv`. Pin the uv executable version and installer checksum in the toolchain manifest and CI. Normal setup is `uv sync --locked`; CI first runs `uv lock --check`, and all commands run through `uv run --locked`. Dependency changes deliberately regenerate and review the lock. Use Hatchling as the minimal build backend for the `src/` package; export `pylock.toml` or an SBOM only as a derived interoperability artifact.
+- **Decision:** Use PEP 621 metadata in `pyproject.toml`, uv as the sole dependency/environment manager, a committed `uv.lock`, and an uncommitted project-local `.venv`. Pin the uv executable version and installer checksum in the toolchain manifest and CI. In CI this means an immutable `setup-uv` action SHA, an exact uv version, and the official platform-specific uv archive SHA-256 supplied through the action's `checksum` input; the action must fail on mismatch. Normal setup is `uv sync --locked`; CI first runs `uv lock --check`, and all commands run through `uv run --locked`. Dependency changes deliberately regenerate and review the lock. Use Hatchling as the minimal build backend for the `src/` package; export `pylock.toml` or an SBOM only as a derived interoperability artifact.
 - **Alternatives considered:** Poetry and PDM provide integrated workflows but add a second project-specific command model; pip-tools does not manage the interpreter/project environment; Conda is useful for unusual native/GPU stacks but adds a second solver. They are rejected initially and require a new decision if a measured native dependency cannot be supported.
 - **Scientific/statistical consequences:** Frozen runs bind to the lock digest and exact environment manifest, preventing opportunistic package drift.
 - **Reproducibility and cost consequences:** uv and Hatchling are open source and add USD 0 direct cost. `.venv` is disposable and never committed; `pyproject.toml`, `uv.lock`, toolchain metadata, and their digests are retained.
@@ -185,7 +185,7 @@ The seven Stage 1A design decisions are resolved. The following are factual inpu
 
 - enter invoice amount and service dates for any pre-existing ChatGPT or other fixed subscription materially used by Quant Hunter;
 - enter any project-attributable OpenAI API usage during the Month-1 window; and
-- confirm the existing GitHub repository's free Actions entitlement before enabling hosted CI; and
+- re-confirm public visibility and free standard-runner policy if repository visibility or GitHub billing policy changes; and
 - retain the verified ephemeral exact-path Git trust method for `D:/quant-hunter`, or obtain owner approval for a persistent repository-specific ownership/trust correction; wildcard or silent global trust is prohibited.
 
 Until the first two values are recorded, budget headroom remains `UNKNOWN` and no paid action is permitted. These factual inputs do not invalidate the design. Separately authorized, local, zero-cost Stage 1B work may use the verified exact-path Git method; hosted CI remains conditional on confirmed free entitlement.

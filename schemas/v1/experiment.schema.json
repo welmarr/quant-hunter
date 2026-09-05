@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/experiment.schema.json",
+  "title": "Quant Hunter Experiment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment_id",
+    "revision",
+    "previous_revision_digest",
+    "created_at",
+    "lifecycle_status",
+    "study_type",
+    "hypothesis",
+    "research_family_id",
+    "referenced_object_ids",
+    "dataset_ids",
+    "partitions",
+    "search_space",
+    "variants_planned",
+    "evaluation_metrics",
+    "statistical_tests",
+    "decision_criteria",
+    "execution_cost_assumptions",
+    "code_revision",
+    "configuration_digest",
+    "environment_digest",
+    "author"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "experiment_id": {"$ref": "common.schema.json#/$defs/experiment_id"},
+    "revision": {"$ref": "common.schema.json#/$defs/revision"},
+    "previous_revision_digest": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "common.schema.json#/$defs/digest"}
+      ]
+    },
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "lifecycle_status": {
+      "enum": ["DRAFT", "REGISTERED", "FROZEN", "RUNNING", "EVALUATED", "DECIDED"]
+    },
+    "study_type": {"enum": ["EXPLORATORY", "CONFIRMATORY", "REPRODUCTION", "OPERATIONAL_VALIDATION"]},
+    "hypothesis": {"type": "string", "minLength": 1},
+    "research_family_id": {"$ref": "common.schema.json#/$defs/family_id"},
+    "referenced_object_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/any_object_id"},
+      "uniqueItems": true
+    },
+    "dataset_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "common.schema.json#/$defs/dataset_id"},
+      "uniqueItems": true
+    },
+    "partitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["training", "validation", "sealed_out_of_sample"],
+      "properties": {
+        "training": {"$ref": "#/$defs/interval"},
+        "validation": {"$ref": "#/$defs/interval"},
+        "sealed_out_of_sample": {"$ref": "#/$defs/interval"}
+      }
+    },
+    "search_space": {"type": "string", "minLength": 1},
+    "variants_planned": {"type": "integer", "minimum": 1},
+    "evaluation_metrics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "statistical_tests": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "decision_criteria": {"type": "string", "minLength": 1},
+    "execution_cost_assumptions": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "code_revision": {"$ref": "common.schema.json#/$defs/git_revision"},
+    "configuration_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "environment_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "random_seed": {"type": "integer", "minimum": 0},
+    "decision": {
+      "enum": [
+        "CONTINUE_RESEARCH",
+        "REVISE_NEW_EXPERIMENT",
+        "REJECT",
+        "INCONCLUSIVE",
+        "DEFER",
+        "INVALIDATED",
+        "SUPERSEDED"
+      ]
+    },
+    "result_artifact_digests": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/digest"},
+      "uniqueItems": true
+    },
+    "failure_modes": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "author": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "interval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": {"$ref": "common.schema.json#/$defs/timestamp"},
+        "end": {"$ref": "common.schema.json#/$defs/timestamp"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"revision": {"const": 1}}},
+      "then": {"properties": {"previous_revision_digest": {"type": "null"}}},
+      "else": {
+        "properties": {
+          "previous_revision_digest": {"$ref": "common.schema.json#/$defs/digest"}
+        }
+      }
+    }
+  ]
+}

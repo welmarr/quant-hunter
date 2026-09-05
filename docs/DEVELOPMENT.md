@@ -1,4 +1,4 @@
-# Development and Stage 1B Batch 1 Evidence
+# Development and Stage 1B Evidence
 
 ## Pinned toolchain
 
@@ -12,6 +12,7 @@ regeneration, Windows and Ubuntu quality runs, and updated environment evidence.
 | CPython | 3.14.7, Windows x86-64, standard GIL | [Python.org release](https://www.python.org/downloads/release/python-3147/) |
 | uv | 0.12.10; release commit `3c979abda4530fe9bf3d92e9bcf5c5575e3b3126` | [uv release](https://github.com/astral-sh/uv/releases/tag/0.12.10) |
 | uv Windows archive | SHA-256 `f65744f94072152b1f86ba2aace4d01f1124d9a8ecb235805039e3718c36cac2` | Official release checksum |
+| uv Linux x86-64 GNU archive | SHA-256 `173d95a0c32d18c896c46ba6fafbf3cf9c14ab74b033f81b76c883ef492a976b` | Official release checksum |
 | uv Windows executable used for validation | SHA-256 `a8bf95637ba520491de06713d718a55b90f18d127980b9531fd8fc5a8e99dc1d` | Extracted from the verified archive |
 
 The host's pre-existing system interpreter is CPython 3.14.3. Validation uses a
@@ -34,9 +35,16 @@ uv run --locked pytest --cov=quant_hunter --cov-branch --cov-fail-under=90
 Direct development dependencies are intentionally limited to Hatchling 1.32.0
 (packaging), Ruff 0.16.6 (format/lint), mypy 1.20.2 (strict typing), pytest
 8.4.2 (tests), and pytest-cov 7.1.0 with coverage.py 7.16.0 (branch coverage).
+Batch 2 adds jsonschema 4.26.0, referencing 0.37.0, rfc3339-validator 0.1.4,
+and types-jsonschema 4.26.0.20260518 solely for local Draft 2020-12
+conformance, reference resolution, semantic timestamp checks, and strict typing.
 Exact resolved versions and transitive dependencies are authoritative in
 `uv.lock`. No quantitative, market-data, broker, backtest, optimizer,
 portfolio, or AI library is installed.
+
+Pytest's nonessential cache provider is disabled. The host contains an ignored
+`.pytest_cache/` directory that this process identity cannot inspect or remove;
+disabling the cache avoids nondeterministic warnings without changing its ACLs.
 
 ## Preflight record
 
@@ -68,11 +76,34 @@ Recorded 2026-09-05 before Batch 1 changes:
 
 ## Batch boundary
 
-This batch contains only package and directory scaffolding, tool configuration,
-an import/version smoke test, and the quality workflow. Schemas, registry
-behavior, canonicalization, data contracts, experiment controls, quantitative
-algorithms, connectors, backtesting, portfolio logic, brokers, and sealed-data
-release remain deferred.
+Batches 1–2 contain only package and directory scaffolding, tool configuration,
+the quality workflow, versioned schemas, and synthetic schema conformance tests.
+Registry behavior, canonicalization, hashing, data contracts, experiment
+controls, quantitative algorithms, connectors, backtesting, portfolio logic,
+brokers, and sealed-data release remain deferred.
+
+## Schema foundation
+
+`schemas/v1/` defines Draft 2020-12 schemas for configurations, artifacts,
+environments, sources, datasets, research families/models/strategies, patterns,
+experiments, backlog items, and sealed release events. Every instance requires
+`schema_version: "1.0.0"`; schema IDs include `/v1/`, and incompatible changes
+require a new retained version plus an explicit migration decision.
+
+The schemas close object shapes where fields are governed, preserve typed UUIDv7
+formats, require provenance and scientific metadata, use UTC RFC 3339
+timestamps, avoid unconstrained JSON `number` fields, and represent
+precision-sensitive decimal values as constrained strings. Revision fields
+prepare registry-shaped records for append-only history without implementing a
+registry.
+
+Batch 2 local validation checked all 11 schema documents against the Draft
+2020-12 metaschema and validated one meaningful synthetic object for each of the
+10 instance schemas. Targeted invalid fixtures proved rejection of missing
+mandatory fields, unknown fields, malformed typed IDs, malformed timestamps,
+schema-version mismatches, credential-shaped configuration keys, and broken
+revision metadata. An in-memory NaN case was also rejected. The final locked
+gate passed 21 tests with Ruff, strict mypy, and branch-aware coverage.
 
 ## Initial local validation
 
@@ -98,3 +129,9 @@ Validation completed on the Windows host on 2026-09-05:
 The hosted workflow is enabled in the working tree but was not run during this
 local, uncommitted batch. Its first remote result must be reviewed after a
 separately authorized commit/push.
+
+The Batch 2 review found that the SHA-pinned `setup-uv` action and exact uv
+version selected the intended installer and release, but did not independently
+pin the downloaded platform artifact. Both CI jobs now pass the official
+platform-specific uv 0.12.10 SHA-256 through the action's supported `checksum`
+input. This satisfies DEC-0005 without adding a custom installer.

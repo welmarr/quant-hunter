@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/source.schema.json",
+  "title": "Quant Hunter Data Source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_id",
+    "revision",
+    "previous_revision_digest",
+    "created_at",
+    "reviewed_at",
+    "status",
+    "provider",
+    "documentation_uri",
+    "data_domain",
+    "granularity",
+    "historical_depth",
+    "realtime_availability",
+    "latency_description",
+    "cost",
+    "access",
+    "time_semantics",
+    "price_nature",
+    "reliability",
+    "limitations",
+    "owner"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "source_id": {"$ref": "common.schema.json#/$defs/source_id"},
+    "revision": {"$ref": "common.schema.json#/$defs/revision"},
+    "previous_revision_digest": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "common.schema.json#/$defs/digest"}
+      ]
+    },
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "reviewed_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "status": {
+      "enum": ["CANDIDATE", "APPROVED", "REJECTED", "DEPRECATED", "UNAVAILABLE"]
+    },
+    "provider": {"type": "string", "minLength": 1},
+    "documentation_uri": {"type": "string", "format": "uri"},
+    "data_domain": {"type": "string", "minLength": 1},
+    "granularity": {"type": "string", "minLength": 1},
+    "historical_depth": {"type": "string", "minLength": 1},
+    "realtime_availability": {
+      "enum": ["LIVE", "DELAYED", "END_OF_DAY", "PERIODIC", "HISTORICAL_ONLY", "UNKNOWN"]
+    },
+    "latency_description": {"type": "string", "minLength": 1},
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "currency", "monthly_cost", "pricing_date"],
+      "properties": {
+        "class": {"enum": ["FREE", "LOW-COST", "PREMIUM", "INSTITUTIONAL"]},
+        "currency": {"$ref": "common.schema.json#/$defs/currency"},
+        "monthly_cost": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/normalized_nonnegative_decimal"},
+            {"const": "UNKNOWN"}
+          ]
+        },
+        "pricing_date": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
+      }
+    },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "license",
+        "api_restrictions",
+        "redistribution_restrictions",
+        "retention_constraints"
+      ],
+      "properties": {
+        "license": {"type": "string", "minLength": 1},
+        "api_restrictions": {"type": "string", "minLength": 1},
+        "redistribution_restrictions": {"type": "string", "minLength": 1},
+        "retention_constraints": {"type": "string", "minLength": 1}
+      }
+    },
+    "time_semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_time", "publication_time", "ingestion_time", "revision_time"],
+      "properties": {
+        "event_time": {"$ref": "#/$defs/time_support"},
+        "publication_time": {"$ref": "#/$defs/time_support"},
+        "ingestion_time": {"$ref": "#/$defs/time_support"},
+        "revision_time": {"$ref": "#/$defs/time_support"}
+      }
+    },
+    "price_nature": {
+      "enum": [
+        "EXECUTABLE_BID_ASK",
+        "VENUE_QUOTE_OR_TRADE",
+        "BROKER_SPECIFIC",
+        "COMPOSITE",
+        "INDICATIVE",
+        "MIDPOINT",
+        "NOT_APPLICABLE",
+        "UNKNOWN"
+      ]
+    },
+    "reliability": {"type": "string", "minLength": 1},
+    "limitations": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "owner": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "time_support": {
+      "enum": ["NATIVE", "DERIVED", "NOT_APPLICABLE", "UNKNOWN"]
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"revision": {"const": 1}}},
+      "then": {"properties": {"previous_revision_digest": {"type": "null"}}},
+      "else": {
+        "properties": {
+          "previous_revision_digest": {"$ref": "common.schema.json#/$defs/digest"}
+        }
+      }
+    }
+  ]
+}

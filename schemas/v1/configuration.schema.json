@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/configuration.schema.json",
+  "title": "Quant Hunter Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "configuration_name", "created_at", "values"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "configuration_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "description": {"type": "string", "minLength": 1},
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "values": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(?!.*(?:password|secret|token|credential|api[_-]?key|private[_-]?key))[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {"$ref": "#/$defs/config_value"}
+    }
+  },
+  "$defs": {
+    "safe_string": {
+      "type": "string",
+      "not": {"pattern": "[$][{][^}]+[}]"}
+    },
+    "scalar": {
+      "oneOf": [
+        {"$ref": "#/$defs/safe_string"},
+        {"type": "integer"},
+        {"type": "boolean"},
+        {"type": "null"}
+      ]
+    },
+    "config_value": {
+      "oneOf": [
+        {"$ref": "#/$defs/scalar"},
+        {
+          "type": "array",
+          "items": {"$ref": "#/$defs/scalar"},
+          "maxItems": 1000
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/research-backlog.schema.json",
+  "title": "Quant Hunter Research Backlog Item",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "backlog_id",
+    "revision",
+    "previous_revision_digest",
+    "created_at",
+    "status",
+    "category",
+    "title",
+    "rationale",
+    "provenance_uris",
+    "prerequisites",
+    "related_object_ids",
+    "owner"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "backlog_id": {"$ref": "common.schema.json#/$defs/backlog_id"},
+    "revision": {"$ref": "common.schema.json#/$defs/revision"},
+    "previous_revision_digest": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "common.schema.json#/$defs/digest"}
+      ]
+    },
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "status": {"enum": ["PROPOSED", "DEFERRED", "READY", "IN_RESEARCH", "REJECTED", "CLOSED"]},
+    "category": {
+      "enum": [
+        "ALGORITHM",
+        "PAPER_REPRODUCTION",
+        "ANOMALY",
+        "MISSING_DATA",
+        "EXPENSIVE_DATA",
+        "INFRASTRUCTURE",
+        "REVISIT"
+      ]
+    },
+    "title": {"type": "string", "minLength": 1},
+    "rationale": {"type": "string", "minLength": 1},
+    "provenance_uris": {
+      "type": "array",
+      "items": {"type": "string", "format": "uri"},
+      "uniqueItems": true
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "related_object_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/any_object_id"},
+      "uniqueItems": true
+    },
+    "owner": {"type": "string", "minLength": 1}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"revision": {"const": 1}}},
+      "then": {"properties": {"previous_revision_digest": {"type": "null"}}},
+      "else": {
+        "properties": {
+          "previous_revision_digest": {"$ref": "common.schema.json#/$defs/digest"}
+        }
+      }
+    }
+  ]
+}
