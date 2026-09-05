@@ -67,4 +67,7 @@ request fields and URI credentials are rejected before capture publication.
 These controls reduce RISK-005, RISK-011, RISK-018, and the physical-object part
 of RISK-019. They remain `OPEN` pending Batch 4B derived-data controls, hosted
 cross-platform CI, later secret scanning, and the full Stage 1B audit. The
-portable checks do not claim protection from a machine administrator.
+portable checks reject intermediate link-like components on publication and
+authoritative reads, but their check-to-use window does not claim protection
+from a machine administrator. Labelled secret-text rejection supplements field
+name and URI checks without attempting entropy-based secret discovery.

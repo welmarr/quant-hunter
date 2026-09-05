@@ -35,6 +35,7 @@ LOGGER = logging.getLogger(__name__)
 REVISION_PATTERN: Final = re.compile(r"^v(?P<number>[0-9]{6})[.]json$")
 FIRST_REVISION: Final = "v000001.json"
 LOCK_RETRY_SECONDS: Final = 0.005
+IS_WINDOWS: Final = os.name == "nt"
 _CONSTRUCTION_TOKEN: Final = object()
 
 
@@ -124,14 +125,40 @@ def _exclusive_write(path: Path, content: bytes) -> None:
             os.close(descriptor)
 
 
+def _is_regular_lock_file(path: Path) -> bool:
+    """Inspect a lock path without accepting directories or symbolic links."""
+    try:
+        return path.is_file() and not path.is_symlink()
+    except OSError:
+        return False
+
+
 @contextmanager
 def _exclusive_lock(path: Path, timeout_seconds: float) -> Iterator[None]:
     deadline = time.monotonic() + timeout_seconds
+    unconfirmed_windows_contention = False
     while True:
+        observed_windows_lock = IS_WINDOWS and _is_regular_lock_file(path)
         try:
             descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             break
         except FileExistsError as error:
+            unconfirmed_windows_contention = False
+            if time.monotonic() >= deadline:
+                raise RegistryLockTimeoutError(
+                    f"Timed out acquiring registry lock {path}"
+                ) from error
+            time.sleep(LOCK_RETRY_SECONDS)
+        except PermissionError as error:
+            if not IS_WINDOWS:
+                raise
+            confirmed = observed_windows_lock or _is_regular_lock_file(path)
+            if not confirmed:
+                if unconfirmed_windows_contention:
+                    raise
+                unconfirmed_windows_contention = True
+                continue
+            unconfirmed_windows_contention = False
             if time.monotonic() >= deadline:
                 raise RegistryLockTimeoutError(
                     f"Timed out acquiring registry lock {path}"

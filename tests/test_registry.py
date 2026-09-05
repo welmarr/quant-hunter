@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import time
 from collections.abc import Callable, Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -15,6 +17,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+import quant_hunter.identity.registry as registry_module
 from quant_hunter.identity import (
     AllocationExhaustedError,
     DuplicateIdentifierError,
@@ -218,6 +221,82 @@ def test_concurrent_allocation_is_unique_and_complete(tmp_path: Path) -> None:
 
     assert len(set(object_ids)) == 12
     assert set(store.verify_all()) == set(object_ids)
+
+
+def test_concurrent_allocation_stress_is_unique_and_complete(tmp_path: Path) -> None:
+    """Repeated contention leaves every allocation unique, complete, and verifiable."""
+    store = RegistryStore.for_synthetic_tests(tmp_path)
+    object_ids: list[str] = []
+
+    for _wave in range(4):
+        barrier = Barrier(16)
+
+        def allocate(_: int, wave_barrier: Barrier = barrier) -> str:
+            wave_barrier.wait()
+            return store.allocate(RegistryKind.STRATEGY, synthetic_record()).object_id
+
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            object_ids.extend(executor.map(allocate, range(16)))
+
+    assert len(object_ids) == 64
+    assert len(set(object_ids)) == 64
+    assert set(store.verify_all()) == set(object_ids)
+
+
+def test_windows_existing_lock_permission_error_is_contention(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Windows sharing denial on an existing lock retries instead of leaking."""
+    store = RegistryStore.for_synthetic_tests(tmp_path)
+    lock_path = tmp_path / ".allocation.lock"
+    original_open = os.open
+    intercepted = False
+
+    def windows_open(path: Path, flags: int, mode: int = 0o777) -> int:
+        nonlocal intercepted
+        if Path(path) == lock_path and not intercepted:
+            descriptor = original_open(
+                lock_path,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+            )
+            os.close(descriptor)
+            intercepted = True
+            raise PermissionError("synthetic Windows sharing violation")
+        return original_open(path, flags, mode)
+
+    def release_lock(_seconds: float) -> None:
+        lock_path.unlink()
+
+    monkeypatch.setattr(registry_module, "IS_WINDOWS", True)
+    monkeypatch.setattr(os, "open", windows_open)
+    monkeypatch.setattr(time, "sleep", release_lock)
+
+    allocation = store.allocate(RegistryKind.SOURCE, synthetic_record())
+
+    assert intercepted
+    assert allocation.revision.path.name == "v000001.json"
+    assert len(store.verify_object(allocation.object_id)) == 1
+
+
+def test_windows_permission_error_without_lock_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An absent lock cannot turn a real permission failure into contention."""
+    store = RegistryStore.for_synthetic_tests(tmp_path)
+    lock_path = tmp_path / ".allocation.lock"
+    original_open = os.open
+
+    def denied_open(path: Path, flags: int, mode: int = 0o777) -> int:
+        if Path(path) == lock_path:
+            raise PermissionError("synthetic configuration denial")
+        return original_open(path, flags, mode)
+
+    monkeypatch.setattr(registry_module, "IS_WINDOWS", True)
+    monkeypatch.setattr(os, "open", denied_open)
+
+    with pytest.raises(PermissionError, match="configuration denial"):
+        store.allocate(RegistryKind.SOURCE, synthetic_record())
 
 
 def test_concurrent_initial_creation_has_one_winner(tmp_path: Path) -> None:

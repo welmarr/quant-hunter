@@ -175,6 +175,7 @@ class ImmutableObjectStore:
         """Return a verified immutable object descriptor."""
         final_path = self.object_path(digest)
         self._validate_root()
+        self._assert_safe_object_components(final_path)
         if not _lexists(final_path):
             raise ObjectStoreError(f"Immutable object does not exist: {digest}")
         return self._inspect_existing(digest, final_path)
@@ -224,6 +225,7 @@ class ImmutableObjectStore:
         self._validate_root()
         if path != self.object_path(digest):
             raise UnsafeObjectPathError("Object path is not digest-derived")
+        self._assert_safe_object_components(path)
         if _is_link_like(path) or not path.is_file():
             raise ObjectCorruptionError("Digest path is not a regular immutable object")
         try:
@@ -238,6 +240,14 @@ class ImmutableObjectStore:
                 "Immutable object bytes do not match their digest path"
             ) from error
         return content
+
+    def _assert_safe_object_components(self, path: Path) -> None:
+        try:
+            self._assert_no_link_components(path.parent)
+        except UnsafeArtifactRootError as error:
+            raise UnsafeObjectPathError(
+                "Link-like object path component is forbidden"
+            ) from error
 
     def _validate_root(self) -> None:
         self._assert_no_link_components(self.root)

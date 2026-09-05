@@ -26,6 +26,7 @@ from quant_hunter.storage.objects import (
 from quant_hunter.storage.security import (
     reject_credential_shaped_fields,
     reject_credential_uri,
+    reject_secret_text,
 )
 
 ARTIFACT_MANIFEST_SCHEMA = "artifact-manifest.schema.json"
@@ -84,6 +85,7 @@ def build_artifact_manifest(
     store.verify(stored_object)
     require_sha256_digest(stored_object.digest)
     require_sha256_digest(producer.environment_digest)
+    reject_secret_text(producer.command, "artifact producer command")
     if provenance.configuration_digest is not None:
         require_sha256_digest(provenance.configuration_digest)
     for source_id in provenance.source_ids:
@@ -120,6 +122,7 @@ def build_artifact_manifest(
     reject_credential_shaped_fields(document)
     for reference in provenance.references:
         reject_credential_uri(reference)
+        reject_secret_text(reference, "artifact provenance reference")
     catalog.validate(ARTIFACT_MANIFEST_SCHEMA, document)
     canonical_bytes = canonicalize_json(document)
     manifest = ArtifactManifest(canonical_bytes, sha256_bytes(canonical_bytes))

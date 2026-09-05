@@ -15,6 +15,14 @@ SENSITIVE_KEY: Final = re.compile(
     r"(?:$|[_-])",
     re.IGNORECASE,
 )
+SENSITIVE_TEXT: Final = re.compile(
+    r"(?:"
+    r"--(?:api[-_]?key|token|password)(?=\s|=)(?:\s*=\s*|\s+)\S+"
+    r"|(?:authorization|cookie)\s*(?::|=)\s*\S+"
+    r"|(?<![A-Za-z0-9_-])bearer\s+[A-Za-z0-9][A-Za-z0-9._~+/=-]*"
+    r")",
+    re.IGNORECASE,
+)
 
 
 class SensitiveMetadataError(ValueError):
@@ -48,3 +56,25 @@ def reject_credential_uri(uri: str) -> None:
             raise SensitiveMetadataError(
                 "Credential-shaped URI query parameter is forbidden"
             )
+
+
+def reject_secret_text(value: str, context: str) -> None:
+    """Reject explicit credential labels in free text without exposing the value."""
+    if SENSITIVE_TEXT.search(value) is not None:
+        raise SensitiveMetadataError(
+            f"Labelled credential material is forbidden in {context}"
+        )
+
+
+def reject_secret_text_values(
+    value: JsonValue | Mapping[str, JsonValue], context: str
+) -> None:
+    """Recursively inspect string values in persisted metadata containers."""
+    if isinstance(value, str):
+        reject_secret_text(value, context)
+    elif isinstance(value, Mapping):
+        for item in value.values():
+            reject_secret_text_values(item, context)
+    elif isinstance(value, list):
+        for item in value:
+            reject_secret_text_values(item, context)

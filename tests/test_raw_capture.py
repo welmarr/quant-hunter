@@ -39,8 +39,11 @@ def capture(
     native_reference: str = "synthetic-release-1",
     quality: QualityDisposition = QualityDisposition.PENDING,
     request_parameters: JsonRecord | None = None,
+    request_reference: str | None = "synthetic-request-1",
     endpoint: str = "https://example.invalid/raw",
     provider: str = "Synthetic Public Provider",
+    coverage_reference: str = "synthetic-window",
+    warning: str | None = None,
 ) -> tuple[ImmutableObjectStore, VersionedSchemaCatalog, RawCapture]:
     store = ImmutableObjectStore(tmp_path / "artifacts")
     catalog = VersionedSchemaCatalog(SCHEMA_DIRECTORY)
@@ -53,15 +56,15 @@ def capture(
         provider=provider,
         source_endpoint=endpoint,
         request_parameters=request_parameters or {"series": "SYNTHETIC"},
-        request_reference="synthetic-request-1",
+        request_reference=request_reference,
         media_type="application/octet-stream",
         compression=Compression.NONE,
         ingestion_time=ingestion_time,
         source_native_references=(native_reference,),
-        coverage_references=("synthetic-window",),
+        coverage_references=(coverage_reference,),
         retrieval_status=RetrievalStatus.SUCCEEDED,
         quality_disposition=quality,
-        warnings=(),
+        warnings=() if warning is None else (warning,),
         producer=ArtifactProducer(
             code_revision="a" * 40,
             command="synthetic-capture",
@@ -214,6 +217,51 @@ def test_raw_metadata_rejects_credentials_in_endpoint(
     """URI userinfo and credential query names cannot enter stored provenance."""
     with pytest.raises(SensitiveMetadataError):
         capture(tmp_path, endpoint=endpoint)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("request_reference", "Authorization: Bearer do-not-echo"),
+        ("native_reference", "Bearer do-not-echo"),
+        ("coverage_reference", "Cookie: do-not-echo"),
+        ("warning", "retry used --password=do-not-echo"),
+    ],
+)
+def test_raw_metadata_rejects_labelled_secrets_in_free_text(
+    tmp_path: Path, field: str, value: str
+) -> None:
+    """References and warnings reject labelled secrets before capture publication."""
+    arguments = {field: value}
+
+    with pytest.raises(SensitiveMetadataError) as captured:
+        capture(tmp_path, **arguments)  # type: ignore[arg-type]
+
+    assert "do-not-echo" not in str(captured.value)
+
+
+def test_raw_request_values_reject_labelled_secrets_but_allow_normal_prose(
+    tmp_path: Path,
+) -> None:
+    """Nested request text is checked without matching ordinary token words."""
+    with pytest.raises(SensitiveMetadataError):
+        capture(
+            tmp_path,
+            request_parameters={"note": "invoke with --token do-not-echo"},
+        )
+
+    _store, _catalog, result = capture(
+        tmp_path / "safe",
+        request_parameters={
+            "note": "Document token budgets and tokenization in normal prose"
+        },
+    )
+    assert result.metadata.document["request"] == {
+        "parameters": {
+            "note": "Document token budgets and tokenization in normal prose"
+        },
+        "reference": "synthetic-request-1",
+    }
 
 
 def test_schema_invalid_raw_metadata_fails_before_metadata_publication(

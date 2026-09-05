@@ -31,6 +31,8 @@ from quant_hunter.storage.objects import (
 from quant_hunter.storage.security import (
     reject_credential_shaped_fields,
     reject_credential_uri,
+    reject_secret_text,
+    reject_secret_text_values,
 )
 
 RAW_CAPTURE_SCHEMA = "raw-capture.schema.json"
@@ -121,10 +123,20 @@ def capture_raw_payload(
     validate_typed_id(source_id, RegistryKind.SOURCE)
     validate_typed_id(dataset_id, RegistryKind.DATASET)
     reject_credential_uri(source_endpoint)
+    reject_secret_text(provider, "provider")
+    reject_secret_text(source_endpoint, "source endpoint")
     if request_reference is not None:
         reject_credential_uri(request_reference)
+        reject_secret_text(request_reference, "request reference")
     parameter_record = dict(request_parameters)
     reject_credential_shaped_fields(parameter_record)
+    reject_secret_text_values(parameter_record, "request parameters")
+    for reference in source_native_references:
+        reject_secret_text(reference, "source-native reference")
+    for reference in coverage_references:
+        reject_secret_text(reference, "coverage reference")
+    for warning in warnings:
+        reject_secret_text(warning, "warning")
 
     stored_payload = store.publish(payload)
     provenance_references = [source_endpoint]

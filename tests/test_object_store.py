@@ -237,6 +237,30 @@ def test_link_like_object_namespace_is_rejected_before_publication(
     assert not (unsafe / "sha256").exists()
 
 
+@pytest.mark.parametrize("operation", ["get", "read", "verify"])
+def test_authoritative_reads_reject_intermediate_link_like_components(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, operation: str
+) -> None:
+    """Every authoritative read rejects a link-like digest-prefix directory."""
+    store = ImmutableObjectStore(tmp_path / "artifacts")
+    stored = store.publish(b"synthetic intermediate-link target")
+    unsafe = stored.path.parent
+    original = object_module._is_link_like
+    monkeypatch.setattr(
+        object_module,
+        "_is_link_like",
+        lambda path: path == unsafe or original(path),
+    )
+
+    with pytest.raises(UnsafeObjectPathError, match="Link-like"):
+        if operation == "get":
+            store.get(stored.digest)
+        elif operation == "read":
+            store.read_bytes(stored.digest)
+        else:
+            store.verify(stored)
+
+
 def test_publication_requires_exact_bytes(tmp_path: Path) -> None:
     """Mutable bytearray input is rejected rather than copied implicitly."""
     store = ImmutableObjectStore(tmp_path / "artifacts")

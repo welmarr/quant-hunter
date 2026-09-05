@@ -149,6 +149,64 @@ def test_manifest_reuses_schema_and_typed_provenance(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "secret_text",
+    [
+        "capture --api-key=do-not-echo",
+        "capture --token do-not-echo",
+        "capture --password=do-not-echo",
+        "Authorization: Bearer do-not-echo",
+        "Authorization=do-not-echo",
+        "Cookie: do-not-echo",
+        "Bearer do-not-echo",
+    ],
+)
+def test_manifest_rejects_labelled_secrets_in_producer_command(
+    tmp_path: Path, secret_text: str
+) -> None:
+    """Obvious labelled credentials cannot enter producer command evidence."""
+    store = ImmutableObjectStore(tmp_path / "artifacts")
+    catalog = VersionedSchemaCatalog(SCHEMA_DIRECTORY)
+    stored = store.publish(b"synthetic artifact")
+
+    with pytest.raises(SensitiveMetadataError) as captured:
+        build_artifact_manifest(
+            store=store,
+            catalog=catalog,
+            stored_object=stored,
+            artifact_type="report",
+            media_type="application/json",
+            created_at="2026-09-05T12:00:00Z",
+            producer=ArtifactProducer("a" * 40, secret_text, ENVIRONMENT_DIGEST),
+            provenance=ArtifactProvenance(),
+        )
+
+    assert "do-not-echo" not in str(captured.value)
+
+
+def test_manifest_rejects_labelled_secret_in_provenance_reference(
+    tmp_path: Path,
+) -> None:
+    """Free-text provenance references receive the same pre-persistence check."""
+    store = ImmutableObjectStore(tmp_path / "artifacts")
+    catalog = VersionedSchemaCatalog(SCHEMA_DIRECTORY)
+    stored = store.publish(b"synthetic artifact")
+
+    with pytest.raises(SensitiveMetadataError):
+        build_artifact_manifest(
+            store=store,
+            catalog=catalog,
+            stored_object=stored,
+            artifact_type="report",
+            media_type="application/json",
+            created_at="2026-09-05T12:00:00Z",
+            producer=ArtifactProducer("a" * 40, "synthetic", ENVIRONMENT_DIGEST),
+            provenance=ArtifactProvenance(
+                references=("request Authorization=do-not-echo",)
+            ),
+        )
+
+
 def test_manifest_defensive_nonobject_and_publish_mismatch_paths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

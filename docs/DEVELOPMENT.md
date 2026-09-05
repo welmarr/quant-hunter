@@ -246,3 +246,38 @@ strict mypy, build, import, archive inspection, and diff checks also passed.
 Hosted Windows and Ubuntu CI remain for independent review after push. Batch 4B
 retains every derived-Parquet, three-digest, normalized/curated, timestamp, and
 point-in-time obligation. No dependency or paid commitment was added.
+
+### Batch 4A independent-review fixes
+
+Windows may report an exclusive-create collision on a live registry lock as a
+sharing `PermissionError` rather than `FileExistsError`. Registry acquisition
+now retries that result only on Windows and only while the lock path is an
+existing regular, non-symlink file. It also permits one immediate retry when a
+contender removes the lock between the failed create and that inspection; a
+second unconfirmed denial propagates. Directories, symlinks, persistent absent-path
+denials, and non-Windows permission/configuration failures still fail closed,
+and a confirmed live contender remains bounded by the original timeout. The
+filesystem lock remains cross-process and exclusive-create based.
+
+Authoritative object `get`, `read_bytes`, and `verify` operations now repeat the
+existing symlink/Windows-reparse component inspection through the digest-prefix
+directory immediately before reading. Final-object and artifact-root checks are
+unchanged. These portable checks narrow accidental and unprivileged redirection,
+but component inspection and file opening are separate operations and therefore
+have an unavoidable TOCTOU window; they do not protect against a machine
+administrator.
+
+Before publication, artifact producer commands, provenance/request/source/coverage
+references, request string values, provider text, and warning strings reject
+explicit credential labels such as credential-bearing command options,
+authorization headers, cookies, and bearer credentials. Detection is
+label-based rather than entropy-based, does not match ordinary words containing
+`token`, and never includes the suspected value in its exception text.
+
+The review-fix locked Windows gate passed with 219 tests and 95.54% combined
+statement/branch coverage. Lock, Ruff format, Ruff lint, strict mypy, package
+import, and archive inspection passed. The first isolated build attempt could
+not reach PyPI; the established `uv build --no-sources --offline` path then
+built both distributions from the pinned local cache. No dependency or paid
+service was added. Hosted Windows and Ubuntu CI remain for independent review
+after push.
