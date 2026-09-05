@@ -71,6 +71,10 @@
       "type": "string",
       "pattern": "^BACKLOG-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
+    "cost_id": {
+      "type": "string",
+      "pattern": "^COST-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
     "any_object_id": {
       "oneOf": [
         {"$ref": "#/$defs/research_object_id"},
@@ -78,7 +82,8 @@
         {"$ref": "#/$defs/experiment_id"},
         {"$ref": "#/$defs/source_id"},
         {"$ref": "#/$defs/dataset_id"},
-        {"$ref": "#/$defs/backlog_id"}
+        {"$ref": "#/$defs/backlog_id"},
+        {"$ref": "#/$defs/cost_id"}
       ]
     }
   }

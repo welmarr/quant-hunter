@@ -203,3 +203,17 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** EXPERIMENT_LEDGER.md Required Metadata and Lifecycle; MODEL_REGISTRY.md Minimum Record; RESEARCH_METHODOLOGY.md reproduction classifications; schemas/v1/experiment.schema.json; schemas/v1/research-object.schema.json; tests/test_schemas.py.
 - **Supersedes / superseded by:** Narrow pre-use v1 correction exception only; no scientific standard superseded.
 - **Owner and approver:** Project owner through explicit Stage 1B Batch 2 Fix request.
+
+### DEC-0013 — Stage Registry Integrity Before General Canonicalization
+
+- **Date:** 2026-09-05
+- **Status:** ACCEPTED
+- **Scope:** architecture / governance / reproducibility
+- **Context:** Batch 3A authorizes typed identity and append-only registry behavior, while RFC 8785 canonicalization and reusable content hashing remain a separately gated Batch 3B. Revision compare-and-swap still needs an unambiguous prior-file identity.
+- **Decision:** Implement DEC-0009's registry layout, UUIDv7 allocation, exclusive creation, revisions, compare-and-swap, duplicate scans, and chain verification in Batch 3A. Until Batch 3B, compute the private revision-chain digest as SHA-256 over the exact stored UTF-8 revision-file bytes. Do not expose this helper as general artifact, configuration, dataset, or freeze-manifest hashing. No real research record may be created in this batch; tests use temporary synthetic records only. A caller may inject its governed schema validator, while the core always owns and validates the typed ID, revision number, prior digest, finite JSON encoding, and path placement. Generated indexes are explicitly non-authoritative and disposable.
+- **Alternatives considered:** Implementing JCS early would cross the Batch 3B boundary. Omitting a digest would make stale-writer rejection and chain verification impossible. Mutable latest-record files and in-place locking were rejected by DEC-0009.
+- **Scientific/statistical consequences:** Concurrent writers cannot silently fork one object's history, and rejected or failed revisions remain present. Exact-file hashing is limited to registry history integrity and makes no claim that arbitrary JSON is canonically equivalent.
+- **Reproducibility and cost consequences:** The implementation uses the Python 3.14 standard library and the existing locked test toolchain at USD 0 direct cost. Batch 3B must add and validate RFC 8785 behavior before any real record is admitted and must preserve any existing revision bytes rather than rewrite history.
+- **References:** DEC-0007, DEC-0009, `ARCHITECTURE.md`, `ROADMAP.md` Stage 1B items 5–6, `src/quant_hunter/identity/`, and `tests/test_registry.py`.
+- **Supersedes / superseded by:** Stages, and does not supersede, DEC-0007 or DEC-0009.
+- **Owner and approver:** Project owner through explicit Stage 1B Batch 3A authorization dated 2026-09-05.

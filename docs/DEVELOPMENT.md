@@ -158,3 +158,34 @@ source and wheel distributions. Package import returned `0.1.0`.
 `git diff --check` passed. Hosted CI was not triggered during this fix.
 No dependencies, purchases, or paid commitments were added; aggregate budget
 headroom remains unknown pending the existing subscription/API accounting inputs.
+
+## Batch 3A registry validation
+
+On 2026-09-05, Batch 3A implemented only Stage 1B roadmap item 5. The
+`quant_hunter.identity` package defines all nine DEC-0009 identifier kinds and
+their fixed registry directories. `RegistryStore` exclusive-creates
+`v000001.json`, appends zero-padded revisions under a per-object filesystem
+lock, compares the caller's prior digest with the verified current head, scans
+globally for duplicate full IDs, and verifies contiguous exact-file SHA-256
+links. Allocation is serialized by a registry-root lock and retries logged UUID
+collisions. Generated indexes declare themselves non-authoritative.
+
+The chain digest is private to registry-file integrity under DEC-0013. It hashes
+the exact stored UTF-8 bytes and is not RFC 8785 JCS or a reusable artifact,
+configuration, dataset, or freeze digest. Batch 3B remains responsible for
+general canonicalization, standard vectors, hash APIs, and freeze manifests.
+No authoritative research record was created; tests use temporary synthetic
+directories and payloads. The common schema gained its previously documented
+`COST-<uuidv7>` definition as a backward-compatible addition.
+
+The locked local gate passed after implementation: `uv lock --check`, Ruff
+format and lint, strict mypy, and 114 pytest cases. Registry tests exercise all
+nine prefixes, exclusive first creation, collision retry/exhaustion,
+multi-threaded allocation, one-winner compare-and-swap, stale-writer rejection,
+zero-padded append history, global duplicates, broken links, lock timeout,
+injected validation, non-finite JSON rejection, retained rejected/failed
+history, and disposable index rebuilds. Combined statement/branch coverage was
+94.04%; the collision and revision-conflict
+behaviors required by DEC-0008 are directly exercised. `git diff --check` and
+the offline source/wheel build passed. Hosted CI was not triggered. No runtime
+or development dependency, purchase, service, or paid commitment was added.

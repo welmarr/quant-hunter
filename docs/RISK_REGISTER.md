@@ -35,3 +35,14 @@ Every operational risk record must include ID, cause and consequence, likelihood
 ## Escalation
 
 Stop and record a decision when a control cannot be satisfied, a sealed dataset may have been exposed, provenance is incomplete, a result depends on unavailable proprietary data, a credential may have leaked, or a purchase is proposed. Scientific or safety controls may not be waived for schedule pressure.
+
+## Batch 3A Evidence
+
+On 2026-09-05, temporary synthetic tests implemented and exercised the
+DEC-0009 controls for RISK-018: exclusive typed-ID allocation, collision retry,
+append-only revisions, prior-digest compare-and-swap, global duplicate scans,
+chain verification, concurrent allocation, and stale-writer rejection. The risk
+remains `OPEN` until the wider Stage 1B reproducibility audit and cross-platform
+CI evidence are complete. Under DEC-0013, the current revision digest covers
+exact stored bytes only; RISK-019 remains `OPEN` because RFC 8785 canonicalization
+and its standard vectors are explicitly deferred to Batch 3B.

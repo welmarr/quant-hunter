@@ -22,7 +22,10 @@ Do not implement the proposed 200 strategies.
 
 ### Stage 1B — Foundation Implementation
 
-**Status: IN PROGRESS — BATCH 2 COMPLETE (2026-09-05).** Batches 1–2 completed items 1–4 below. Items 5–13 remain not authorized and unstarted. Execute future work only through a separate explicit batch authorization:
+**Status: IN PROGRESS — BATCH 3A COMPLETE (2026-09-05).** Batches 1–2
+completed items 1–4 below. Batch 3A completed item 5 only. Items 6–13 remain
+not authorized and unstarted. Execute future work only through a separate
+explicit batch authorization:
 
 1. **Preflight and boundary evidence:** reread governing documents; inventory the host without exposing data; reverify Git through the exact-path ephemeral trust method or an owner-approved persistent repository-specific remedy (never a wildcard); record the repository/CI state and budget facts; verify that a separate encrypted NTFS location, OS identities, ACLs, and auditing are feasible. Obtain explicit host-admin approval before persistent ownership/trust, account, volume, audit-policy, or ACL mutations.
 2. **Minimal package scaffold:** create only the `src/quant_hunter` foundation package, `tests`, `schemas`, `registries`, `configs`, and manifest directories; configure CPython 3.14, PEP 621/Hatchling, `.python-version`, pinned uv bootstrap metadata, `.venv` exclusion, and committed `uv.lock`.
