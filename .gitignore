@@ -1,0 +1,19 @@
+.env
+.venv/
+.tools/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Generated research data and artifact objects never belong in Git.
+artifacts/objects/
+data/
+

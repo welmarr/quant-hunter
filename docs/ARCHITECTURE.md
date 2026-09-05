@@ -2,11 +2,11 @@
 
 ## Status and Design Goals
 
-Stage 1A planning is complete; no application scaffold exists yet and Stage 1B has not begun. The design must be modular, reproducible, testable, and difficult to misuse. Prefer explicit local components and clean interfaces over premature services, distributed systems, or operational complexity.
+Stage 1A planning is complete and Stage 1B is in progress. Batch 1 provides only the package shell, reserved directory markers, locked toolchain, smoke test, and engineering quality gate. Domain modules and research behavior remain unimplemented. The design must be modular, reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
 
-## Planned Repository Layout
+## Current and Planned Repository Layout
 
 ```text
 quant-hunter/
@@ -21,7 +21,8 @@ quant-hunter/
 ├── artifacts/
 │   └── manifests/            # small, reviewable artifact manifests; objects stay outside Git
 ├── src/quant_hunter/
-│   ├── config/               # schema validation and canonicalization
+│   ├── __init__.py           # Batch 1 package/version surface
+│   ├── config/               # planned: schema validation and canonicalization
 │   ├── identity/             # UUIDv7 allocation and registry revisions
 │   ├── provenance/           # manifests, hashes, and rerun resolution
 │   ├── storage/              # immutable raw/derived/artifact contracts
@@ -43,11 +44,13 @@ quant-hunter/
 └── .env.example
 ```
 
-This tree is a Stage 1B design target, not permission to implement it under the completed Stage 1A planning scope.
+Only files and directory markers created by an authorized batch are present. The
+listed domain packages remain design targets and do not authorize later-batch
+implementation.
 
 ## Stage 1 Technology Profile
 
-- Runtime: 64-bit standard CPython `>=3.14,<3.15`; every run records its exact patch/build and platform.
+- Runtime: 64-bit standard CPython `>=3.14,<3.15`, pinned to 3.14.7 for the current toolchain; every run records its exact patch/build and platform.
 - Project/environment: PEP 621 `pyproject.toml`, Hatchling, uv, committed `uv.lock`, ignored `.venv`, and version/checksum-pinned uv bootstrap.
 - Evidence metadata: JSON Schema Draft 2020-12, RFC 8785 JCS, UTF-8, and `sha256:<hex>` digests. Precision-sensitive values are normalized strings.
 - Tabular data: deterministic Parquet plus a canonical lineage manifest; raw inputs retain exact provider bytes and byte hashes.

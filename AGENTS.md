@@ -2,7 +2,7 @@
 
 ## Mission and Current Scope
 
-Quant Hunter is a long-horizon project to build an independent, scientifically defensible quantitative-research and market-discovery laboratory. It is not currently a trading bot. Stage 0 and Stage 1A planning are complete; Stage 1B implementation has not begun. Do not implement Stage 1B infrastructure, trading strategies, or later-stage systems without a subsequent explicit request and the applicable roadmap gate.
+Quant Hunter is a long-horizon project to build an independent, scientifically defensible quantitative-research and market-discovery laboratory. It is not currently a trading bot. Stage 0 and Stage 1A are complete. Stage 1B is in progress, but only an explicitly authorized batch may be implemented. Do not implement trading strategies or later-stage systems without the applicable roadmap gate and a separate explicit request.
 
 Agents working here must combine the responsibilities of principal quantitative systems architect, quantitative researcher, data engineer, statistician, and senior Python engineer, while respecting the stage and authorization boundaries below.
 
@@ -64,5 +64,6 @@ Detailed requirements live in:
 - `docs/BUDGET_LEDGER.md` — aggregate spending, commitments, approvals, and Month-1 headroom.
 - `docs/ROADMAP.md` — stage gates, ordered work, completion evidence, and deferred scope.
 - `docs/REQUIREMENTS_TRACEABILITY.md` — mapping from the original master specification to this hierarchy.
+- `docs/DEVELOPMENT.md` — pinned toolchain, quality commands, CI policy, and host preflight evidence.
 
 This file governs invariant behavior. The detailed documents govern implementation and research procedures. If they conflict, apply the stricter scientific, safety, reproducibility, and spending constraint and record the resolution in `docs/DECISIONS.md`.

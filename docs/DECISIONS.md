@@ -165,6 +165,20 @@ Owner and approver:
 - **Supersedes / superseded by:** None.
 - **Owner and approver:** Project owner, through Stage 1A authorization dated 2026-09-04.
 
+### DEC-0011 — Pin the Initial Stage 1B Toolchain and Public CI Profile
+
+- **Date:** 2026-09-05
+- **Status:** ACCEPTED
+- **Scope:** architecture / reproducibility / operations / cost
+- **Context:** Stage 1B Batch 1 requires the floating CPython 3.14 design to become an exact, reproducible toolchain. The host has CPython 3.14.3, while Python.org lists 3.14.7 as the current maintenance release. The repository is public, and GitHub's current billing documentation makes standard hosted runners free for public repositories.
+- **Decision:** Pin standard GIL-enabled, 64-bit CPython 3.14.7 in `.python-version` and uv 0.12.10 in `uv.toml` and CI. Treat any Python patch or uv change as an explicit upgrade requiring a decision, lock regeneration, clean Windows and Ubuntu checks, and updated toolchain evidence. Use only standard `ubuntu-24.04` and `windows-2025` GitHub-hosted runners with `contents: read`, disabled uv caching, no artifact upload, and immutable action SHAs. Reassess and disable hosted CI before or when repository visibility or GitHub billing policy changes.
+- **Alternatives considered:** Retaining host Python 3.14.3 would ignore available security and maintenance fixes. uv 0.12.0 passed archive verification but its managed-Python catalog could not install CPython 3.14.7; it was rejected for the project pin. Floating Python, uv, or action tags weaken reproducibility and supply-chain review. Larger or self-hosted runners add cost or security exposure and are rejected.
+- **Scientific/statistical consequences:** The batch adds no research method or result. Exact toolchain identity reduces unexplained environment drift; future frozen experiments must bind their own environment evidence.
+- **Reproducibility and cost consequences:** CPython, uv, Hatchling, Ruff, mypy, pytest, pytest-cov, coverage.py, and eligible standard public-repository Actions usage add USD 0 direct cost. The verified uv Windows archive SHA-256 and local executable SHA-256 are recorded in `DEVELOPMENT.md`. Budget headroom remains `UNKNOWN`; no purchase is authorized.
+- **References:** `pyproject.toml`, `.python-version`, `uv.toml`, `uv.lock`, `.github/workflows/quality.yml`, `DEVELOPMENT.md`, `BUDGET_LEDGER.md`, `RISK_REGISTER.md`.
+- **Supersedes / superseded by:** Implements DEC-0004, DEC-0005, and DEC-0008 without superseding their constraints.
+- **Owner and approver:** Project owner, through Stage 1B Batch 1 authorization dated 2026-09-05.
+
 ## Remaining Inputs Before Paid Work
 
 The seven Stage 1A design decisions are resolved. The following are factual inputs, not unresolved architecture choices:

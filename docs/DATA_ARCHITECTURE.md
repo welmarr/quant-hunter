@@ -109,7 +109,7 @@ Each normalized, curated, or feature dataset must additionally record parent dat
 
 Every experiment must reference an immutable dataset manifest containing the exact dataset versions and vintages used. Re-running that manifest from the same inputs must reproduce the same records, or fail loudly with an auditable explanation.
 
-Under DEC-0007, metadata manifests are schema-validated JCS JSON and use SHA-256 identities. Raw objects are identified by exact received bytes. Derived Parquet objects record the physical file digest plus a canonical manifest digest covering ordered parent digests, logical schema, stable row ordering or explicit unordered semantics, transformation configuration, code revision, environment, and quality disposition. A different byte stream is a different object even when its rows appear equivalent.
+Under DEC-0007, metadata manifests are schema-validated JCS JSON and use SHA-256 identities. Raw objects are identified by exact received bytes. A later data-foundation batch must record three distinct digests for derived Parquet data: (1) a physical-object digest over the exact file bytes, (2) a provenance/lineage digest over the canonical manifest and ordered parent evidence, and (3) a logical-content fingerprint over the normalized logical schema and canonical row content using the declared order or unordered semantics. The logical fingerprint identifies equivalent rows across different valid Parquet encodings; it never substitutes for byte identity or lineage. Transformation configuration, code revision, environment, and quality disposition remain part of lineage. This three-digest contract is specified here but is not implemented in Batch 1.
 
 ## Quality controls
 

@@ -31,7 +31,9 @@ Rejected and cancelled entries remain visible. Approval of one item does not app
 
 ## Entries
 
-No purchases or paid commitments are recorded. Paid-source proposals must also satisfy `DATA_SOURCE_REGISTRY.md`; infrastructure, API, subscription, and tooling proposals use this ledger even when no data source is involved.
+No purchases or paid commitments are recorded. Stage 1B Batch 1 uses free/open-source CPython, uv, Hatchling, Ruff, mypy, pytest, pytest-cov, and coverage.py at USD 0 direct cost. On 2026-09-05 the repository was verified public and GitHub's current documentation stated that standard GitHub-hosted runners are free for public repositories; the Batch 1 workflow uses only standard Ubuntu/Windows runners, no cache, and no artifact upload. Larger runners are prohibited, and visibility or billing-policy changes require immediate reassessment. These zero-cost tools do not resolve the unknown pre-existing subscription/API baseline, so headroom remains `UNKNOWN`.
+
+Paid-source proposals must also satisfy `DATA_SOURCE_REGISTRY.md`; infrastructure, API, subscription, and tooling proposals use this ledger even when no data source is involved.
 
 ## Review
 
