@@ -180,8 +180,11 @@ semantics. Selection verifies the supplied input table against that logical
 parent identity. The same audit binds the complete selected logical schema and
 values through the existing logical-content fingerprint under the declared
 output ordering, then accounts for selected and excluded vintage IDs. Both
-immutable objects are referenced by the existing lineage manifest. Published selections use the
-existing deterministic Parquet, artifact sidecar, canonical lineage, immutable
+immutable objects are referenced by the existing lineage manifest. Publication
+and later PIT verification require the exact input table, rerun the governed PIT
+algorithm, and compare the complete selected table, exclusions, vintage
+accounting, fingerprint, and audit. Published selections use the existing
+deterministic Parquet, artifact sidecar, canonical lineage, immutable
 object store, parent evidence, and physical/lineage/logical identities. A mode
 or `as_of` change therefore changes configuration and lineage even when the
 selected logical rows, and correctly their logical fingerprint, remain equal.

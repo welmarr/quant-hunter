@@ -744,10 +744,45 @@ def select_point_in_time(
     return result
 
 
+def verify_pit_transformation(
+    *, input_table: pa.Table, selection: PitSelectionResult
+) -> None:
+    """Rerun PIT selection from exact input and compare the complete claimed result."""
+    selection.verify()
+    expected = select_point_in_time(
+        table=input_table,
+        configuration=selection.configuration,
+        input_evidence=selection.input_evidence,
+    )
+    if not selection.selected_table.equals(
+        expected.selected_table, check_metadata=True
+    ):
+        raise PitIntegrityError("PIT transformation selected table mismatch")
+    if selection.selected_vintage_ids != expected.selected_vintage_ids:
+        raise PitIntegrityError(
+            "PIT transformation selected vintage accounting mismatch"
+        )
+    if selection.exclusions != expected.exclusions:
+        raise PitIntegrityError("PIT transformation exclusion evidence mismatch")
+    if selection.input_row_count != expected.input_row_count:
+        raise PitIntegrityError("PIT transformation input row count mismatch")
+    if (
+        selection.selected_logical_content_fingerprint
+        != expected.selected_logical_content_fingerprint
+    ):
+        raise PitIntegrityError("PIT transformation selected fingerprint mismatch")
+    if (
+        selection.audit_canonical_bytes != expected.audit_canonical_bytes
+        or selection.audit_digest != expected.audit_digest
+    ):
+        raise PitIntegrityError("PIT transformation audit evidence mismatch")
+
+
 def publish_pit_selection(
     *,
     store: ImmutableObjectStore,
     catalog: VersionedSchemaCatalog,
+    input_table: pa.Table,
     selection: PitSelectionResult,
     output_dataset_id: str,
     layer: DerivedLayer,
@@ -759,7 +794,7 @@ def publish_pit_selection(
     references: Sequence[str] = (),
 ) -> PublishedPitDataset:
     """Publish a normalized or curated PIT result through the three identities."""
-    selection.verify()
+    verify_pit_transformation(input_table=input_table, selection=selection)
     catalog.validate(PIT_CONFIGURATION_SCHEMA, selection.configuration.document)
     if layer not in {DerivedLayer.NORMALIZED, DerivedLayer.CURATED}:
         raise PitConfigurationError(
@@ -809,7 +844,12 @@ def publish_pit_selection(
         audit_object=audit_object,
         derived_evidence=derived_evidence,
     )
-    verify_published_pit_dataset(store=store, catalog=catalog, published=published)
+    verify_published_pit_dataset(
+        store=store,
+        catalog=catalog,
+        input_table=input_table,
+        published=published,
+    )
     return published
 
 
@@ -817,10 +857,11 @@ def verify_published_pit_dataset(
     *,
     store: ImmutableObjectStore,
     catalog: VersionedSchemaCatalog,
+    input_table: pa.Table,
     published: PublishedPitDataset,
 ) -> None:
     """Verify PIT configuration/audit objects and their derived lineage binding."""
-    published.selection.verify()
+    verify_pit_transformation(input_table=input_table, selection=published.selection)
     store.verify(published.configuration_object)
     store.verify(published.audit_object)
     if (

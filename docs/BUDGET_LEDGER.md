@@ -25,13 +25,18 @@ Rejected and cancelled entries remain visible. Approval of one item does not app
 
 | Window | Cap | Recorded baseline | Approved/committed | Spent | Remaining headroom |
 |---|---:|---:|---:|---:|---:|
-| 2026-09-04 00:00 EDT (inclusive) to 2026-10-04 00:00 EDT (exclusive) | USD 400 | UNKNOWN | USD 0 | USD 0 | UNKNOWN |
+| 2026-09-04 00:00 EDT (inclusive) to 2026-10-04 00:00 EDT (exclusive) | USD 400 | UNKNOWN | USD 10 | USD 10 | UNKNOWN |
 
-`USD 0` above means no new project commitment or spend is recorded in this repository; it does not assert that existing subscriptions or project API usage have zero cost. The owner must provide relevant invoice amount/service dates and project-attributable API usage. For each item, the ledger counts actual Month-1 spend when final, otherwise its approved or committed maximum; any unknown material amount keeps headroom `UNKNOWN`.
+The USD 10 approved/committed amount is the same purchase shown as spent, not an
+additional USD 10 liability. It does not assert that existing subscriptions or
+project API usage have zero cost. The owner must provide relevant invoice
+amount/service dates and project-attributable API usage. For each item, the
+ledger counts actual Month-1 spend when final, otherwise its approved or
+committed maximum; any unknown material amount keeps headroom `UNKNOWN`.
 
 ## Entries
 
-No purchases or paid commitments are recorded. Stage 1B Batches 1–4A use
+One owner-reported purchase is recorded below. Stage 1B Batches 1–4A use
 free/open-source CPython, uv, Hatchling, Ruff, mypy, pytest, pytest-cov,
 coverage.py, jsonschema, referencing, rfc3339-validator, and types-jsonschema at
 USD 0 direct cost. Batch 3B adds the Apache-2.0 `rfc8785` 0.1.4 package at USD 0
@@ -48,8 +53,27 @@ Batch 4A uses only the Python standard library and existing locked dependencies
 for local immutable object and synthetic raw-capture foundations. Batch 4B.1 adds
 Apache-2.0 PyArrow 25.0.1 at USD 0 direct cost for deterministic local Parquet
 encoding. Batch 4B.2 uses the same locked dependencies for synthetic PIT
-selection and adds no service, data, storage, subscription, usage commitment,
-or direct cost.
+selection. This final review-fix implementation adds no service, data, storage,
+subscription, usage commitment, or direct cost. The separate owner-reported
+purchase already made for project capacity is recorded below.
+
+### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
+
+- **Category / provider / product:** implementation capacity / OpenAI / Codex credits.
+- **Purpose:** reserve/additional Codex implementation capacity for Quant Hunter.
+- **Cost class:** non-recurring prepaid purchase; recurrence and cancellation terms are not applicable based on the owner's report.
+- **Purchase date / currency / Month-1 actual:** 2026-09-06 / USD / USD 10.
+- **Status:** `SPENT`.
+- **Approval:** explicitly approved and reported by the project owner in the current Stage 1B work.
+- **Committed / actual amount:** USD 10 / USD 10, based on the owner's report.
+- **Taxes and fees:** unknown; no additional amount is imputed.
+- **Invoice, payment reference, and service period:** not provided.
+- **Alternative / deferral consequence:** use only already available no-additional-cost capacity; implementation may proceed more slowly.
+- **Owner / linked risks:** project owner / RISK-013 and RISK-021.
+
+The USD 10 is an already-made project purchase recorded against the Month-1 cap.
+The unresolved pre-existing subscription/API baseline keeps remaining headroom
+`UNKNOWN`; this ledger does not claim that USD 390 is available.
 
 Paid-source proposals must also satisfy `DATA_SOURCE_REGISTRY.md`; infrastructure, API, subscription, and tooling proposals use this ledger even when no data source is involved.
 

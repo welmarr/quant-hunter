@@ -301,3 +301,17 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** DEC-0016–DEC-0018, `DATA_ARCHITECTURE.md`, `ROADMAP.md` item 7, `src/quant_hunter/data/pit.py`, and `tests/test_pit.py`.
 - **Supersedes / superseded by:** Hardens DEC-0018 without changing PIT science. Item 7 remains in review-fix status pending independent review; item 8 remains unstarted.
 - **Owner and approver:** Project owner through explicit Stage 1B Batch 4B.2 review-fix authorization dated 2026-09-06.
+
+### DEC-0020 — Verify PIT Transformation Semantics by Deterministic Replay
+
+- **Date:** 2026-09-06
+- **Status:** ACCEPTED
+- **Scope:** data / provenance / reproducibility
+- **Context:** Rehashing a modified selected table and its audit can restore internal hash consistency without proving that the governed PIT algorithm produced that table from the exact bound input.
+- **Decision:** Publication and published-evidence verification must receive the exact input table explicitly, verify it against the existing `PitInputEvidence`, rerun the unchanged PIT selection algorithm with the bound configuration, and compare the complete selected Arrow table, selected vintage IDs, exclusions, input-row accounting, selected logical fingerprint, and canonical audit evidence. Do not retain a duplicate input payload inside `PitSelectionResult`; callers must supply the verified immutable input material when establishing transformation correctness.
+- **Alternatives considered:** Another self-declared digest would only restore hash consistency. Retaining the complete parent table inside every result duplicates potentially large data. A general query engine or recursive provenance-DAG verifier exceeds this review fix.
+- **Scientific/statistical consequences:** A fully canonical, correctly rehashed forged selection still fails unless deterministic replay from the exact input produces identical output and dispositions. Event/publication/ingestion/revision semantics, PUBLIC/OPERATIONAL policy, vintage priority, equality boundaries, and ambiguity behavior are unchanged.
+- **Reproducibility and cost consequences:** The replay uses existing deterministic Arrow and PIT contracts and adds no dependency. Its incremental direct cost is USD 0. Separately, the owner-reported USD 10 Codex-credit purchase is recorded as spent in `BUDGET_LEDGER.md`; unresolved baseline costs keep headroom unknown.
+- **References:** DEC-0018, DEC-0019, `DATA_ARCHITECTURE.md`, `BUDGET_LEDGER.md`, `ROADMAP.md` item 7, `src/quant_hunter/data/pit.py`, and `tests/test_pit.py`.
+- **Supersedes / superseded by:** Extends DEC-0019 from evidence identity to deterministic transformation verification. Item 7 remains in final-review-fix status pending independent review; item 8 remains unstarted.
+- **Owner and approver:** Project owner through explicit final Stage 1B Batch 4B.2 review-fix authorization dated 2026-09-06.

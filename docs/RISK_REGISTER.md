@@ -116,3 +116,15 @@ the exact parent tuple and selected identity. Hostile synthetic evidence with
 valid alternate revision, physical, lineage, logical, or selected-content claims
 is rejected. This further reduces RISK-003, RISK-005, and RISK-019; item 7 remains
 in review-fix status pending independent review.
+
+The final review fix also requires the exact bound input table at publication
+and later verification, reruns the unchanged governed PIT transformation, and
+compares the complete selected table, exclusions, and selection accounting.
+This rejects internally rehashed selected-value forgeries without changing the
+temporal eligibility or vintage-selection rules.
+
+The owner also reported a USD 10 non-recurring prepaid Codex-credit purchase on
+2026-09-06 and directed that it count against the Month-1 cap. The canonical
+budget ledger records it as spent under a permanent COST ID. RISK-013 and
+RISK-021 remain `OPEN` because the pre-existing subscription/API baseline and
+therefore remaining headroom are still unknown.

@@ -16,8 +16,8 @@ adds the synthetic deterministic Parquet and distinct physical, lineage, and
 logical-content identity foundation. Batch 4B.2 adds the synthetic point-in-time
 selection contract for explicit UTC as-of queries, PUBLIC and OPERATIONAL
 availability, immutable vintages, and normalized/curated publication. Roadmap
-item 7 remains in review-fix status pending independent review of exact PIT
-input/output evidence binding. No real data, connector, experiment,
+item 7 remains in final-review-fix status pending independent review of exact
+PIT transformation binding. No real data, connector, experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 portfolio logic, or live-trading capability exists.
 

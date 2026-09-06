@@ -39,6 +39,7 @@ from quant_hunter.data import (
     publish_derived_table,
     publish_pit_selection,
     select_point_in_time,
+    verify_pit_transformation,
     verify_published_pit_dataset,
 )
 from quant_hunter.provenance import sha256_bytes
@@ -144,6 +145,15 @@ def select(
     mode: AvailabilityMode = AvailabilityMode.PUBLIC,
 ) -> PitSelectionResult:
     table = table_from_rows(rows)
+    return select_table(table, as_of=as_of, mode=mode)
+
+
+def select_table(
+    table: pa.Table,
+    *,
+    as_of: int = 150,
+    mode: AvailabilityMode = AvailabilityMode.PUBLIC,
+) -> PitSelectionResult:
     return select_point_in_time(
         table=table,
         configuration=typed_configuration(as_of=as_of, mode=mode),
@@ -174,6 +184,7 @@ def input_evidence(table: pa.Table) -> PitInputEvidence:
 
 def publish(
     tmp_path: Path,
+    input_table: pa.Table,
     selection: PitSelectionResult,
     *,
     output_dataset_id: str = OUTPUT_DATASET_ID,
@@ -184,6 +195,7 @@ def publish(
     published = publish_pit_selection(
         store=store,
         catalog=schema_catalog,
+        input_table=input_table,
         selection=selection,
         output_dataset_id=output_dataset_id,
         layer=layer,
@@ -850,7 +862,8 @@ def test_input_evidence_binds_declared_schema_and_parent_ordering() -> None:
 
 
 def test_selected_value_tampering_fails_result_and_publication(tmp_path: Path) -> None:
-    result = select([row("V1", 1)])
+    input_table = table_from_rows([row("V1", 1)])
+    result = select_table(input_table)
     value_index = result.selected_table.schema.get_field_index("value")
     changed_table = result.selected_table.set_column(
         value_index, "value", pa.array([999], type=pa.int64())
@@ -860,22 +873,59 @@ def test_selected_value_tampering_fails_result_and_publication(tmp_path: Path) -
     with pytest.raises(PitIntegrityError, match="logical content fingerprint"):
         damaged.verify()
     with pytest.raises(PitIntegrityError, match="logical content fingerprint"):
-        publish(tmp_path, damaged)
+        publish(tmp_path, input_table, damaged)
+
+
+def test_rehashed_value_forgery_fails_transformation_and_publication(
+    tmp_path: Path,
+) -> None:
+    input_table = table_from_rows([row("V1", 1)])
+    result = select_table(input_table)
+    value_index = result.selected_table.schema.get_field_index("value")
+    changed_table = result.selected_table.set_column(
+        value_index, "value", pa.array([999], type=pa.int64())
+    )
+    changed_fingerprint = logical_content_fingerprint(
+        changed_table, changed_table.schema, PIT_SELECTED_ROW_ORDERING
+    )
+    changed_audit = result.audit_document
+    changed_audit["selected_logical_content_fingerprint"] = changed_fingerprint
+    changed_audit_bytes = canonicalize_json(changed_audit)
+    forged = replace(
+        result,
+        selected_table=changed_table,
+        selected_logical_content_fingerprint=changed_fingerprint,
+        audit_canonical_bytes=changed_audit_bytes,
+        audit_digest=sha256_bytes(changed_audit_bytes),
+    )
+
+    forged.verify()
+    with pytest.raises(PitIntegrityError, match="transformation selected table"):
+        verify_pit_transformation(input_table=input_table, selection=forged)
+    with pytest.raises(PitIntegrityError, match="transformation selected table"):
+        publish(tmp_path, input_table, forged)
 
 
 def test_as_of_and_policy_change_lineage_but_not_equal_logical_content(
     tmp_path: Path,
 ) -> None:
     rows = [row("V1", 1, publication_time=100, ingestion_time=100)]
-    early = select(rows, as_of=150, mode=AvailabilityMode.PUBLIC)
-    later = select(rows, as_of=160, mode=AvailabilityMode.PUBLIC)
-    operational = select(rows, as_of=160, mode=AvailabilityMode.OPERATIONAL)
-    _store, _catalog, early_published = publish(tmp_path / "early", early)
+    input_table = table_from_rows(rows)
+    early = select_table(input_table, as_of=150, mode=AvailabilityMode.PUBLIC)
+    later = select_table(input_table, as_of=160, mode=AvailabilityMode.PUBLIC)
+    operational = select_table(
+        input_table, as_of=160, mode=AvailabilityMode.OPERATIONAL
+    )
+    _store, _catalog, early_published = publish(tmp_path / "early", input_table, early)
     _store, _catalog, later_published = publish(
-        tmp_path / "later", later, output_dataset_id=SECOND_OUTPUT_DATASET_ID
+        tmp_path / "later",
+        input_table,
+        later,
+        output_dataset_id=SECOND_OUTPUT_DATASET_ID,
     )
     _store, _catalog, operational_published = publish(
         tmp_path / "operational",
+        input_table,
         operational,
         output_dataset_id="DATASET-01990f30-7f5e-7b34-9b21-3d74c513c855",
     )
@@ -910,15 +960,17 @@ def test_published_early_vintage_is_not_retroactively_changed(
             revision_status=RevisionTimeStatus.KNOWN,
         ),
     ]
-    early = select(rows, as_of=150)
-    later = select(rows, as_of=200)
-    store, schema_catalog, early_published = publish(tmp_path, early)
+    input_table = table_from_rows(rows)
+    early = select_table(input_table, as_of=150)
+    later = select_table(input_table, as_of=200)
+    store, schema_catalog, early_published = publish(tmp_path, input_table, early)
     early_bytes = store.read_bytes(
         early_published.derived_evidence.parquet_object.digest
     )
     later_published = publish_pit_selection(
         store=store,
         catalog=schema_catalog,
+        input_table=input_table,
         selection=later,
         output_dataset_id=SECOND_OUTPUT_DATASET_ID,
         layer=DerivedLayer.CURATED,
@@ -938,14 +990,18 @@ def test_published_early_vintage_is_not_retroactively_changed(
         == early_bytes
     )
     verify_published_pit_dataset(
-        store=store, catalog=schema_catalog, published=early_published
+        store=store,
+        catalog=schema_catalog,
+        input_table=input_table,
+        published=early_published,
     )
 
 
 def test_pit_publication_requires_exact_parent_and_supported_layer(
     tmp_path: Path,
 ) -> None:
-    selection = select([row("V1", 1)])
+    input_table = table_from_rows([row("V1", 1)])
+    selection = select_table(input_table)
     wrong_parent = replace(
         selection.input_evidence.parent,
         dataset_id="DATASET-01990f30-7f5e-7b34-9b21-3d74c513c856",
@@ -957,6 +1013,7 @@ def test_pit_publication_requires_exact_parent_and_supported_layer(
         publish_pit_selection(
             store=store,
             catalog=schema_catalog,
+            input_table=input_table,
             selection=selection,
             output_dataset_id=OUTPUT_DATASET_ID,
             layer=DerivedLayer.FEATURES,
@@ -970,6 +1027,7 @@ def test_pit_publication_requires_exact_parent_and_supported_layer(
         publish_pit_selection(
             store=store,
             catalog=schema_catalog,
+            input_table=input_table,
             selection=selection,
             output_dataset_id=OUTPUT_DATASET_ID,
             layer=DerivedLayer.NORMALIZED,
@@ -984,12 +1042,14 @@ def test_pit_publication_requires_exact_parent_and_supported_layer(
 def _assert_parent_identity_rejected(
     tmp_path: Path, wrong_parent: ParentEvidence
 ) -> None:
-    selection = select([row("V1", 1)])
+    input_table = table_from_rows([row("V1", 1)])
+    selection = select_table(input_table)
     store = ImmutableObjectStore(tmp_path / "artifacts")
     with pytest.raises(PitConfigurationError, match="exact input evidence"):
         publish_pit_selection(
             store=store,
             catalog=catalog(),
+            input_table=input_table,
             selection=selection,
             output_dataset_id=OUTPUT_DATASET_ID,
             layer=DerivedLayer.NORMALIZED,
@@ -1034,7 +1094,8 @@ def test_pit_publication_rejects_wrong_parent_logical_content(tmp_path: Path) ->
 def test_pit_verifier_rejects_valid_evidence_for_different_exact_parent(
     tmp_path: Path,
 ) -> None:
-    selection = select([row("V1", 1)])
+    input_table = table_from_rows([row("V1", 1)])
+    selection = select_table(input_table)
     exact = selection.input_evidence.parent
     wrong_parents = (
         replace(exact, registry_revision_digest="sha256:" + "5" * 64),
@@ -1048,14 +1109,18 @@ def test_pit_verifier_rejects_valid_evidence_for_different_exact_parent(
         )
         with pytest.raises(PitIntegrityError, match="parent binding mismatch"):
             verify_published_pit_dataset(
-                store=store, catalog=schema_catalog, published=published
+                store=store,
+                catalog=schema_catalog,
+                input_table=input_table,
+                published=published,
             )
 
 
 def test_pit_verifier_rejects_valid_evidence_for_different_selected_content(
     tmp_path: Path,
 ) -> None:
-    selection = select([row("V1", 1)])
+    input_table = table_from_rows([row("V1", 1)])
+    selection = select_table(input_table)
     value_index = selection.selected_table.schema.get_field_index("value")
     changed_table = selection.selected_table.set_column(
         value_index, "value", pa.array([999], type=pa.int64())
@@ -1066,15 +1131,24 @@ def test_pit_verifier_rejects_valid_evidence_for_different_selected_content(
 
     with pytest.raises(PitIntegrityError, match="logical content does not match"):
         verify_published_pit_dataset(
-            store=store, catalog=schema_catalog, published=published
+            store=store,
+            catalog=schema_catalog,
+            input_table=input_table,
+            published=published,
         )
 
 
 def test_published_pit_configuration_identity_is_verified(tmp_path: Path) -> None:
-    store, schema_catalog, published = publish(tmp_path, select([row("V1", 1)]))
+    input_table = table_from_rows([row("V1", 1)])
+    store, schema_catalog, published = publish(
+        tmp_path, input_table, select_table(input_table)
+    )
     damaged = replace(published, configuration_object=published.audit_object)
 
     with pytest.raises(PitIntegrityError, match="configuration object"):
         verify_published_pit_dataset(
-            store=store, catalog=schema_catalog, published=damaged
+            store=store,
+            catalog=schema_catalog,
+            input_table=input_table,
+            published=damaged,
         )

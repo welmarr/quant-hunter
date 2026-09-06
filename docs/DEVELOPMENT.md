@@ -398,3 +398,27 @@ combined members, included the PIT module in both artifacts, and found no
 `.tools/` or `.venv/` member. No dependency or paid service was added. Item 7
 remains in review-fix status pending independent review; Stage 1B item 8 remains
 unstarted.
+
+### Batch 4B.2 final review fix
+
+On 2026-09-06, PIT publication and later verification gained an independent
+transformation-correctness check. Both paths now require the exact bound input
+table, rerun the governed PIT selection algorithm with the recorded
+configuration and input evidence, and compare the complete selected table,
+selected-vintage accounting, exclusions, row counts, logical fingerprint, and
+canonical audit evidence. A hostile regression changes a selected non-key
+value, recomputes every affected ordinary result digest, and demonstrates that
+the internally self-consistent forged result passes its ordinary verification
+but fails deterministic transformation replay and publication.
+
+The complete locked Windows gate passed: `uv lock --check`; Ruff format over 52
+files; Ruff lint; strict mypy over 29 source files; and 322 pytest cases with
+93.33% combined statement/branch coverage. The PIT module retained 93%
+coverage. The offline governed build produced both distributions; package and
+PyArrow imports returned `0.1.0` and `25.0.1`; archive inspection found 100
+combined members, included the PIT module in both artifacts, and found no
+`.tools/` or `.venv/` member. `git diff --check` passed. This review fix added no
+dependency or incremental direct cost. The canonical budget ledger separately
+records the owner's previously purchased USD 10 Codex credits. Item 7 remains
+in final-review-fix status pending independent review; Stage 1B item 8 remains
+unstarted.

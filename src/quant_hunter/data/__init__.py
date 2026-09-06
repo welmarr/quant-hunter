@@ -48,6 +48,7 @@ from quant_hunter.data.pit import (
     build_pit_selection_configuration,
     publish_pit_selection,
     select_point_in_time,
+    verify_pit_transformation,
     verify_published_pit_dataset,
 )
 
@@ -97,5 +98,6 @@ __all__ = (
     "select_point_in_time",
     "verify_dataset_record_binding",
     "verify_derived_dataset_evidence",
+    "verify_pit_transformation",
     "verify_published_pit_dataset",
 )
