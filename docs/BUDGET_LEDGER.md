@@ -64,6 +64,10 @@ and adds USD 0 incremental direct cost.
 Item 8B reuses the same locked dependencies, registry, canonicalization, and
 immutable-object foundations. It adds no service, data, infrastructure,
 subscription, or usage commitment and has USD 0 incremental direct cost.
+Item 8C reuses those same local foundations for evaluation evidence, decisions,
+immutable result-object verification, and deterministic rerun resolution. It
+adds no dependency, service, data, infrastructure, subscription, usage
+commitment, or incremental direct cost.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 

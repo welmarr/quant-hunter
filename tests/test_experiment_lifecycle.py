@@ -16,10 +16,14 @@ from quant_hunter.config.canonical import canonicalize_json
 from quant_hunter.config.schema import RecordSchemaError
 from quant_hunter.experiments import (
     AttemptBudgetExceededError,
+    EvaluationOutcome,
+    ExperimentDecision,
     ExperimentIntegrityError,
     ExperimentLifecycleService,
     InvalidExperimentTransitionError,
     PreregistrationError,
+    RerunResolutionError,
+    ResultArtifactReference,
 )
 from quant_hunter.identity import (
     RegistryIntegrityError,
@@ -49,6 +53,8 @@ REGISTERED_AT = "2026-09-06T12:01:00Z"
 FROZEN_AT = "2026-09-06T12:02:00Z"
 STARTED_AT = "2026-09-06T12:03:00Z"
 ATTEMPT_AT = "2026-09-06T12:04:00Z"
+EVALUATED_AT = "2026-09-06T12:05:00Z"
+DECIDED_AT = "2026-09-06T12:06:00Z"
 
 
 def planned_payload() -> JsonRecord:
@@ -173,6 +179,27 @@ def runtime_payload(*, budget: int = 4) -> JsonRecord:
     multiple_testing = cast(JsonRecord, payload["multiple_testing"])
     multiple_testing["budget"] = budget
     return payload
+
+
+def evaluated_experiment(
+    lifecycle: ExperimentLifecycleService,
+    *,
+    outcome: EvaluationOutcome = EvaluationOutcome.INCONCLUSIVE,
+    result_summary: str = "Synthetic evaluation produced no directional conclusion.",
+    failure_modes: tuple[str, ...] = (),
+) -> tuple[str, Revision, Revision]:
+    """Create a synthetic EVALUATED experiment without an external artifact."""
+    experiment_id, _frozen, running = running_experiment(lifecycle, runtime_payload())
+    evaluated = lifecycle.evaluate(
+        experiment_id,
+        running.digest,
+        evaluated_at=EVALUATED_AT,
+        outcome=outcome,
+        result_summary=result_summary,
+        no_result_artifact_reason="The synthetic outcome is retained in the revision.",
+        failure_modes=failure_modes,
+    )
+    return experiment_id, running, evaluated
 
 
 def test_valid_draft_registered_frozen_chain(tmp_path: Path) -> None:
@@ -1328,4 +1355,613 @@ def test_running_and_attempt_accounting_never_read_sealed_data(
         "status": "UNRELEASED",
         "reason": "Not evaluated.",
     }
+    assert not sealed_path.exists()
+
+
+def test_valid_running_to_evaluated_retains_exact_runtime_evidence(
+    tmp_path: Path,
+) -> None:
+    """EVALUATED appends observed evidence without changing runtime history."""
+    lifecycle = service(tmp_path)
+    experiment_id, running, evaluated = evaluated_experiment(lifecycle)
+
+    assert evaluated.record["lifecycle_status"] == "EVALUATED"
+    assert evaluated.record["evaluated_at"] == EVALUATED_AT
+    assert evaluated.record["evaluation_outcome"] == "INCONCLUSIVE"
+    assert evaluated.record["attempt_records"] == running.record["attempt_records"]
+    assert (
+        evaluated.record["variants_attempted"] == running.record["variants_attempted"]
+    )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == evaluated
+
+
+def test_evaluate_rejects_pre_running_and_repeated_states(tmp_path: Path) -> None:
+    """Only RUNNING may transition once to EVALUATED."""
+    draft_service = service(tmp_path / "draft")
+    draft = draft_service.create_draft(
+        planned_payload(), created_at=CREATED_AT, uuid_factory=lambda: EXPERIMENT_UUID
+    )
+    with pytest.raises(InvalidExperimentTransitionError, match="DRAFT to EVALUATED"):
+        draft_service.evaluate(
+            draft.object_id,
+            draft.revision.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+    registered_service = service(tmp_path / "registered")
+    registered_id, _draft, registered = registered_experiment(registered_service)
+    with pytest.raises(
+        InvalidExperimentTransitionError, match="REGISTERED to EVALUATED"
+    ):
+        registered_service.evaluate(
+            registered_id,
+            registered.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+    frozen_service = service(tmp_path / "frozen")
+    frozen_id, _registered, frozen = frozen_experiment(frozen_service)
+    with pytest.raises(InvalidExperimentTransitionError, match="FROZEN to EVALUATED"):
+        frozen_service.evaluate(
+            frozen_id,
+            frozen.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+    evaluated_service = service(tmp_path / "evaluated")
+    evaluated_id, _running, evaluated = evaluated_experiment(evaluated_service)
+    with pytest.raises(
+        InvalidExperimentTransitionError, match="EVALUATED to EVALUATED"
+    ):
+        evaluated_service.evaluate(
+            evaluated_id,
+            evaluated.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Repeated synthetic evaluation.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+
+def test_evaluate_rejects_wrong_or_stale_cas_head(tmp_path: Path) -> None:
+    """Observed evidence cannot append unless the caller owns the runtime head."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle, runtime_payload())
+
+    with pytest.raises(StaleWriterError, match="current head"):
+        lifecycle.evaluate(
+            experiment_id,
+            "sha256:" + "f" * 64,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+    attempted = lifecycle.record_attempt(
+        experiment_id,
+        running.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=False,
+        failed=False,
+        exposure_reason="Synthetic attempt advances the CAS head.",
+    )
+    with pytest.raises(StaleWriterError, match="current head"):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == attempted
+
+
+def test_evaluate_rejects_time_before_start_or_last_attempt(tmp_path: Path) -> None:
+    """Evaluation follows the latest governed runtime timestamp."""
+    no_attempt_service = service(tmp_path / "no-attempt")
+    no_attempt_id, _frozen, running = running_experiment(no_attempt_service)
+    with pytest.raises(ExperimentIntegrityError, match="latest runtime"):
+        no_attempt_service.evaluate(
+            no_attempt_id,
+            running.digest,
+            evaluated_at=FROZEN_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+    attempt_service = service(tmp_path / "attempt")
+    attempt_id, _frozen, attempt_running = running_experiment(
+        attempt_service, runtime_payload()
+    )
+    attempted = attempt_service.record_attempt(
+        attempt_id,
+        attempt_running.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=False,
+        failed=False,
+        exposure_reason="Synthetic runtime exposure.",
+    )
+    with pytest.raises(ExperimentIntegrityError, match="latest runtime"):
+        attempt_service.evaluate(
+            attempt_id,
+            attempted.digest,
+            evaluated_at=STARTED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+
+def test_evaluate_rejects_submicrosecond_reversal(tmp_path: Path) -> None:
+    """Evaluation ordering preserves fractional precision below microseconds."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(
+        lifecycle, started_at="2026-09-06T12:03:00.000000900Z"
+    )
+
+    with pytest.raises(ExperimentIntegrityError, match="latest runtime"):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at="2026-09-06T12:03:00.000000100Z",
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+
+@pytest.mark.parametrize(
+    ("started_at", "evaluated_at"),
+    [
+        (
+            "2026-09-06T12:03:00.123456789012Z",
+            "2026-09-06T12:03:00.123456789012Z",
+        ),
+        (
+            "2026-09-06T12:03:00.000000100Z",
+            "2026-09-06T12:03:00.000000101Z",
+        ),
+    ],
+)
+def test_evaluate_accepts_equality_and_one_nanosecond_progress(
+    tmp_path: Path, started_at: str, evaluated_at: str
+) -> None:
+    """Exact equality and one-nanosecond progress are valid evaluation times."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(
+        lifecycle, started_at=started_at
+    )
+
+    evaluated = lifecycle.evaluate(
+        experiment_id,
+        running.digest,
+        evaluated_at=evaluated_at,
+        outcome=EvaluationOutcome.NULL,
+        result_summary="Synthetic null outcome.",
+        no_result_artifact_reason="No external artifact applies.",
+    )
+    assert evaluated.record["evaluated_at"] == evaluated_at
+
+
+def test_evaluation_rejects_corrupted_freeze_evidence(tmp_path: Path) -> None:
+    """The transition re-verifies immutable freeze bytes before recording results."""
+    lifecycle = service(tmp_path)
+    experiment_id, frozen, running = running_experiment(lifecycle)
+    digest = cast(str, frozen.record["frozen_manifest_digest"])
+    stored = lifecycle.object_store.get(digest)
+    stored.path.write_bytes(stored.path.read_bytes() + b" ")
+
+    with pytest.raises(ObjectCorruptionError, match="digest"):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic null outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+
+def test_evaluation_rejects_rewritten_attempt_history_or_counters(
+    tmp_path: Path,
+) -> None:
+    """A schema-valid counter rewrite cannot become evaluated evidence."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle, runtime_payload())
+    attempted = lifecycle.record_attempt(
+        experiment_id,
+        running.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=True,
+        failed=True,
+        exposure_reason="Retained synthetic failed AI attempt.",
+    )
+    payload = revision_payload(attempted)
+    payload["variants_attempted"] = 0
+    hostile = lifecycle.registry.append(experiment_id, attempted.digest, payload)
+
+    with pytest.raises(ExperimentIntegrityError, match="counters"):
+        lifecycle.evaluate(
+            experiment_id,
+            hostile.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.FAILED,
+            result_summary="Synthetic execution failed.",
+            no_result_artifact_reason="Failure is retained in the revision.",
+            failure_modes=("Synthetic controlled failure.",),
+        )
+
+
+def test_positive_result_artifact_is_verified_and_retained(tmp_path: Path) -> None:
+    """Positive evidence references existing immutable result bytes exactly."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle)
+    stored = lifecycle.object_store.publish(b"synthetic positive result evidence")
+    reference = ResultArtifactReference(
+        "https://example.invalid/results/positive.json", stored.digest
+    )
+
+    evaluated = lifecycle.evaluate(
+        experiment_id,
+        running.digest,
+        evaluated_at=EVALUATED_AT,
+        outcome=EvaluationOutcome.POSITIVE,
+        result_summary="Synthetic metric satisfied its declared criterion.",
+        result_artifacts=(reference,),
+    )
+
+    assert evaluated.record["results"] == (
+        "Synthetic metric satisfied its declared criterion."
+    )
+    assert evaluated.record["result_artifact_digests"] == [stored.digest]
+    assert evaluated.record["result_artifact_locations"] == [reference.location]
+
+
+def test_evaluation_rejects_corrupt_result_artifact(tmp_path: Path) -> None:
+    """A supplied result digest must still identify intact immutable object bytes."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle)
+    stored = lifecycle.object_store.publish(b"synthetic result bytes")
+    stored.path.write_bytes(b"corrupted synthetic result bytes")
+
+    with pytest.raises(ObjectCorruptionError, match="digest"):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.POSITIVE,
+            result_summary="Synthetic positive result.",
+            result_artifacts=(
+                ResultArtifactReference(
+                    "https://example.invalid/results/corrupt.json", stored.digest
+                ),
+            ),
+        )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == running
+
+
+def test_failed_outcome_without_success_artifact_is_retained(tmp_path: Path) -> None:
+    """Failure remains permanent even when no successful artifact exists."""
+    lifecycle = service(tmp_path)
+    experiment_id, running, evaluated = evaluated_experiment(
+        lifecycle,
+        outcome=EvaluationOutcome.FAILED,
+        result_summary="Synthetic evaluation stopped with no successful result.",
+        failure_modes=("Synthetic process exited before producing a candidate.",),
+    )
+
+    assert evaluated.record["evaluation_outcome"] == "FAILED"
+    assert evaluated.record["failure_modes"] == [
+        "Synthetic process exited before producing a candidate."
+    ]
+    assert evaluated.record["result_artifact_digests"] == []
+    assert (
+        cast(JsonRecord, evaluated.record["result_artifact_locations"])["status"]
+        == "NOT_APPLICABLE"
+    )
+    assert lifecycle.registry.verify_object(experiment_id)[-2] == running
+
+
+def test_evaluated_evidence_cannot_change_frozen_science(tmp_path: Path) -> None:
+    """A hostile EVALUATED revision cannot carry changed preregistration evidence."""
+    lifecycle = service(tmp_path)
+    experiment_id, _running, evaluated = evaluated_experiment(lifecycle)
+    payload = revision_payload(evaluated)
+    payload["hypothesis"] = "Rewritten after observing the synthetic result"
+    payload["lifecycle_status"] = "DECIDED"
+    payload["decided_at"] = DECIDED_AT
+    payload["decision"] = "REJECT"
+    payload["reason_for_decision"] = "Synthetic hostile decision."
+    del payload["decision_pending_reason"]
+    hostile = lifecycle.registry.append(experiment_id, evaluated.digest, payload)
+
+    with pytest.raises(ExperimentIntegrityError, match="changed observed or frozen"):
+        lifecycle.resolve_rerun(experiment_id)
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == hostile
+
+
+def test_valid_evaluated_to_decided_preserves_all_evidence(tmp_path: Path) -> None:
+    """A governed decision appends reason and time without rewriting observations."""
+    lifecycle = service(tmp_path)
+    experiment_id, _running, evaluated = evaluated_experiment(lifecycle)
+
+    decided = lifecycle.decide(
+        experiment_id,
+        evaluated.digest,
+        decided_at=DECIDED_AT,
+        decision=ExperimentDecision.INCONCLUSIVE,
+        reason="Synthetic evidence does not support a directional conclusion.",
+    )
+
+    assert decided.record["lifecycle_status"] == "DECIDED"
+    assert decided.record["decision"] == "INCONCLUSIVE"
+    assert decided.record["decided_at"] == DECIDED_AT
+    assert decided.record["results"] == evaluated.record["results"]
+    assert decided.record["failure_modes"] == evaluated.record["failure_modes"]
+    assert decided.record["attempt_records"] == evaluated.record["attempt_records"]
+    assert (
+        decided.record["sealed_data_release"] == evaluated.record["sealed_data_release"]
+    )
+
+
+def test_decision_rejects_backward_time_invalid_value_and_reason(
+    tmp_path: Path,
+) -> None:
+    """Decision time, vocabulary, and explicit reasoning all fail closed."""
+    lifecycle = service(tmp_path)
+    experiment_id, _running, evaluated = evaluated_experiment(lifecycle)
+    with pytest.raises(ExperimentIntegrityError, match="precedes evaluated_at"):
+        lifecycle.decide(
+            experiment_id,
+            evaluated.digest,
+            decided_at=STARTED_AT,
+            decision=ExperimentDecision.REJECT,
+            reason="Synthetic rejection.",
+        )
+    with pytest.raises(ExperimentIntegrityError, match="decision is malformed"):
+        lifecycle.decide(
+            experiment_id,
+            evaluated.digest,
+            decided_at=DECIDED_AT,
+            decision="ACCEPT_FOR_TRADING",
+            reason="Invalid synthetic decision.",
+        )
+    with pytest.raises(ExperimentIntegrityError, match="nonempty"):
+        lifecycle.decide(
+            experiment_id,
+            evaluated.digest,
+            decided_at=DECIDED_AT,
+            decision=ExperimentDecision.DEFER,
+            reason="   ",
+        )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == evaluated
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("results", "Rewritten observed result"),
+        ("failure_modes", ["Invented later failure"]),
+        ("variants_attempted", 1),
+        (
+            "attempt_records",
+            [
+                {
+                    "attempt_number": 1,
+                    "experiment_id": f"EXP-{EXPERIMENT_UUID}",
+                    "recorded_at": ATTEMPT_AT,
+                    "ai_generated": False,
+                    "failed": False,
+                    "exposure_reason": "Invented later attempt.",
+                }
+            ],
+        ),
+        ("hypothesis", "Rewritten frozen hypothesis"),
+        ("configuration_digest", "sha256:" + "e" * 64),
+        ("sealed_data_release", {"status": "UNRELEASED", "reason": "Rewritten"}),
+    ],
+)
+def test_decided_revision_cannot_rewrite_prior_evidence(
+    tmp_path: Path, field: str, value: JsonValue
+) -> None:
+    """Decision verification rejects observed, attempt, science, or release rewrites."""
+    lifecycle = service(tmp_path)
+    experiment_id, _running, evaluated = evaluated_experiment(lifecycle)
+    payload = revision_payload(evaluated)
+    payload["lifecycle_status"] = "DECIDED"
+    payload["decided_at"] = DECIDED_AT
+    payload["decision"] = "REJECT"
+    payload["reason_for_decision"] = "Synthetic hostile decision."
+    payload.pop("decision_pending_reason", None)
+    payload[field] = deepcopy(value)
+    hostile = lifecycle.registry.append(experiment_id, evaluated.digest, payload)
+
+    with pytest.raises(ExperimentIntegrityError, match="changed observed or frozen"):
+        lifecycle.resolve_rerun(experiment_id)
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == hostile
+
+
+def test_decided_cannot_repeat_or_transition_backward(tmp_path: Path) -> None:
+    """A terminal decision cannot be repeated or relabelled as evaluation."""
+    lifecycle = service(tmp_path)
+    experiment_id, _running, evaluated = evaluated_experiment(lifecycle)
+    decided = lifecycle.decide(
+        experiment_id,
+        evaluated.digest,
+        decided_at=DECIDED_AT,
+        decision=ExperimentDecision.DEFER,
+        reason="Synthetic research is deferred.",
+    )
+
+    with pytest.raises(InvalidExperimentTransitionError, match="DECIDED to DECIDED"):
+        lifecycle.decide(
+            experiment_id,
+            decided.digest,
+            decided_at=DECIDED_AT,
+            decision=ExperimentDecision.REJECT,
+            reason="Repeated synthetic decision.",
+        )
+    with pytest.raises(InvalidExperimentTransitionError, match="DECIDED to EVALUATED"):
+        lifecycle.evaluate(
+            experiment_id,
+            decided.digest,
+            evaluated_at=DECIDED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Backward synthetic evaluation.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+
+
+def test_rerun_resolution_is_stable_and_excludes_results_and_decisions(
+    tmp_path: Path,
+) -> None:
+    """Lifecycle outcomes never become deterministic rerun input parameters."""
+    lifecycle = service(tmp_path)
+    experiment_id, _registered, frozen = frozen_experiment(lifecycle)
+    frozen_resolution = lifecycle.resolve_rerun(experiment_id)
+    assert lifecycle.resolve_rerun(experiment_id) == frozen_resolution
+
+    running = lifecycle.start(experiment_id, frozen.digest, started_at=STARTED_AT)
+    evaluated = lifecycle.evaluate(
+        experiment_id,
+        running.digest,
+        evaluated_at=EVALUATED_AT,
+        outcome=EvaluationOutcome.NEGATIVE,
+        result_summary="Synthetic observed result that is not a rerun input.",
+        no_result_artifact_reason="The result is retained in the registry revision.",
+        failure_modes=("Synthetic criterion was not met.",),
+    )
+    lifecycle.decide(
+        experiment_id,
+        evaluated.digest,
+        decided_at=DECIDED_AT,
+        decision=ExperimentDecision.REJECT,
+        reason="Synthetic observed evidence did not satisfy the criterion.",
+    )
+    decided_resolution = lifecycle.resolve_rerun(experiment_id)
+
+    assert decided_resolution == frozen_resolution
+    assert decided_resolution.digest == sha256_bytes(decided_resolution.canonical_bytes)
+    document = decided_resolution.document
+    assert (
+        document["registered_revision_digest"]
+        == frozen_resolution.document["registered_revision_digest"]
+    )
+    assert "results" not in document
+    assert "decision" not in document
+
+
+def test_rerun_resolution_rejects_incomplete_and_corrupt_registered_history(
+    tmp_path: Path,
+) -> None:
+    """Resolution requires FROZEN authority and an intact REGISTERED chain link."""
+    draft_service = service(tmp_path / "draft")
+    draft = draft_service.create_draft(
+        planned_payload(), created_at=CREATED_AT, uuid_factory=lambda: EXPERIMENT_UUID
+    )
+    with pytest.raises(RerunResolutionError, match="FROZEN or later"):
+        draft_service.resolve_rerun(draft.object_id)
+
+    corrupt_service = service(tmp_path / "corrupt")
+    experiment_id, registered, _frozen = frozen_experiment(corrupt_service)
+    damaged = deepcopy(registered.record)
+    damaged["configuration_digest"] = "sha256:" + "e" * 64
+    registered.path.write_bytes(canonicalize_json(damaged))
+    with pytest.raises(RegistryIntegrityError, match="previous-revision"):
+        corrupt_service.resolve_rerun(experiment_id)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("configuration_digest", "sha256:" + "d" * 64),
+        ("environment_digest", "sha256:" + "d" * 64),
+        ("provenance_artifact_digests", ["sha256:" + "d" * 64]),
+    ],
+)
+def test_rerun_resolution_rejects_changed_frozen_input_evidence(
+    tmp_path: Path, field: str, value: JsonValue
+) -> None:
+    """Configuration, environment, and data bindings must match REGISTERED evidence."""
+    lifecycle = service(tmp_path)
+    experiment_id, _registered, frozen = frozen_experiment(lifecycle)
+    damaged = deepcopy(frozen.record)
+    damaged[field] = deepcopy(value)
+    frozen.path.write_bytes(canonicalize_json(damaged))
+
+    with pytest.raises(ExperimentIntegrityError, match="scientific evidence"):
+        lifecycle.resolve_rerun(experiment_id)
+
+
+def test_rerun_resolution_rejects_corrupt_freeze_object(tmp_path: Path) -> None:
+    """Resolution fails if the immutable freeze manifest bytes no longer verify."""
+    lifecycle = service(tmp_path)
+    experiment_id, _registered, frozen = frozen_experiment(lifecycle)
+    digest = cast(str, frozen.record["frozen_manifest_digest"])
+    stored = lifecycle.object_store.get(digest)
+    stored.path.write_bytes(stored.path.read_bytes() + b" ")
+
+    with pytest.raises(ObjectCorruptionError, match="digest"):
+        lifecycle.resolve_rerun(experiment_id)
+
+
+def test_evaluation_decision_and_rerun_never_read_sealed_contents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Item 8C preserves release metadata without dereferencing sealed content."""
+    lifecycle = service(tmp_path)
+    sealed_path = (tmp_path / "sealed" / "holdout.bin").resolve()
+    payload = runtime_payload()
+    experiment_id, _draft, registered = registered_experiment(lifecycle, payload)
+    frozen = lifecycle.freeze(
+        experiment_id,
+        registered.digest,
+        frozen_at=FROZEN_AT,
+        data_manifests=data_manifests(payload, reference=sealed_path.as_uri()),
+    )
+    original_read_bytes = Path.read_bytes
+
+    def guarded_read_bytes(path: Path) -> bytes:
+        if path == sealed_path:
+            raise AssertionError("sealed data was accessed")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", guarded_read_bytes)
+    running = lifecycle.start(
+        experiment_id, frozen.revision.digest, started_at=STARTED_AT
+    )
+    evaluated = lifecycle.evaluate(
+        experiment_id,
+        running.digest,
+        evaluated_at=EVALUATED_AT,
+        outcome=EvaluationOutcome.NULL,
+        result_summary="Synthetic result retained without sealed content.",
+        no_result_artifact_reason="No external artifact applies.",
+    )
+    lifecycle.decide(
+        experiment_id,
+        evaluated.digest,
+        decided_at=DECIDED_AT,
+        decision=ExperimentDecision.INCONCLUSIVE,
+        reason="Synthetic evidence is inconclusive.",
+    )
+    resolution = lifecycle.resolve_rerun(experiment_id)
+
+    assert resolution.document["data_manifests"] == [
+        {
+            "digest": cast(list[str], payload["provenance_artifact_digests"])[0],
+            "reference": sealed_path.as_uri(),
+        }
+    ]
     assert not sealed_path.exists()
