@@ -82,6 +82,12 @@
     "started_at": {
       "$ref": "common.schema.json#/$defs/timestamp"
     },
+    "evaluated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "decided_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
     "lifecycle_status": {
       "enum": [
         "DRAFT",
@@ -200,6 +206,15 @@
         "DEFER",
         "INVALIDATED",
         "SUPERSEDED"
+      ]
+    },
+    "evaluation_outcome": {
+      "enum": [
+        "POSITIVE",
+        "NEGATIVE",
+        "NULL",
+        "FAILED",
+        "INCONCLUSIVE"
       ]
     },
     "result_artifact_digests": {
@@ -649,6 +664,64 @@
             "$ref": "common.schema.json#/$defs/digest"
           }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "EVALUATED",
+              "DECIDED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "evaluated_at",
+          "evaluation_outcome"
+        ],
+        "properties": {
+          "results": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evaluation_outcome": {
+            "const": "FAILED"
+          }
+        },
+        "required": [
+          "evaluation_outcome"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_modes": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "const": "DECIDED"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "decided_at"
+        ]
       }
     },
     {

@@ -2,6 +2,8 @@
 
 from quant_hunter.experiments.lifecycle import (
     AttemptBudgetExceededError,
+    EvaluationOutcome,
+    ExperimentDecision,
     ExperimentIntegrityError,
     ExperimentLifecycleError,
     ExperimentLifecycleService,
@@ -9,10 +11,15 @@ from quant_hunter.experiments.lifecycle import (
     FrozenExperiment,
     InvalidExperimentTransitionError,
     PreregistrationError,
+    RerunResolution,
+    RerunResolutionError,
+    ResultArtifactReference,
 )
 
 __all__ = (
     "AttemptBudgetExceededError",
+    "EvaluationOutcome",
+    "ExperimentDecision",
     "ExperimentIntegrityError",
     "ExperimentLifecycleError",
     "ExperimentLifecycleService",
@@ -20,4 +27,7 @@ __all__ = (
     "FrozenExperiment",
     "InvalidExperimentTransitionError",
     "PreregistrationError",
+    "RerunResolution",
+    "RerunResolutionError",
+    "ResultArtifactReference",
 )

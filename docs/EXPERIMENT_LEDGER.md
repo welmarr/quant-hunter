@@ -60,6 +60,29 @@ failed AI attempt contributes once to total exposure and once to each applicable
 subset counter. Attempt timestamps are nondecreasing, and no append may exceed
 the frozen multiple-testing budget.
 
+Item 8C appends `EVALUATED` only after re-verifying that complete runtime
+history. `evaluated_at` must be at or after `started_at`, or the final attempt
+timestamp when attempts exist, at full schema-accepted precision. The revision
+retains a typed positive, negative, null, failed, or inconclusive outcome; a
+nonempty result summary; exact result/failure object digests and locations when
+they exist; an explicit reason when no external artifact applies; all failure
+modes; exact attempt accounting; frozen science; and the existing sealed-release
+reference. Supplied artifact digests must resolve to intact objects in the
+existing immutable store. The JCS registry revision is the immutable observed
+evidence, so no parallel result manifest or mutable result database exists.
+
+`DECIDED` follows only `EVALUATED`, uses a caller-supplied ordered timestamp,
+and requires an explicit governed decision and nonempty reason. Its predecessor
+digest and lifecycle verification preserve all observed, failed, attempt,
+frozen, and release evidence exactly. Decisions never authorize execution or
+deployment. Deterministic rerun resolution verifies the current experiment
+history and emits canonical JCS/SHA-256 inputs from REGISTERED/FROZEN authority:
+code, configuration, environment, data-manifest references/digests, seed
+evidence, search/multiple-testing budget, criteria, and baselines. Results and
+decisions are excluded from rerun inputs, sealed contents are not read, and a
+future actual rerun requires a new permanent experiment linked through
+`earlier_experiment_ids`.
+
 ## Multiple Testing and AI
 
 Count every candidate actually or implicitly searched: parameters, filters, assets, horizons, feature combinations, model prompts, code-generated variants, pattern candidates, retries, and human or AI suggestions. Record the total search exposure even when candidates fail before producing a report. Related variants remain grouped under their research family for correction and ensemble-independence analysis.
@@ -71,11 +94,12 @@ A result is not complete until another controlled run can reproduce it from reco
 ## Ledger Entries
 
 No experiments are registered yet. Independent review passed Item 8A at commit
-`79730f9ed54d6fcf9c8b33ad70af6181941c0b5e`. Item 8B adds only synthetic-tested
-`FROZEN → RUNNING` and runtime-attempt accounting; it does not evaluate an
-experiment, produce results or decisions, or release sealed data. Documentation
-work is not a trading experiment, and no strategy experiment may begin until
-Stage 1 controls in `ROADMAP.md` exist and the work is explicitly authorized.
-Machine authority is the schema-validated JCS revision chain at
-`registries/experiments/<id>/vNNNNNN.json`; generated summaries are
-non-authoritative views.
+`79730f9ed54d6fcf9c8b33ad70af6181941c0b5e` and Item 8B at commit
+`747ae70b9b6d95179271d5770239347e24d6b2bd`. Item 8C adds only synthetic-tested
+evaluation, decision, evidence retention, and rerun resolution; it does not
+execute an experiment or release sealed data. Documentation work is not a
+trading experiment, and no strategy experiment may begin until Stage 1 controls
+in `ROADMAP.md` exist and the work is explicitly authorized. Machine authority
+is the schema-validated JCS revision chain at
+`registries/experiments/<id>/vNNNNNN.json`; generated summaries and rerun
+resolutions are deterministic non-authoritative views of verified evidence.

@@ -165,3 +165,17 @@ portions of RISK-001, RISK-002, RISK-003, RISK-008, and RISK-011. These risks
 remain `OPEN` pending evaluation/result controls, sealed-release integration,
 real research use, and the remaining Stage 1 gates. Item 8B adds USD 0 direct
 cost. Item 8C and Item 9 remain unstarted.
+
+### Item 8B closure and Item 8C retained evidence
+
+Independent review passed Item 8B at commit
+`747ae70b9b6d95179271d5770239347e24d6b2bd`. Item 8C adds synthetic hostile
+coverage for `RUNNING → EVALUATED → DECIDED`, full-precision timestamp order,
+immutable result-object verification, explicit failed/no-artifact outcomes,
+preservation of frozen and attempt evidence, release-reference retention, and
+deterministic rerun resolution from verified freeze inputs. These controls
+further reduce the current Stage 1B portions of RISK-001–003, RISK-005,
+RISK-008, RISK-011, and RISK-015. Those risks remain `OPEN` pending independent
+Item 8C review, sealed-release infrastructure, real experiment execution, and
+the remaining Stage 1 gates. Item 8C adds USD 0 direct cost. Item 9 remains
+unstarted.

@@ -15,11 +15,13 @@ logical-content identities for explicitly typed synthetic tables. Batch 4B.2
 adds explicit point-in-time selection for synthetic normalized/curated data with
 PUBLIC and OPERATIONAL availability policies. Independent review passed item 7
 at commit `952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Independent review passed Item
-8A at commit `79730f9ed54d6fcf9c8b33ad70af6181941c0b5e`. Item 8B extends that single
-experiment authority only through `FROZEN → RUNNING` and append-only,
-CAS-protected attempt evidence and counters. Experiment evaluation, result and
-decision behavior, sealed release, and later item-8 controls remain absent. The
-design must be modular, reproducible, testable, and difficult to misuse.
+8A at commit `79730f9ed54d6fcf9c8b33ad70af6181941c0b5e` and Item 8B at commit
+`747ae70b9b6d95179271d5770239347e24d6b2bd`. Item 8C extends the same experiment
+authority through `RUNNING → EVALUATED → DECIDED`, storing observed result and
+failure evidence in immutable registry revisions, verifying supplied result
+objects, and resolving deterministic rerun inputs from REGISTERED/FROZEN
+evidence. Sealed release infrastructure and experiment execution remain absent.
+The design must be modular, reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
 
