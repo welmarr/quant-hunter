@@ -128,3 +128,17 @@ The owner also reported a USD 10 non-recurring prepaid Codex-credit purchase on
 budget ledger records it as spent under a permanent COST ID. RISK-013 and
 RISK-021 remain `OPEN` because the pre-existing subscription/API baseline and
 therefore remaining headroom are still unknown.
+
+## Item 7 Closure and Item 8A Evidence
+
+Independent review passed Stage 1B item 7 at commit
+`952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Item 8A adds synthetic hostile
+tests for the governed `DRAFT → REGISTERED → FROZEN` lifecycle, exact
+registered-revision freeze binding, result-free preregistration, registry CAS,
+immutable freeze publication, and non-dereferenced sealed references. These
+controls reduce the preregistration and freeze portions of RISK-001, RISK-003,
+RISK-004, RISK-006, and RISK-010. Those risks remain `OPEN` pending runtime
+attempt accounting, experiment execution/result retention, the sealed OOS
+boundary, deterministic rerun resolution, and later Stage 1 gates. Item 8A adds
+USD 0 incremental direct cost; RISK-013 and RISK-021 remain `OPEN` because
+Month-1 baseline costs and remaining headroom remain unknown.

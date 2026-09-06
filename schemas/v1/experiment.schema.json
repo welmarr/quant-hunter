@@ -73,6 +73,12 @@
     "created_at": {
       "$ref": "common.schema.json#/$defs/timestamp"
     },
+    "registered_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "frozen_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
     "lifecycle_status": {
       "enum": [
         "DRAFT",
@@ -592,6 +598,45 @@
             "$ref": "common.schema.json#/$defs/digest"
           }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "REGISTERED",
+              "FROZEN",
+              "RUNNING",
+              "EVALUATED",
+              "DECIDED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "registered_at"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "FROZEN",
+              "RUNNING",
+              "EVALUATED",
+              "DECIDED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "frozen_at"
+        ]
       }
     },
     {

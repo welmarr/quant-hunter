@@ -177,6 +177,8 @@ def test_completed_experiment_metadata(status: str) -> None:
     """Frozen definitions and later results have concrete, reproducible references."""
     instance = deepcopy(VALID_OBJECTS["experiment.schema.json"])
     instance["lifecycle_status"] = status
+    instance["registered_at"] = "2026-09-05T06:01:00Z"
+    instance["frozen_at"] = "2026-09-05T06:02:00Z"
     instance["frozen_manifest_digest"] = "sha256:" + "a" * 64
     for field in [
         "feature_definitions",
@@ -204,6 +206,35 @@ def test_completed_experiment_metadata(status: str) -> None:
             "Synthetic fixture supplies no market evidence."
         )
     validator_for("experiment.schema.json").validate(instance)
+
+
+@pytest.mark.parametrize(
+    ("status", "missing"),
+    [("REGISTERED", "registered_at"), ("FROZEN", "frozen_at")],
+)
+def test_experiment_lifecycle_timestamps_are_required(
+    status: str, missing: str
+) -> None:
+    """Registered and frozen evidence cannot omit caller-supplied transition time."""
+    instance = deepcopy(VALID_OBJECTS["experiment.schema.json"])
+    instance["lifecycle_status"] = status
+    if status == "FROZEN":
+        instance["registered_at"] = "2026-09-05T06:01:00Z"
+        instance["frozen_manifest_digest"] = "sha256:" + "a" * 64
+        for field in (
+            "feature_definitions",
+            "label_definitions",
+            "candidate_universe",
+            "parameters_considered",
+        ):
+            instance[field] = "Fixed synthetic conformance definition."
+        instance["baselines"] = ["Synthetic identity baseline"]
+
+    errors = list(validator_for("experiment.schema.json").iter_errors(instance))
+
+    assert any(
+        error.validator == "required" and missing in error.message for error in errors
+    )
 
 
 @pytest.mark.parametrize(

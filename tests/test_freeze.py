@@ -24,6 +24,7 @@ def manifest_inputs() -> dict[str, object]:
     """Return deterministic, synthetic DEC-0007 inputs."""
     return {
         "experiment_id": new_typed_id(RegistryKind.EXPERIMENT),
+        "registered_revision_digest": "sha256:" + "1" * 64,
         "hypothesis_reference": "registry://synthetic/hypothesis/v000001",
         "configuration_digest": DIGEST_A,
         "code_revision": "d" * 40,
@@ -65,6 +66,33 @@ def test_freeze_manifest_change_changes_digest() -> None:
 
     assert original.digest != changed.digest
     assert original.canonical_bytes != changed.canonical_bytes
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("registered_revision_digest", "sha256:" + "2" * 64),
+        ("configuration_digest", "sha256:" + "2" * 64),
+        ("code_revision", "e" * 40),
+        (
+            "data_manifests",
+            [DataManifestReference("registry://synthetic/data/manifest-2", DIGEST_B)],
+        ),
+        ("environment_digest", "sha256:" + "2" * 64),
+        ("search_budget", {"maximum_variants": 5, "family": "synthetic"}),
+    ],
+)
+def test_each_material_freeze_binding_changes_identity(
+    field: str, value: object
+) -> None:
+    """Every material registered or reproduction binding affects freeze identity."""
+    arguments = manifest_inputs()
+    original = build_freeze_manifest(**arguments)  # type: ignore[arg-type]
+    arguments[field] = value
+
+    changed = build_freeze_manifest(**arguments)  # type: ignore[arg-type]
+
+    assert changed.digest != original.digest
 
 
 def test_freeze_manifest_digest_mismatch_is_rejected() -> None:

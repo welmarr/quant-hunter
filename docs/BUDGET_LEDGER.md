@@ -56,6 +56,9 @@ encoding. Batch 4B.2 uses the same locked dependencies for synthetic PIT
 selection. This final review-fix implementation adds no service, data, storage,
 subscription, usage commitment, or direct cost. The separate owner-reported
 purchase already made for project capacity is recorded below.
+Item 8A reuses the same locked local dependencies and prepaid capacity. Its
+incremental direct project cost is USD 0; consumption of the recorded prepaid
+credits is not counted again as separate spend.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 

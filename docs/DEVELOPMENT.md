@@ -422,3 +422,24 @@ dependency or incremental direct cost. The canonical budget ledger separately
 records the owner's previously purchased USD 10 Codex credits. Item 7 remains
 in final-review-fix status pending independent review; Stage 1B item 8 remains
 unstarted.
+
+## Stage 1B Item 8A experiment lifecycle and freeze core
+
+On 2026-09-06, independent review passed item 7 at commit
+`952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Item 8A added only the governed
+synthetic `DRAFT → REGISTERED → FROZEN` path. Registration requires concrete
+scientific plans and rejects outcomes, decisions, and nonzero attempt evidence.
+Freeze evidence binds the exact registered revision and publishes canonical
+bytes through the immutable object store without dereferencing sealed data.
+
+The complete locked Windows gate passed: `uv lock --check`; Ruff format over 55
+files; Ruff lint; strict mypy over 32 source files; and 364 pytest cases with
+92.98% combined statement/branch coverage. The lifecycle module reached 90%
+coverage. The offline governed build produced both distributions; package and
+PyArrow imports returned `0.1.0` and `25.0.1`; archive inspection found 105
+combined members, included the experiment lifecycle module in both artifacts,
+and found no `.tools/` or `.venv/` member. Item 8 remains in progress: runtime
+attempt counters, execution/later transitions, result and failure retention,
+sealed-release integration, and deterministic rerun resolution remain
+unimplemented. No dependency or incremental direct cost was added, and the
+existing USD 10 prepaid Codex-credit spend was not counted again.

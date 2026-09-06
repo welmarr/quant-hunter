@@ -4,6 +4,7 @@ from quant_hunter.config.canonical import JsonRecord, JsonValue
 from quant_hunter.identity.ids import (
     IdentityError,
     RegistryKind,
+    UuidFactory,
     kind_for_id,
     new_typed_id,
     validate_typed_id,
@@ -34,6 +35,7 @@ __all__ = (
     "RegistryStore",
     "Revision",
     "StaleWriterError",
+    "UuidFactory",
     "kind_for_id",
     "new_typed_id",
     "validate_typed_id",

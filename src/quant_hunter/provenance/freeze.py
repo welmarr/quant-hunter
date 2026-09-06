@@ -60,6 +60,7 @@ def _require_nonempty(value: str, field: str) -> None:
 def build_freeze_manifest(
     *,
     experiment_id: str,
+    registered_revision_digest: str,
     hypothesis_reference: str,
     configuration_digest: str,
     code_revision: str,
@@ -72,6 +73,7 @@ def build_freeze_manifest(
 ) -> FreezeManifest:
     """Build the deterministic fields required by DEC-0007, without lifecycle I/O."""
     validate_typed_id(experiment_id, RegistryKind.EXPERIMENT)
+    require_sha256_digest(registered_revision_digest)
     _require_nonempty(hypothesis_reference, "hypothesis_reference")
     require_sha256_digest(configuration_digest)
     require_sha256_digest(environment_digest)
@@ -105,6 +107,7 @@ def build_freeze_manifest(
         "schema_version": "1.0.0",
         "manifest_type": "EXPERIMENT_FREEZE",
         "experiment_id": experiment_id,
+        "registered_revision_digest": registered_revision_digest,
         "hypothesis_reference": hypothesis_reference,
         "configuration_digest": configuration_digest,
         "code_revision": code_revision,
