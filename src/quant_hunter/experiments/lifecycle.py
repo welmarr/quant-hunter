@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from enum import StrEnum
 from typing import Final, cast
 from uuid import uuid7
@@ -30,8 +31,9 @@ from quant_hunter.provenance import (
 from quant_hunter.storage import ImmutableObjectStore, StoredObject
 
 _TIMESTAMP_PATTERN: Final = re.compile(
-    r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
-    r"(?:[.][0-9]+)?Z$"
+    r"^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})"
+    r"T(?P<hour>[0-9]{2}):(?P<minute>[0-9]{2}):(?P<second>[0-9]{2})"
+    r"(?:[.](?P<fraction>[0-9]+))?Z$"
 )
 _REGISTRY_MANAGED_FIELDS: Final = {
     "experiment_id",
@@ -95,16 +97,27 @@ class FrozenExperiment:
     manifest_object: StoredObject
 
 
-def _timestamp(value: str, field: str) -> datetime:
-    if _TIMESTAMP_PATTERN.fullmatch(value) is None:
+type _ExactTimestamp = tuple[int, int, int, int, int, int, Decimal]
+
+
+def _timestamp(value: str, field: str) -> _ExactTimestamp:
+    match = _TIMESTAMP_PATTERN.fullmatch(value)
+    if match is None:
         raise ExperimentIntegrityError(f"{field} must be a UTC RFC 3339 timestamp")
+    year = int(match.group("year"))
+    month = int(match.group("month"))
+    day = int(match.group("day"))
+    hour = int(match.group("hour"))
+    minute = int(match.group("minute"))
+    second = int(match.group("second"))
     try:
-        parsed = datetime.fromisoformat(value[:-1] + "+00:00")
+        datetime(year, month, day, hour, minute, second)
     except ValueError as error:
         raise ExperimentIntegrityError(
             f"{field} must be a valid UTC RFC 3339 timestamp"
         ) from error
-    return parsed
+    fraction = match.group("fraction") or "0"
+    return (year, month, day, hour, minute, second, Decimal(f"0.{fraction}"))
 
 
 def _status(record: Mapping[str, JsonValue]) -> ExperimentStatus:

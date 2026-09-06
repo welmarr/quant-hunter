@@ -59,6 +59,8 @@ purchase already made for project capacity is recorded below.
 Item 8A reuses the same locked local dependencies and prepaid capacity. Its
 incremental direct project cost is USD 0; consumption of the recorded prepaid
 credits is not counted again as separate spend.
+The Item 8A timestamp-ordering review fix uses only the Python standard library
+and adds USD 0 incremental direct cost.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 

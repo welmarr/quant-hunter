@@ -414,6 +414,10 @@ def test_lifecycle_owns_fields_and_requires_ordered_explicit_timestamps(
         )
     with pytest.raises(ExperimentIntegrityError, match="UTC RFC 3339"):
         lifecycle.create_draft(planned_payload(), created_at="2026-09-06 12:00:00")
+    with pytest.raises(ExperimentIntegrityError, match="UTC RFC 3339"):
+        lifecycle.create_draft(
+            planned_payload(), created_at="2026-09-06T12:00:00-04:00"
+        )
     with pytest.raises(ExperimentIntegrityError, match="valid UTC"):
         lifecycle.create_draft(planned_payload(), created_at="2026-99-99T12:00:00Z")
 
@@ -438,6 +442,107 @@ def test_lifecycle_owns_fields_and_requires_ordered_explicit_timestamps(
             frozen_at=CREATED_AT,
             data_manifests=data_manifests(),
         )
+
+
+@pytest.mark.parametrize(
+    ("created_at", "registered_at"),
+    [
+        (
+            "2026-09-06T12:00:00.000000900Z",
+            "2026-09-06T12:00:00.000000100Z",
+        ),
+        (
+            "2026-09-06T12:00:00.000000000009Z",
+            "2026-09-06T12:00:00.000000000001Z",
+        ),
+    ],
+)
+def test_registration_rejects_reversed_full_fractional_precision(
+    tmp_path: Path, created_at: str, registered_at: str
+) -> None:
+    """Sub-microsecond and beyond-nanosecond ordering is never truncated."""
+    lifecycle = service(tmp_path)
+    draft = lifecycle.create_draft(
+        planned_payload(),
+        created_at=created_at,
+        uuid_factory=lambda: EXPERIMENT_UUID,
+    )
+
+    with pytest.raises(ExperimentIntegrityError, match="precedes created_at"):
+        lifecycle.register(
+            draft.object_id,
+            draft.revision.digest,
+            registered_at=registered_at,
+        )
+
+
+def test_freeze_rejects_reversed_submicrosecond_precision(tmp_path: Path) -> None:
+    """A FROZEN timestamp cannot move backward within one microsecond."""
+    lifecycle = service(tmp_path)
+    draft = lifecycle.create_draft(
+        planned_payload(),
+        created_at="2026-09-06T12:00:00Z",
+        uuid_factory=lambda: EXPERIMENT_UUID,
+    )
+    registered = lifecycle.register(
+        draft.object_id,
+        draft.revision.digest,
+        registered_at="2026-09-06T12:00:00.000000900Z",
+    )
+
+    with pytest.raises(ExperimentIntegrityError, match="precedes registered_at"):
+        lifecycle.freeze(
+            draft.object_id,
+            registered.digest,
+            frozen_at="2026-09-06T12:00:00.000000100Z",
+            data_manifests=data_manifests(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("created_at", "registered_at", "frozen_at"),
+    [
+        (
+            "2026-09-06T12:00:00.000000100Z",
+            "2026-09-06T12:00:00.000000101Z",
+            "2026-09-06T12:00:00.000000102Z",
+        ),
+        (
+            "2026-09-06T12:00:00.123456789012Z",
+            "2026-09-06T12:00:00.123456789012Z",
+            "2026-09-06T12:00:00.123456789012Z",
+        ),
+        (CREATED_AT, REGISTERED_AT, FROZEN_AT),
+        (
+            "2026-09-06T12:00:00.000001Z",
+            "2026-09-06T12:00:00.000002Z",
+            "2026-09-06T12:00:00.000003Z",
+        ),
+    ],
+)
+def test_full_precision_forward_equality_and_existing_timestamps_are_valid(
+    tmp_path: Path, created_at: str, registered_at: str, frozen_at: str
+) -> None:
+    """One-nanosecond progress, equality, seconds, and microseconds remain valid."""
+    lifecycle = service(tmp_path)
+    draft = lifecycle.create_draft(
+        planned_payload(),
+        created_at=created_at,
+        uuid_factory=lambda: EXPERIMENT_UUID,
+    )
+    registered = lifecycle.register(
+        draft.object_id,
+        draft.revision.digest,
+        registered_at=registered_at,
+    )
+    frozen = lifecycle.freeze(
+        draft.object_id,
+        registered.digest,
+        frozen_at=frozen_at,
+        data_manifests=data_manifests(),
+    )
+
+    assert frozen.revision.record["frozen_at"] == frozen_at
 
 
 def test_freeze_rejects_registered_record_with_observed_results(

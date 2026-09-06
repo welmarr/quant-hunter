@@ -14,9 +14,9 @@ adds deterministic Parquet publication and separate physical, lineage, and
 logical-content identities for explicitly typed synthetic tables. Batch 4B.2
 adds explicit point-in-time selection for synthetic normalized/curated data with
 PUBLIC and OPERATIONAL availability policies. Independent review passed item 7
-at commit `952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Item 8A adds the governed
-experiment `DRAFT → REGISTERED → FROZEN` and immutable freeze-evidence core;
-execution and later item-8 controls remain absent. The design must be modular,
+at commit `952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Item 8A remains in review-fix
+status with the governed experiment `DRAFT → REGISTERED → FROZEN` and immutable
+freeze-evidence core; execution and later item-8 controls remain absent. The design must be modular,
 reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.

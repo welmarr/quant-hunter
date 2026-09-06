@@ -142,3 +142,12 @@ attempt accounting, experiment execution/result retention, the sealed OOS
 boundary, deterministic rerun resolution, and later Stage 1 gates. Item 8A adds
 USD 0 incremental direct cost; RISK-013 and RISK-021 remain `OPEN` because
 Month-1 baseline costs and remaining headroom remain unknown.
+
+### Item 8A timestamp-ordering review fix
+
+The Item 8A lifecycle now compares every fractional-second digit accepted by
+the common UTC timestamp schema. Synthetic hostile tests cover backward
+sub-microsecond and beyond-nanosecond transitions, one-nanosecond progress,
+exact equality, and existing second/microsecond inputs. This further reduces
+the lifecycle portion of RISK-004 without changing its `OPEN` status or starting
+Item 8B.

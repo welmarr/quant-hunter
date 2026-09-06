@@ -329,3 +329,17 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** DEC-0007, DEC-0009, DEC-0020, `EXPERIMENT_LEDGER.md`, `ROADMAP.md` item 8, `schemas/v1/experiment.schema.json`, `src/quant_hunter/experiments/lifecycle.py`, and `src/quant_hunter/provenance/freeze.py`.
 - **Supersedes / superseded by:** Extends the generic freeze foundation without replacing any registry or artifact authority. Later item-8 controls remain separately gated.
 - **Owner and approver:** Project owner through explicit Stage 1B Item 8A authorization dated 2026-09-06.
+
+### DEC-0022 — Compare Lifecycle Timestamps at Full Accepted Precision
+
+- **Date:** 2026-09-06
+- **Status:** ACCEPTED
+- **Scope:** governance / methodology / reproducibility
+- **Context:** The common timestamp schema accepts UTC RFC 3339 fractions of arbitrary length, while Python `datetime` retains only microseconds. Comparing parsed `datetime` values could therefore treat a sub-microsecond backward transition as equality.
+- **Decision:** Parse lifecycle timestamp components with the existing strict UTC shape, validate their calendar and whole-second components with the standard library, and compare the fractional component as an exact standard-library `Decimal`. Preserve every accepted digit without float conversion, rounding, truncation, or a dependency on point-in-time data code. Continue allowing exact equality.
+- **Alternatives considered:** Limiting the common schema to six or nine fractional digits would be a broad semantic change. Float timestamps and `datetime` microseconds are lossy. Importing PIT timestamp machinery would create an inappropriate experiment-to-data dependency.
+- **Scientific/statistical consequences:** `created_at ≤ registered_at ≤ frozen_at` now holds for the full precision accepted by the governed schema, including beyond nanoseconds. No preregistration, multiple-testing, result exclusion, freeze binding, immutable storage, or sealed-data rule changes.
+- **Reproducibility and cost consequences:** The correction uses only the Python standard library, adds no dependency, and costs USD 0 incrementally. The existing USD 10 prepaid Codex purchase is not counted again.
+- **References:** DEC-0021, `EXPERIMENT_LEDGER.md`, `schemas/v1/common.schema.json`, `src/quant_hunter/experiments/lifecycle.py`, and `tests/test_experiment_lifecycle.py`.
+- **Supersedes / superseded by:** Corrects only timestamp ordering within Item 8A. Item 8A remains in review-fix status pending independent review; Item 8B remains unstarted.
+- **Owner and approver:** Project owner through explicit Stage 1B Item 8A review-fix authorization dated 2026-09-06.

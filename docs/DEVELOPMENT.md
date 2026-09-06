@@ -443,3 +443,23 @@ attempt counters, execution/later transitions, result and failure retention,
 sealed-release integration, and deterministic rerun resolution remain
 unimplemented. No dependency or incremental direct cost was added, and the
 existing USD 10 prepaid Codex-credit spend was not counted again.
+
+### Item 8A exact-timestamp review fix
+
+On 2026-09-06, lifecycle ordering stopped using microsecond-resolution
+`datetime` values. Calendar validation remains standard-library based, while
+the complete fractional component is compared as an exact `Decimal`. Hostile
+tests reject backward transitions below microsecond and nanosecond precision
+and retain one-nanosecond progress, exact equality, whole-second, microsecond,
+invalid-calendar, naive, and local-offset behavior.
+
+The complete locked Windows gate passed: `uv lock --check`; Ruff format over 55
+files; Ruff lint; strict mypy over 32 source files; and 371 pytest cases with
+93.01% combined statement/branch coverage. The lifecycle module reached 91%
+coverage. The offline governed build produced both distributions; package and
+PyArrow imports returned `0.1.0` and `25.0.1`; archive inspection found 105
+combined members, included the lifecycle module in both artifacts, and found no
+`.tools/` or `.venv/` member. Item 8A remains in review-fix status pending
+independent review. Item 8B was not started. No dependency or incremental
+direct cost was added, and the existing USD 10 prepaid Codex-credit spend was
+not counted again.
