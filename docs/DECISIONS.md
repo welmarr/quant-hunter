@@ -287,3 +287,17 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** DEC-0007, DEC-0015–DEC-0017, `DATA_ARCHITECTURE.md`, `ROADMAP.md` item 7, `schemas/v1/pit-selection-config.schema.json`, `src/quant_hunter/data/pit.py`, and `tests/test_pit.py`.
 - **Supersedes / superseded by:** Completes the Batch 4B.2 implementation portion of roadmap item 7 without superseding existing provenance or identity contracts. Item 8 remains separately gated and unstarted.
 - **Owner and approver:** Project owner through explicit Stage 1B Batch 4B.2 authorization dated 2026-09-06.
+
+### DEC-0019 — Bind PIT Inputs and Selected Content End to End
+
+- **Date:** 2026-09-06
+- **Status:** ACCEPTED
+- **Scope:** data / provenance / reproducibility
+- **Context:** Independent review found that a dataset ID alone did not prove the table supplied to PIT selection was the immutable parent later cited by publication, while selected vintage IDs and keys did not bind non-key selected values.
+- **Decision:** Add a narrow typed PIT input-evidence record containing the existing five-field `ParentEvidence`, declared logical schema digest, and explicit parent row-ordering semantics. Selection must recompute the supplied input table's existing logical-content fingerprint under that schema/order and match the parent claim. The immutable PIT audit binds that complete input evidence, the configuration digest, the selected table's existing logical-content fingerprint under its declared derived ordering, and selected/excluded vintage accounting. Publication and later verification require exact equality of all parent evidence fields and require the published derived logical identity and ordering to match the selection audit. Do not change the temporal algorithm or any physical, lineage, or logical identity definition.
+- **Alternatives considered:** Recomputing every parent as unordered would make a false claim when parent ordering is meaningful. Matching only dataset ID or logical fingerprint would omit immutable revision, physical, or lineage identity. Adding a broad catalog or a cosmetic audit schema would exceed the narrow fix.
+- **Scientific/statistical consequences:** A table cannot be selected under one logical parent and published against another revision, physical object, lineage, or logical-content claim with the same dataset ID. Altering a non-key selected value invalidates the result and cannot be published under the original audit.
+- **Reproducibility and cost consequences:** The change reuses existing Arrow logical schema/fingerprint, JCS, SHA-256, immutable storage, and lineage contracts. It adds no dependency, service, data, infrastructure, or paid commitment; direct incremental cost is USD 0.
+- **References:** DEC-0016–DEC-0018, `DATA_ARCHITECTURE.md`, `ROADMAP.md` item 7, `src/quant_hunter/data/pit.py`, and `tests/test_pit.py`.
+- **Supersedes / superseded by:** Hardens DEC-0018 without changing PIT science. Item 7 remains in review-fix status pending independent review; item 8 remains unstarted.
+- **Owner and approver:** Project owner through explicit Stage 1B Batch 4B.2 review-fix authorization dated 2026-09-06.

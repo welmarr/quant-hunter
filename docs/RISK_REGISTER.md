@@ -104,3 +104,15 @@ material selection policy. These controls reduce the item-7 portions of
 RISK-003–005 and preserve the three identities under RISK-019. The risks remain
 `OPEN` pending real-source assessment, later experiment/sealed controls, hosted
 cross-platform independent review, and the full Stage 1B reproducibility audit.
+
+### Batch 4B.2 independent-review fix
+
+The PIT audit now binds the exact parent dataset, registry revision, physical,
+lineage, and logical identities together with the declared parent schema and
+row-ordering semantics. Selection recomputes the supplied input table's existing
+logical fingerprint before applying PIT rules. The audit also binds the complete
+selected table through that same governed fingerprint, and publication requires
+the exact parent tuple and selected identity. Hostile synthetic evidence with
+valid alternate revision, physical, lineage, logical, or selected-content claims
+is rejected. This further reduces RISK-003, RISK-005, and RISK-019; item 7 remains
+in review-fix status pending independent review.

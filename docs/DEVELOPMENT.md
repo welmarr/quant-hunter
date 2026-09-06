@@ -375,3 +375,26 @@ archive inspection found 100 combined members, included the PIT module in both
 artifacts, and found no `.tools/` or `.venv/` member. `git diff --check` passed.
 No dependency or paid service was added. Roadmap item 7 is ready for independent
 review; Stage 1B item 8 remains unstarted.
+
+### Batch 4B.2 independent-review fix
+
+On 2026-09-06, the PIT selection contract gained a narrow exact-input evidence
+record. It binds all five existing parent identities, declared schema digest, and
+explicit parent row ordering; selection recomputes the supplied table's governed
+logical fingerprint before eligibility evaluation. The canonical audit now also
+binds the complete selected table with the existing logical-content fingerprint
+under the published derived ordering. Publication and later verification require
+the exact audited parent and selected identities. No timestamp, availability,
+vintage-priority, ambiguity, or three-identity rule changed.
+
+Focused hostile tests use otherwise valid alternate derived evidence to reject
+wrong parent revision, physical, lineage, and logical identities and changed
+non-key selected values. The locked Windows gate passed: lock check; Ruff format
+over 52 files; Ruff lint; strict mypy over 29 source files; and 321 pytest cases
+with 93.68% combined statement/branch coverage. The PIT module retained 95%
+coverage. The offline governed build produced both distributions; package and
+PyArrow imports returned `0.1.0` and `25.0.1`; archive inspection found 100
+combined members, included the PIT module in both artifacts, and found no
+`.tools/` or `.venv/` member. No dependency or paid service was added. Item 7
+remains in review-fix status pending independent review; Stage 1B item 8 remains
+unstarted.

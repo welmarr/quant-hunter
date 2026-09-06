@@ -26,6 +26,7 @@ from quant_hunter.data.derived import (
     ParentEvidence,
     canonical_logical_table_bytes,
     logical_content_fingerprint,
+    logical_schema_digest,
     publish_derived_table,
     verify_derived_dataset_evidence,
 )
@@ -37,6 +38,7 @@ from quant_hunter.storage.raw import QualityDisposition
 
 PIT_CONFIGURATION_SCHEMA: Final = "pit-selection-config.schema.json"
 PIT_TRANSFORMATION_IDENTITY: Final = "quant-hunter-pit-selection-v1"
+PIT_SELECTED_ROW_ORDERING: Final = OrderingSemantics.UNORDERED
 COLUMN_NAME: Final = re.compile(r"^[a-z][a-z0-9_]*$")
 NANOSECONDS_PER_SECOND: Final = 1_000_000_000
 
@@ -232,11 +234,67 @@ class PitExclusion:
 
 
 @dataclass(frozen=True, slots=True)
+class PitInputEvidence:
+    """Exact parent identities plus schema/order needed to identify the input table."""
+
+    parent: ParentEvidence
+    declared_schema: pa.Schema
+    row_ordering: OrderingSemantics
+    schema_digest: str
+
+    def verify(self) -> None:
+        self.parent.document()
+        if (
+            logical_schema_digest(self.declared_schema, self.row_ordering)
+            != self.schema_digest
+        ):
+            raise PitIntegrityError("PIT input logical schema digest mismatch")
+
+    def verify_table(self, table: pa.Table) -> None:
+        self.verify()
+        observed = logical_content_fingerprint(
+            table, self.declared_schema, self.row_ordering
+        )
+        if observed != self.parent.logical_content_fingerprint:
+            raise PitIntegrityError(
+                "PIT input table does not match parent logical content"
+            )
+
+    def document(self) -> JsonRecord:
+        self.verify()
+        return {
+            "parent": self.parent.document(),
+            "row_ordering": self.row_ordering.value,
+            "schema_digest": self.schema_digest,
+        }
+
+
+def build_pit_input_evidence(
+    *,
+    table: pa.Table,
+    parent_evidence: ParentEvidence,
+    declared_schema: pa.Schema,
+    row_ordering: OrderingSemantics,
+) -> PitInputEvidence:
+    """Bind a candidate PIT input table to one complete immutable parent claim."""
+    evidence = PitInputEvidence(
+        parent=parent_evidence,
+        declared_schema=declared_schema,
+        row_ordering=row_ordering,
+        schema_digest=logical_schema_digest(declared_schema, row_ordering),
+    )
+    evidence.verify_table(table)
+    return evidence
+
+
+@dataclass(frozen=True, slots=True)
 class PitSelectionResult:
     """Deterministic selected table plus explicit exclusion evidence."""
 
     configuration: PitSelectionConfiguration
+    input_evidence: PitInputEvidence
     selected_table: pa.Table
+    selected_logical_content_fingerprint: str
     selected_vintage_ids: tuple[str, ...]
     exclusions: tuple[PitExclusion, ...]
     input_row_count: int
@@ -252,6 +310,11 @@ class PitSelectionResult:
 
     def verify(self) -> None:
         self.configuration.verify()
+        self.input_evidence.verify()
+        if self.input_evidence.parent.dataset_id != self.configuration.input_dataset_id:
+            raise PitIntegrityError(
+                "PIT input evidence dataset does not match configuration"
+            )
         verify_sha256_bytes(self.audit_canonical_bytes, self.audit_digest)
         expected: JsonRecord = {
             "schema_version": "1.0.0",
@@ -259,7 +322,12 @@ class PitSelectionResult:
             "input_dataset_id": self.configuration.input_dataset_id,
             "as_of": self.configuration.as_of.rfc3339,
             "availability_mode": self.configuration.availability_mode.value,
+            "input_evidence": self.input_evidence.document(),
             "input_row_count": self.input_row_count,
+            "selected_row_ordering": PIT_SELECTED_ROW_ORDERING.value,
+            "selected_logical_content_fingerprint": (
+                self.selected_logical_content_fingerprint
+            ),
             "selected_vintage_ids": list(self.selected_vintage_ids),
             "exclusions": [exclusion.document() for exclusion in self.exclusions],
         }
@@ -271,6 +339,13 @@ class PitSelectionResult:
                 )
         if document != expected:
             raise PitIntegrityError("PIT audit contains unbound evidence")
+        observed_selected_fingerprint = logical_content_fingerprint(
+            self.selected_table,
+            self.selected_table.schema,
+            PIT_SELECTED_ROW_ORDERING,
+        )
+        if observed_selected_fingerprint != self.selected_logical_content_fingerprint:
+            raise PitIntegrityError("PIT selected logical content fingerprint mismatch")
         observed_vintage_ids = _string_values(
             self.selected_table,
             self.configuration.vintage_id_column,
@@ -504,7 +579,10 @@ def _row_reasons(
 
 
 def select_point_in_time(
-    *, table: pa.Table, configuration: PitSelectionConfiguration
+    *,
+    table: pa.Table,
+    configuration: PitSelectionConfiguration,
+    input_evidence: PitInputEvidence,
 ) -> PitSelectionResult:
     """Select the latest unambiguous eligible vintage for each observation key."""
     configuration.verify()
@@ -524,6 +602,11 @@ def select_point_in_time(
         raise PitInputError(
             "Input table violates the governed logical schema"
         ) from error
+    if input_evidence.parent.dataset_id != configuration.input_dataset_id:
+        raise PitConfigurationError(
+            "PIT input evidence dataset does not match configuration"
+        )
+    input_evidence.verify_table(table)
     time_values = {
         name: _timestamp_values_ns(table, name, timestamp_type)
         for name, timestamp_type in timestamp_types.items()
@@ -627,20 +710,30 @@ def select_point_in_time(
     )
     exclusions = tuple(exclusion for _key, exclusion in exclusions_with_keys)
     selected_vintage_ids = tuple(candidate.vintage_id for candidate in selected)
+    selected_fingerprint = logical_content_fingerprint(
+        selected_table,
+        selected_table.schema,
+        PIT_SELECTED_ROW_ORDERING,
+    )
     audit_document: JsonRecord = {
         "schema_version": "1.0.0",
         "configuration_digest": configuration.digest,
         "input_dataset_id": configuration.input_dataset_id,
         "as_of": configuration.as_of.rfc3339,
         "availability_mode": configuration.availability_mode.value,
+        "input_evidence": input_evidence.document(),
         "input_row_count": table.num_rows,
+        "selected_row_ordering": PIT_SELECTED_ROW_ORDERING.value,
+        "selected_logical_content_fingerprint": selected_fingerprint,
         "selected_vintage_ids": list(selected_vintage_ids),
         "exclusions": [exclusion.document() for exclusion in exclusions],
     }
     audit_bytes = canonicalize_json(audit_document)
     result = PitSelectionResult(
         configuration=configuration,
+        input_evidence=input_evidence,
         selected_table=selected_table,
+        selected_logical_content_fingerprint=selected_fingerprint,
         selected_vintage_ids=selected_vintage_ids,
         exclusions=exclusions,
         input_row_count=table.num_rows,
@@ -673,11 +766,9 @@ def publish_pit_selection(
             "PIT publication supports normalized or curated layers"
         )
     parents = tuple(parent_evidence)
-    if len(parents) != 1 or parents[0].dataset_id != (
-        selection.configuration.input_dataset_id
-    ):
+    if parents != (selection.input_evidence.parent,):
         raise PitConfigurationError(
-            "PIT publication requires exactly its configured input dataset parent"
+            "PIT publication parent does not match exact input evidence"
         )
     configuration_object = store.publish(selection.configuration.canonical_bytes)
     audit_object = store.publish(selection.audit_canonical_bytes)
@@ -701,7 +792,7 @@ def publish_pit_selection(
         declared_schema=selection.selected_table.schema,
         dataset_id=output_dataset_id,
         layer=layer,
-        row_ordering=OrderingSemantics.UNORDERED,
+        row_ordering=PIT_SELECTED_ROW_ORDERING,
         parent_evidence=parents,
         parent_ordering=OrderingSemantics.ORDERED,
         transformation_identity=PIT_TRANSFORMATION_IDENTITY,
@@ -744,16 +835,14 @@ def verify_published_pit_dataset(
     )
     evidence = published.derived_evidence
     verify_derived_dataset_evidence(store=store, catalog=catalog, evidence=evidence)
-    if len(evidence.parent_evidence) != 1 or evidence.parent_evidence[0].dataset_id != (
-        published.selection.configuration.input_dataset_id
-    ):
+    if evidence.parent_evidence != (published.selection.input_evidence.parent,):
         raise PitIntegrityError("PIT input dataset parent binding mismatch")
-    expected_logical = logical_content_fingerprint(
-        published.selection.selected_table,
-        published.selection.selected_table.schema,
-        OrderingSemantics.UNORDERED,
-    )
-    if evidence.logical_content_fingerprint != expected_logical:
+    if evidence.row_ordering is not PIT_SELECTED_ROW_ORDERING:
+        raise PitIntegrityError("PIT selected row-ordering evidence mismatch")
+    if (
+        evidence.logical_content_fingerprint
+        != published.selection.selected_logical_content_fingerprint
+    ):
         raise PitIntegrityError("PIT selected logical content does not match evidence")
     lineage = evidence.lineage_manifest.document
     transformation = lineage.get("transformation")

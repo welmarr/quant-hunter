@@ -13,6 +13,8 @@ import pytest
 from quant_hunter.config import canonicalize_json
 from quant_hunter.config.schema import RecordSchemaError, VersionedSchemaCatalog
 from quant_hunter.data import (
+    PIT_SELECTED_ROW_ORDERING,
+    PIT_TRANSFORMATION_IDENTITY,
     AvailabilityMode,
     DerivedLayer,
     ExclusionReason,
@@ -22,6 +24,7 @@ from quant_hunter.data import (
     PitConfigurationError,
     PitExclusion,
     PitInputError,
+    PitInputEvidence,
     PitIntegrityError,
     PitSelectionConfiguration,
     PitSelectionResult,
@@ -29,8 +32,11 @@ from quant_hunter.data import (
     RevisionTimeStatus,
     TemporalColumns,
     UtcInstant,
+    build_pit_input_evidence,
     build_pit_selection_configuration,
     logical_content_fingerprint,
+    logical_schema_digest,
+    publish_derived_table,
     publish_pit_selection,
     select_point_in_time,
     verify_published_pit_dataset,
@@ -137,19 +143,32 @@ def select(
     as_of: int = 150,
     mode: AvailabilityMode = AvailabilityMode.PUBLIC,
 ) -> PitSelectionResult:
+    table = table_from_rows(rows)
     return select_point_in_time(
-        table=table_from_rows(rows),
+        table=table,
         configuration=typed_configuration(as_of=as_of, mode=mode),
+        input_evidence=input_evidence(table),
     )
 
 
-def parent() -> ParentEvidence:
+def parent(table: pa.Table) -> ParentEvidence:
     return ParentEvidence(
         dataset_id=INPUT_DATASET_ID,
         registry_revision_digest="sha256:" + "1" * 64,
         physical_object_digest="sha256:" + "2" * 64,
         provenance_lineage_digest="sha256:" + "3" * 64,
-        logical_content_fingerprint="sha256:" + "4" * 64,
+        logical_content_fingerprint=logical_content_fingerprint(
+            table, table.schema, OrderingSemantics.UNORDERED
+        ),
+    )
+
+
+def input_evidence(table: pa.Table) -> PitInputEvidence:
+    return build_pit_input_evidence(
+        table=table,
+        parent_evidence=parent(table),
+        declared_schema=table.schema,
+        row_ordering=OrderingSemantics.UNORDERED,
     )
 
 
@@ -168,7 +187,7 @@ def publish(
         selection=selection,
         output_dataset_id=output_dataset_id,
         layer=layer,
-        parent_evidence=(parent(),),
+        parent_evidence=(selection.input_evidence.parent,),
         created_at="2026-09-05T12:00:00Z",
         producer=ArtifactProducer(
             "a" * 40, "synthetic-pit-selection", ENVIRONMENT_DIGEST
@@ -178,6 +197,52 @@ def publish(
         references=("synthetic://pit/selection",),
     )
     return store, schema_catalog, published
+
+
+def alternate_published_evidence(
+    tmp_path: Path,
+    selection: PitSelectionResult,
+    *,
+    table: pa.Table | None = None,
+    parent_evidence: ParentEvidence | None = None,
+) -> tuple[ImmutableObjectStore, VersionedSchemaCatalog, PublishedPitDataset]:
+    store = ImmutableObjectStore(tmp_path / "artifacts")
+    schema_catalog = catalog()
+    configuration_object = store.publish(selection.configuration.canonical_bytes)
+    audit_object = store.publish(selection.audit_canonical_bytes)
+    selected_table = selection.selected_table if table is None else table
+    derived = publish_derived_table(
+        store=store,
+        catalog=schema_catalog,
+        table=selected_table,
+        declared_schema=selected_table.schema,
+        dataset_id=OUTPUT_DATASET_ID,
+        layer=DerivedLayer.CURATED,
+        row_ordering=PIT_SELECTED_ROW_ORDERING,
+        parent_evidence=(
+            selection.input_evidence.parent
+            if parent_evidence is None
+            else parent_evidence,
+        ),
+        parent_ordering=OrderingSemantics.ORDERED,
+        transformation_identity=PIT_TRANSFORMATION_IDENTITY,
+        transformation_configuration_digest=selection.configuration.digest,
+        created_at="2026-09-06T12:00:00Z",
+        producer=ArtifactProducer(
+            "a" * 40, "synthetic-pit-selection", ENVIRONMENT_DIGEST
+        ),
+        source_ids=(SOURCE_ID,),
+        quality_disposition=QualityDisposition.APPROVED,
+        references=(
+            store.storage_reference(configuration_object.digest),
+            store.storage_reference(audit_object.digest),
+        ),
+    )
+    return (
+        store,
+        schema_catalog,
+        PublishedPitDataset(selection, configuration_object, audit_object, derived),
+    )
 
 
 def selected_values(result: PitSelectionResult) -> list[int]:
@@ -340,6 +405,7 @@ def test_supported_timestamp_units_preserve_exact_boundary(
     result = select_point_in_time(
         table=table,
         configuration=typed_configuration(as_of=as_of_nanoseconds),
+        input_evidence=input_evidence(table),
     )
 
     assert selected_values(result) == [1]
@@ -499,9 +565,17 @@ def test_input_permutation_does_not_change_pit_result() -> None:
         ),
     ]
     config = typed_configuration(as_of=150)
-    forward = select_point_in_time(table=table_from_rows(rows), configuration=config)
+    forward_table = table_from_rows(rows)
+    reverse_table = table_from_rows(list(reversed(rows)))
+    forward = select_point_in_time(
+        table=forward_table,
+        configuration=config,
+        input_evidence=input_evidence(forward_table),
+    )
     reversed_result = select_point_in_time(
-        table=table_from_rows(list(reversed(rows))), configuration=config
+        table=reverse_table,
+        configuration=config,
+        input_evidence=input_evidence(reverse_table),
     )
 
     assert forward.selected_vintage_ids == reversed_result.selected_vintage_ids
@@ -559,21 +633,33 @@ def test_temporal_arrow_columns_require_explicit_utc(
     table = table_from_rows([row("V1", 1)], timestamp_type=timestamp_type)
 
     with pytest.raises(PitInputError, match="UTC timezone"):
-        select_point_in_time(table=table, configuration=typed_configuration())
+        select_point_in_time(
+            table=table,
+            configuration=typed_configuration(),
+            input_evidence=input_evidence(table_from_rows([row("V1", 1)])),
+        )
 
 
 def test_missing_or_non_timestamp_temporal_column_fails_closed() -> None:
     base = table_from_rows([row("V1", 1)])
     missing = base.drop(["publication_time"])
     with pytest.raises(PitInputError, match="Missing required temporal"):
-        select_point_in_time(table=missing, configuration=typed_configuration())
+        select_point_in_time(
+            table=missing,
+            configuration=typed_configuration(),
+            input_evidence=input_evidence(base),
+        )
 
     index = base.schema.get_field_index("publication_time")
     wrong_type = base.set_column(
         index, "publication_time", pa.array([100], type=pa.int64())
     )
     with pytest.raises(PitInputError, match="Arrow timestamp"):
-        select_point_in_time(table=wrong_type, configuration=typed_configuration())
+        select_point_in_time(
+            table=wrong_type,
+            configuration=typed_configuration(),
+            input_evidence=input_evidence(base),
+        )
 
 
 def test_missing_or_non_string_identity_columns_fail_closed() -> None:
@@ -581,12 +667,18 @@ def test_missing_or_non_string_identity_columns_fail_closed() -> None:
     for column in ("vintage_id", "revision_time_status"):
         with pytest.raises(PitInputError, match="Missing required"):
             select_point_in_time(
-                table=base.drop([column]), configuration=typed_configuration()
+                table=base.drop([column]),
+                configuration=typed_configuration(),
+                input_evidence=input_evidence(base.drop([column])),
             )
     index = base.schema.get_field_index("vintage_id")
     wrong_type = base.set_column(index, "vintage_id", pa.array([1], type=pa.int64()))
     with pytest.raises(PitInputError, match="Arrow UTF-8"):
-        select_point_in_time(table=wrong_type, configuration=typed_configuration())
+        select_point_in_time(
+            table=wrong_type,
+            configuration=typed_configuration(),
+            input_evidence=input_evidence(wrong_type),
+        )
 
 
 def test_unsupported_input_logical_type_fails_closed() -> None:
@@ -595,13 +687,21 @@ def test_unsupported_input_logical_type_fails_closed() -> None:
     )
 
     with pytest.raises(PitInputError, match="governed logical schema"):
-        select_point_in_time(table=table, configuration=typed_configuration())
+        select_point_in_time(
+            table=table,
+            configuration=typed_configuration(),
+            input_evidence=input_evidence(table_from_rows([row("V1", 1)])),
+        )
 
 
 def test_observation_key_cannot_be_missing_or_null() -> None:
     missing_table = table_from_rows([row("V1", 1)]).drop(["period"])
     with pytest.raises(PitInputError, match="key column is missing"):
-        select_point_in_time(table=missing_table, configuration=typed_configuration())
+        select_point_in_time(
+            table=missing_table,
+            configuration=typed_configuration(),
+            input_evidence=input_evidence(missing_table),
+        )
 
     nullable_row = row("V1", 1)
     nullable_row["period"] = None
@@ -611,12 +711,20 @@ def test_observation_key_cannot_be_missing_or_null() -> None:
     arrays = [pa.array([nullable_row[field.name]], type=field.type) for field in schema]
     nullable_table = pa.Table.from_arrays(arrays, schema=schema)
     with pytest.raises(PitInputError, match="cannot be null"):
-        select_point_in_time(table=nullable_table, configuration=typed_configuration())
+        select_point_in_time(
+            table=nullable_table,
+            configuration=typed_configuration(),
+            input_evidence=input_evidence(nullable_table),
+        )
 
 
 def test_empty_input_produces_deterministic_empty_result() -> None:
     empty = table_from_rows([])
-    result = select_point_in_time(table=empty, configuration=typed_configuration())
+    result = select_point_in_time(
+        table=empty,
+        configuration=typed_configuration(),
+        input_evidence=input_evidence(empty),
+    )
 
     assert result.input_row_count == 0
     assert result.selected_table.num_rows == 0
@@ -649,6 +757,13 @@ def test_selection_audit_is_bound_to_typed_result() -> None:
     with pytest.raises(PitIntegrityError, match="unbound evidence"):
         extra.verify()
 
+    input_document = cast(dict[str, object], result.audit_document["input_evidence"])
+    assert input_document["parent"] == result.input_evidence.parent.document()
+    assert (
+        result.audit_document["selected_logical_content_fingerprint"]
+        == result.selected_logical_content_fingerprint
+    )
+
 
 def test_selection_result_binds_table_accounting_and_canonical_order() -> None:
     result = select(
@@ -658,7 +773,7 @@ def test_selection_result_binds_table_accounting_and_canonical_order() -> None:
         ]
     )
     wrong_table = replace(result, selected_table=result.selected_table.slice(0, 1))
-    with pytest.raises(PitIntegrityError, match="table and vintage identities"):
+    with pytest.raises(PitIntegrityError, match="logical content fingerprint"):
         wrong_table.verify()
 
     duplicate_exclusion = replace(
@@ -703,6 +818,49 @@ def test_selection_result_binds_table_accounting_and_canonical_order() -> None:
     )
     with pytest.raises(PitIntegrityError, match="canonically key ordered"):
         reversed_result.verify()
+
+
+def test_selection_rejects_table_unrelated_to_bound_input_evidence() -> None:
+    table_a = table_from_rows([row("V1", 1)])
+    table_b = table_from_rows([row("V1", 999)])
+
+    with pytest.raises(PitIntegrityError, match="does not match parent logical"):
+        select_point_in_time(
+            table=table_b,
+            configuration=typed_configuration(),
+            input_evidence=input_evidence(table_a),
+        )
+
+
+def test_input_evidence_binds_declared_schema_and_parent_ordering() -> None:
+    table = table_from_rows([row("B", 2, series="B"), row("A", 1, series="A")])
+    evidence = input_evidence(table)
+
+    wrong_schema_digest = replace(evidence, schema_digest="sha256:" + "5" * 64)
+    with pytest.raises(PitIntegrityError, match="schema digest mismatch"):
+        wrong_schema_digest.verify()
+
+    ordered = replace(
+        evidence,
+        row_ordering=OrderingSemantics.ORDERED,
+        schema_digest=logical_schema_digest(table.schema, OrderingSemantics.ORDERED),
+    )
+    with pytest.raises(PitIntegrityError, match="does not match parent logical"):
+        ordered.verify_table(table)
+
+
+def test_selected_value_tampering_fails_result_and_publication(tmp_path: Path) -> None:
+    result = select([row("V1", 1)])
+    value_index = result.selected_table.schema.get_field_index("value")
+    changed_table = result.selected_table.set_column(
+        value_index, "value", pa.array([999], type=pa.int64())
+    )
+    damaged = replace(result, selected_table=changed_table)
+
+    with pytest.raises(PitIntegrityError, match="logical content fingerprint"):
+        damaged.verify()
+    with pytest.raises(PitIntegrityError, match="logical content fingerprint"):
+        publish(tmp_path, damaged)
 
 
 def test_as_of_and_policy_change_lineage_but_not_equal_logical_content(
@@ -764,7 +922,7 @@ def test_published_early_vintage_is_not_retroactively_changed(
         selection=later,
         output_dataset_id=SECOND_OUTPUT_DATASET_ID,
         layer=DerivedLayer.CURATED,
-        parent_evidence=(parent(),),
+        parent_evidence=(later.input_evidence.parent,),
         created_at="2026-09-05T12:01:00Z",
         producer=ArtifactProducer(
             "a" * 40, "synthetic-pit-selection", ENVIRONMENT_DIGEST
@@ -789,7 +947,7 @@ def test_pit_publication_requires_exact_parent_and_supported_layer(
 ) -> None:
     selection = select([row("V1", 1)])
     wrong_parent = replace(
-        parent(),
+        selection.input_evidence.parent,
         dataset_id="DATASET-01990f30-7f5e-7b34-9b21-3d74c513c856",
     )
     store = ImmutableObjectStore(tmp_path / "artifacts")
@@ -802,13 +960,13 @@ def test_pit_publication_requires_exact_parent_and_supported_layer(
             selection=selection,
             output_dataset_id=OUTPUT_DATASET_ID,
             layer=DerivedLayer.FEATURES,
-            parent_evidence=(parent(),),
+            parent_evidence=(selection.input_evidence.parent,),
             created_at="2026-09-05T12:00:00Z",
             producer=producer,
             source_ids=(SOURCE_ID,),
             quality_disposition=QualityDisposition.APPROVED,
         )
-    with pytest.raises(PitConfigurationError, match="configured input"):
+    with pytest.raises(PitConfigurationError, match="exact input evidence"):
         publish_pit_selection(
             store=store,
             catalog=schema_catalog,
@@ -820,6 +978,95 @@ def test_pit_publication_requires_exact_parent_and_supported_layer(
             producer=producer,
             source_ids=(SOURCE_ID,),
             quality_disposition=QualityDisposition.APPROVED,
+        )
+
+
+def _assert_parent_identity_rejected(
+    tmp_path: Path, wrong_parent: ParentEvidence
+) -> None:
+    selection = select([row("V1", 1)])
+    store = ImmutableObjectStore(tmp_path / "artifacts")
+    with pytest.raises(PitConfigurationError, match="exact input evidence"):
+        publish_pit_selection(
+            store=store,
+            catalog=catalog(),
+            selection=selection,
+            output_dataset_id=OUTPUT_DATASET_ID,
+            layer=DerivedLayer.NORMALIZED,
+            parent_evidence=(wrong_parent,),
+            created_at="2026-09-06T12:00:00Z",
+            producer=ArtifactProducer(
+                "a" * 40, "synthetic-pit-selection", ENVIRONMENT_DIGEST
+            ),
+            source_ids=(SOURCE_ID,),
+            quality_disposition=QualityDisposition.APPROVED,
+        )
+
+
+def test_pit_publication_rejects_wrong_parent_revision(tmp_path: Path) -> None:
+    exact = select([row("V1", 1)]).input_evidence.parent
+    _assert_parent_identity_rejected(
+        tmp_path, replace(exact, registry_revision_digest="sha256:" + "5" * 64)
+    )
+
+
+def test_pit_publication_rejects_wrong_parent_physical_object(tmp_path: Path) -> None:
+    exact = select([row("V1", 1)]).input_evidence.parent
+    _assert_parent_identity_rejected(
+        tmp_path, replace(exact, physical_object_digest="sha256:" + "5" * 64)
+    )
+
+
+def test_pit_publication_rejects_wrong_parent_lineage(tmp_path: Path) -> None:
+    exact = select([row("V1", 1)]).input_evidence.parent
+    _assert_parent_identity_rejected(
+        tmp_path, replace(exact, provenance_lineage_digest="sha256:" + "5" * 64)
+    )
+
+
+def test_pit_publication_rejects_wrong_parent_logical_content(tmp_path: Path) -> None:
+    exact = select([row("V1", 1)]).input_evidence.parent
+    _assert_parent_identity_rejected(
+        tmp_path, replace(exact, logical_content_fingerprint="sha256:" + "5" * 64)
+    )
+
+
+def test_pit_verifier_rejects_valid_evidence_for_different_exact_parent(
+    tmp_path: Path,
+) -> None:
+    selection = select([row("V1", 1)])
+    exact = selection.input_evidence.parent
+    wrong_parents = (
+        replace(exact, registry_revision_digest="sha256:" + "5" * 64),
+        replace(exact, physical_object_digest="sha256:" + "5" * 64),
+        replace(exact, provenance_lineage_digest="sha256:" + "5" * 64),
+        replace(exact, logical_content_fingerprint="sha256:" + "5" * 64),
+    )
+    for index, wrong_parent in enumerate(wrong_parents):
+        store, schema_catalog, published = alternate_published_evidence(
+            tmp_path / str(index), selection, parent_evidence=wrong_parent
+        )
+        with pytest.raises(PitIntegrityError, match="parent binding mismatch"):
+            verify_published_pit_dataset(
+                store=store, catalog=schema_catalog, published=published
+            )
+
+
+def test_pit_verifier_rejects_valid_evidence_for_different_selected_content(
+    tmp_path: Path,
+) -> None:
+    selection = select([row("V1", 1)])
+    value_index = selection.selected_table.schema.get_field_index("value")
+    changed_table = selection.selected_table.set_column(
+        value_index, "value", pa.array([999], type=pa.int64())
+    )
+    store, schema_catalog, published = alternate_published_evidence(
+        tmp_path, selection, table=changed_table
+    )
+
+    with pytest.raises(PitIntegrityError, match="logical content does not match"):
+        verify_published_pit_dataset(
+            store=store, catalog=schema_catalog, published=published
         )
 
 

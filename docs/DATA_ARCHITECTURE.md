@@ -174,8 +174,13 @@ The PIT configuration canonically binds the input dataset, exact `as_of`, mode,
 observation and vintage identities, temporal columns, revision states,
 eligibility/selection rules, ambiguity policy, and output ordering. Its digest
 is the derived transformation-configuration identity. Canonical audit evidence
-accounts for selected and excluded vintage IDs. Both immutable objects are
-referenced by the existing lineage manifest. Published selections use the
+binds the exact parent dataset ID, registry revision, physical object, lineage,
+logical-content fingerprint, declared input schema digest, and parent row-order
+semantics. Selection verifies the supplied input table against that logical
+parent identity. The same audit binds the complete selected logical schema and
+values through the existing logical-content fingerprint under the declared
+output ordering, then accounts for selected and excluded vintage IDs. Both
+immutable objects are referenced by the existing lineage manifest. Published selections use the
 existing deterministic Parquet, artifact sidecar, canonical lineage, immutable
 object store, parent evidence, and physical/lineage/logical identities. A mode
 or `as_of` change therefore changes configuration and lineage even when the

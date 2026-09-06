@@ -27,6 +27,7 @@ from quant_hunter.data.derived import (
 )
 from quant_hunter.data.pit import (
     PIT_CONFIGURATION_SCHEMA,
+    PIT_SELECTED_ROW_ORDERING,
     PIT_TRANSFORMATION_IDENTITY,
     AvailabilityMode,
     ExclusionReason,
@@ -35,6 +36,7 @@ from quant_hunter.data.pit import (
     PitError,
     PitExclusion,
     PitInputError,
+    PitInputEvidence,
     PitIntegrityError,
     PitSelectionConfiguration,
     PitSelectionResult,
@@ -42,6 +44,7 @@ from quant_hunter.data.pit import (
     RevisionTimeStatus,
     TemporalColumns,
     UtcInstant,
+    build_pit_input_evidence,
     build_pit_selection_configuration,
     publish_pit_selection,
     select_point_in_time,
@@ -51,6 +54,7 @@ from quant_hunter.data.pit import (
 __all__ = (
     "DEFAULT_PARQUET_PROFILE",
     "PIT_CONFIGURATION_SCHEMA",
+    "PIT_SELECTED_ROW_ORDERING",
     "PIT_TRANSFORMATION_IDENTITY",
     "PYARROW_VERSION",
     "AvailabilityMode",
@@ -70,6 +74,7 @@ __all__ = (
     "PitError",
     "PitExclusion",
     "PitInputError",
+    "PitInputEvidence",
     "PitIntegrityError",
     "PitSelectionConfiguration",
     "PitSelectionResult",
@@ -79,6 +84,7 @@ __all__ = (
     "UnsupportedLogicalTypeError",
     "UtcInstant",
     "build_dataset_lineage_manifest",
+    "build_pit_input_evidence",
     "build_pit_selection_configuration",
     "canonical_logical_table_bytes",
     "deterministic_parquet_bytes",
