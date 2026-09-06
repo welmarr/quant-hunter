@@ -180,6 +180,9 @@ def test_completed_experiment_metadata(status: str) -> None:
     instance["registered_at"] = "2026-09-05T06:01:00Z"
     instance["frozen_at"] = "2026-09-05T06:02:00Z"
     instance["frozen_manifest_digest"] = "sha256:" + "a" * 64
+    if status in {"RUNNING", "EVALUATED", "DECIDED"}:
+        instance["started_at"] = "2026-09-05T06:03:00Z"
+        instance["attempt_records"] = []
     for field in [
         "feature_definitions",
         "label_definitions",
@@ -197,8 +200,20 @@ def test_completed_experiment_metadata(status: str) -> None:
         instance["result_artifact_digests"] = ["sha256:" + "c" * 64]
         instance["result_artifact_locations"] = ["https://example.invalid/result.json"]
         instance["variants_attempted"] = 3
+        instance["multiple_testing"]["budget"] = 3
         instance["variant_accounting"]["failed_attempts"] = 1
         instance["variant_accounting"]["ai_generated_attempts"] = 2
+        instance["attempt_records"] = [
+            {
+                "attempt_number": number,
+                "experiment_id": instance["experiment_id"],
+                "recorded_at": f"2026-09-05T06:0{number + 3}:00Z",
+                "ai_generated": number in {1, 2},
+                "failed": number == 3,
+                "exposure_reason": f"Synthetic schema attempt {number}.",
+            }
+            for number in range(1, 4)
+        ]
     if status == "DECIDED":
         del instance["decision_pending_reason"]
         instance["decision"] = "INCONCLUSIVE"

@@ -79,6 +79,9 @@
     "frozen_at": {
       "$ref": "common.schema.json#/$defs/timestamp"
     },
+    "started_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
     "lifecycle_status": {
       "enum": [
         "DRAFT",
@@ -392,6 +395,12 @@
         }
       }
     },
+    "attempt_records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/runtime_attempt"
+      }
+    },
     "multiple_testing": {
       "type": "object",
       "additionalProperties": false,
@@ -574,6 +583,48 @@
           "pattern": "\\S"
         }
       }
+    },
+    "runtime_attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_number",
+        "experiment_id",
+        "recorded_at",
+        "ai_generated",
+        "failed",
+        "exposure_reason"
+      ],
+      "properties": {
+        "attempt_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "experiment_id": {
+          "$ref": "common.schema.json#/$defs/experiment_id"
+        },
+        "recorded_at": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "ai_generated": {
+          "type": "boolean"
+        },
+        "failed": {
+          "type": "boolean"
+        },
+        "exposure_reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "variant_configuration_digest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "retry_of_attempt": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     }
   },
   "allOf": [
@@ -637,6 +688,55 @@
         "required": [
           "frozen_at"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "RUNNING",
+              "EVALUATED",
+              "DECIDED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "started_at",
+          "attempt_records"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "const": "RUNNING"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "decision"
+          ]
+        },
+        "properties": {
+          "results": {
+            "$ref": "#/$defs/unavailable"
+          },
+          "result_artifact_locations": {
+            "$ref": "#/$defs/unavailable"
+          },
+          "result_artifact_digests": {
+            "maxItems": 0
+          },
+          "reason_for_decision": {
+            "$ref": "#/$defs/unavailable"
+          }
+        }
       }
     },
     {

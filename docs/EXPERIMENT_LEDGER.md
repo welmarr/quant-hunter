@@ -46,6 +46,20 @@ Before `FROZEN`, record the hypothesis, data partitions, feature/label definitio
 
 Opening sealed data is a one-way, timestamped event. After it is opened, changes inspired by its results require a new experiment ID and a new sealed dataset; the old holdout becomes ordinary research data. Never tune against an already opened holdout while continuing to call it out-of-sample.
 
+The Item 8B runtime authority verifies the complete registry chain, exact
+`REGISTERED` predecessor, immutable freeze manifest, and unchanged frozen
+science before appending `RUNNING`. `started_at` is caller supplied and must be
+at or after `frozen_at` at every fractional digit accepted by the schema. Every
+actual search exposure then appends one typed attempt record under registry CAS.
+The record identifies its experiment and sequence, exact recording timestamp,
+AI and failure flags, reason it counts as exposure, optional immutable variant
+configuration digest, and prior-attempt link for a retry. Non-AI covers both
+ordinary human and algorithm-generated work. Cumulative total, AI-generated,
+and failed counters are reconstructed from the retained attempt records; a
+failed AI attempt contributes once to total exposure and once to each applicable
+subset counter. Attempt timestamps are nondecreasing, and no append may exceed
+the frozen multiple-testing budget.
+
 ## Multiple Testing and AI
 
 Count every candidate actually or implicitly searched: parameters, filters, assets, horizons, feature combinations, model prompts, code-generated variants, pattern candidates, retries, and human or AI suggestions. Record the total search exposure even when candidates fail before producing a report. Related variants remain grouped under their research family for correction and ensemble-independence analysis.
@@ -56,4 +70,12 @@ A result is not complete until another controlled run can reproduce it from reco
 
 ## Ledger Entries
 
-No experiments are registered yet. Item 8A supplies only the synthetic-tested `DRAFT → REGISTERED → FROZEN` control path; it does not execute research or release sealed data. Documentation work is not a trading experiment, and no strategy experiment may begin until Stage 1 controls in `ROADMAP.md` exist and the work is explicitly authorized. Machine authority is the schema-validated JCS revision chain at `registries/experiments/<id>/vNNNNNN.json`; generated summaries are non-authoritative views.
+No experiments are registered yet. Independent review passed Item 8A at commit
+`79730f9ed54d6fcf9c8b33ad70af6181941c0b5e`. Item 8B adds only synthetic-tested
+`FROZEN → RUNNING` and runtime-attempt accounting; it does not evaluate an
+experiment, produce results or decisions, or release sealed data. Documentation
+work is not a trading experiment, and no strategy experiment may begin until
+Stage 1 controls in `ROADMAP.md` exist and the work is explicitly authorized.
+Machine authority is the schema-validated JCS revision chain at
+`registries/experiments/<id>/vNNNNNN.json`; generated summaries are
+non-authoritative views.

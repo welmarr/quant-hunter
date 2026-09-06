@@ -17,9 +17,10 @@ logical-content identity foundation. Batch 4B.2 adds the synthetic point-in-time
 selection contract for explicit UTC as-of queries, PUBLIC and OPERATIONAL
 availability, immutable vintages, and normalized/curated publication. Roadmap
 item 7 is complete after independent review passed commit
-`952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Item 8A remains in review-fix
-status with only the synthetic `DRAFT → REGISTERED → FROZEN` experiment
-lifecycle and immutable freeze core.
+`952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Independent review passed Item
+8A at commit `79730f9ed54d6fcf9c8b33ad70af6181941c0b5e`. Item 8B is in review with
+only the governed `FROZEN → RUNNING` transition and append-only runtime-attempt
+accounting added to the synthetic experiment lifecycle.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 portfolio logic, or live-trading capability exists.

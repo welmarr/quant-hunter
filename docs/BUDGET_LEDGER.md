@@ -61,6 +61,9 @@ incremental direct project cost is USD 0; consumption of the recorded prepaid
 credits is not counted again as separate spend.
 The Item 8A timestamp-ordering review fix uses only the Python standard library
 and adds USD 0 incremental direct cost.
+Item 8B reuses the same locked dependencies, registry, canonicalization, and
+immutable-object foundations. It adds no service, data, infrastructure,
+subscription, or usage commitment and has USD 0 incremental direct cost.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 

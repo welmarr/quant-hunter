@@ -151,3 +151,17 @@ sub-microsecond and beyond-nanosecond transitions, one-nanosecond progress,
 exact equality, and existing second/microsecond inputs. This further reduces
 the lifecycle portion of RISK-004 without changing its `OPEN` status or starting
 Item 8B.
+
+### Item 8A closure and Item 8B runtime-attempt evidence
+
+Independent review passed Item 8A at commit
+`79730f9ed54d6fcf9c8b33ad70af6181941c0b5e`. Item 8B adds synthetic hostile
+coverage for the independently verified `FROZEN → RUNNING` edge, exact
+caller-supplied start-time ordering, append-only attempt evidence, AI and failed
+subset counts, retry exposure, registry CAS conflicts, and the frozen
+multiple-testing budget. Every runtime revision is checked against the exact
+frozen science and cumulative attempt history, reducing the current Stage 1B
+portions of RISK-001, RISK-002, RISK-003, RISK-008, and RISK-011. These risks
+remain `OPEN` pending evaluation/result controls, sealed-release integration,
+real research use, and the remaining Stage 1 gates. Item 8B adds USD 0 direct
+cost. Item 8C and Item 9 remain unstarted.

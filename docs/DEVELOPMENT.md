@@ -463,3 +463,27 @@ combined members, included the lifecycle module in both artifacts, and found no
 independent review. Item 8B was not started. No dependency or incremental
 direct cost was added, and the existing USD 10 prepaid Codex-credit spend was
 not counted again.
+
+## Stage 1B Item 8B running state and attempt accounting
+
+Independent review passed Item 8A at commit
+`79730f9ed54d6fcf9c8b33ad70af6181941c0b5e`. Item 8B extends the same governed
+experiment authority only through `FROZEN → RUNNING` and append-only runtime
+attempt evidence. Each accepted attempt adds one registry revision under CAS;
+the cumulative total, AI-generated subset, and failed subset are recomputed
+from retained evidence and checked against the frozen multiple-testing budget.
+No sealed reference is dereferenced and no result or decision behavior exists.
+
+The complete locked Windows gate passed with repository-pinned uv 0.12.10:
+`uv lock --check`; Ruff format over 55 files; Ruff lint; strict mypy over 32
+source files; and 413 pytest cases with 91.44% combined statement/branch
+coverage. The sandboxed run used an external disposable cache and the existing
+pinned CPython 3.14.7 environment; it did not change the lock or dependencies.
+The governed build produced both distributions, package/PyArrow and new
+lifecycle-symbol imports returned `0.1.0`, `25.0.1`,
+`ExperimentLifecycleService`, and `AttemptBudgetExceededError`; archive
+inspection found 105 combined members, included the lifecycle module in both
+artifacts, and excluded disposable tool/cache and virtual-environment paths.
+Item 8B is `IN PROGRESS / REVIEW`. Item 8C and Item 9 were not started. The
+incremental direct project cost is USD 0, and the existing USD 10 prepaid Codex
+purchase was not counted again.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from pathlib import Path
 from typing import cast
@@ -11,7 +12,10 @@ from uuid import UUID
 import pytest
 
 from quant_hunter.config import JsonRecord, JsonValue
+from quant_hunter.config.canonical import canonicalize_json
+from quant_hunter.config.schema import RecordSchemaError
 from quant_hunter.experiments import (
+    AttemptBudgetExceededError,
     ExperimentIntegrityError,
     ExperimentLifecycleService,
     InvalidExperimentTransitionError,
@@ -26,7 +30,12 @@ from quant_hunter.identity import (
     new_typed_id,
 )
 from quant_hunter.provenance import DataManifestReference
-from quant_hunter.storage import ImmutableObjectStore, ObjectCorruptionError
+from quant_hunter.provenance.hashing import sha256_bytes
+from quant_hunter.storage import (
+    ImmutableObjectStore,
+    ObjectCorruptionError,
+    SensitiveMetadataError,
+)
 
 REPOSITORY_ROOT = Path(__file__).parents[1]
 SCHEMA_DIRECTORY = REPOSITORY_ROOT / "schemas" / "v1"
@@ -38,6 +47,8 @@ SECOND_EXPERIMENT_UUID = UUID("01990f30-7f5e-7b34-9b21-3d74c513d60b")
 CREATED_AT = "2026-09-06T12:00:00Z"
 REGISTERED_AT = "2026-09-06T12:01:00Z"
 FROZEN_AT = "2026-09-06T12:02:00Z"
+STARTED_AT = "2026-09-06T12:03:00Z"
+ATTEMPT_AT = "2026-09-06T12:04:00Z"
 
 
 def planned_payload() -> JsonRecord:
@@ -113,6 +124,55 @@ def registered_experiment(
         draft.object_id, draft.revision.digest, registered_at=REGISTERED_AT
     )
     return draft.object_id, draft.revision, registered
+
+
+def frozen_experiment(
+    lifecycle: ExperimentLifecycleService,
+    payload: JsonRecord | None = None,
+    *,
+    frozen_at: str = FROZEN_AT,
+) -> tuple[str, Revision, Revision]:
+    """Create the exact synthetic FROZEN history used by runtime tests."""
+    experiment_id, _draft, registered = registered_experiment(lifecycle, payload)
+    frozen = lifecycle.freeze(
+        experiment_id,
+        registered.digest,
+        frozen_at=frozen_at,
+        data_manifests=data_manifests(payload),
+    )
+    return experiment_id, registered, frozen.revision
+
+
+def running_experiment(
+    lifecycle: ExperimentLifecycleService,
+    payload: JsonRecord | None = None,
+    *,
+    frozen_at: str = FROZEN_AT,
+    started_at: str = STARTED_AT,
+) -> tuple[str, Revision, Revision]:
+    """Create a verified synthetic RUNNING experiment with zero attempts."""
+    experiment_id, _registered, frozen = frozen_experiment(
+        lifecycle, payload, frozen_at=frozen_at
+    )
+    running = lifecycle.start(experiment_id, frozen.digest, started_at=started_at)
+    return experiment_id, frozen, running
+
+
+def revision_payload(revision: Revision) -> JsonRecord:
+    """Remove fields owned by RegistryStore before a hostile direct append."""
+    return {
+        key: deepcopy(value)
+        for key, value in revision.record.items()
+        if key not in {"experiment_id", "revision", "previous_revision_digest"}
+    }
+
+
+def runtime_payload(*, budget: int = 4) -> JsonRecord:
+    """Return a preregistration with room for synthetic runtime attempts."""
+    payload = planned_payload()
+    multiple_testing = cast(JsonRecord, payload["multiple_testing"])
+    multiple_testing["budget"] = budget
+    return payload
 
 
 def test_valid_draft_registered_frozen_chain(tmp_path: Path) -> None:
@@ -769,4 +829,503 @@ def test_freeze_does_not_read_or_release_sealed_data(
             "reference": sealed_path.as_uri(),
         }
     ]
+    assert not sealed_path.exists()
+
+
+def test_valid_frozen_to_running_preserves_frozen_evidence(tmp_path: Path) -> None:
+    """RUNNING is an append-only revision over independently verified freeze evidence."""
+    lifecycle = service(tmp_path)
+    experiment_id, frozen, running = running_experiment(lifecycle)
+
+    assert running.record["lifecycle_status"] == "RUNNING"
+    assert running.record["started_at"] == STARTED_AT
+    assert running.record["attempt_records"] == []
+    assert running.record["variants_attempted"] == 0
+    assert (
+        running.record["frozen_manifest_digest"]
+        == frozen.record["frozen_manifest_digest"]
+    )
+    assert [
+        revision.record["lifecycle_status"]
+        for revision in lifecycle.registry.verify_object(experiment_id)
+    ] == ["DRAFT", "REGISTERED", "FROZEN", "RUNNING"]
+
+
+def test_start_rejects_draft_registered_and_repeated_running(tmp_path: Path) -> None:
+    """Only the single governed FROZEN to RUNNING lifecycle edge is accepted."""
+    lifecycle = service(tmp_path)
+    draft = lifecycle.create_draft(
+        planned_payload(), created_at=CREATED_AT, uuid_factory=lambda: EXPERIMENT_UUID
+    )
+    with pytest.raises(InvalidExperimentTransitionError, match="DRAFT to RUNNING"):
+        lifecycle.start(draft.object_id, draft.revision.digest, started_at=STARTED_AT)
+
+    registered = lifecycle.register(
+        draft.object_id, draft.revision.digest, registered_at=REGISTERED_AT
+    )
+    with pytest.raises(InvalidExperimentTransitionError, match="REGISTERED to RUNNING"):
+        lifecycle.start(draft.object_id, registered.digest, started_at=STARTED_AT)
+
+    frozen = lifecycle.freeze(
+        draft.object_id,
+        registered.digest,
+        frozen_at=FROZEN_AT,
+        data_manifests=data_manifests(),
+    )
+    running = lifecycle.start(
+        draft.object_id, frozen.revision.digest, started_at=STARTED_AT
+    )
+    with pytest.raises(InvalidExperimentTransitionError, match="RUNNING to RUNNING"):
+        lifecycle.start(draft.object_id, running.digest, started_at=STARTED_AT)
+
+
+def test_start_and_attempt_reject_wrong_or_stale_heads(tmp_path: Path) -> None:
+    """Both the lifecycle edge and every exposure append retain registry CAS authority."""
+    lifecycle = service(tmp_path)
+    experiment_id, _registered, frozen = frozen_experiment(lifecycle, runtime_payload())
+    with pytest.raises(StaleWriterError, match="current head"):
+        lifecycle.start(experiment_id, "sha256:" + "f" * 64, started_at=STARTED_AT)
+    running = lifecycle.start(experiment_id, frozen.digest, started_at=STARTED_AT)
+    first = lifecycle.record_attempt(
+        experiment_id,
+        running.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=False,
+        failed=False,
+        exposure_reason="First synthetic candidate execution.",
+    )
+    with pytest.raises(StaleWriterError, match="current head"):
+        lifecycle.record_attempt(
+            experiment_id,
+            running.digest,
+            recorded_at=ATTEMPT_AT,
+            ai_generated=False,
+            failed=False,
+            exposure_reason="Stale synthetic candidate execution.",
+        )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == first
+
+
+def test_start_rejects_submicrosecond_time_reversal(tmp_path: Path) -> None:
+    """FROZEN to RUNNING ordering retains every accepted fractional digit."""
+    lifecycle = service(tmp_path)
+    experiment_id, _registered, frozen = frozen_experiment(
+        lifecycle, frozen_at="2026-09-06T12:02:00.000000900Z"
+    )
+
+    with pytest.raises(ExperimentIntegrityError, match="precedes frozen_at"):
+        lifecycle.start(
+            experiment_id,
+            frozen.digest,
+            started_at="2026-09-06T12:02:00.000000100Z",
+        )
+
+
+@pytest.mark.parametrize(
+    ("frozen_at", "started_at"),
+    [
+        (
+            "2026-09-06T12:02:00.123456789012Z",
+            "2026-09-06T12:02:00.123456789012Z",
+        ),
+        (
+            "2026-09-06T12:02:00.000000100Z",
+            "2026-09-06T12:02:00.000000101Z",
+        ),
+    ],
+)
+def test_start_accepts_exact_equality_and_one_nanosecond_progress(
+    tmp_path: Path, frozen_at: str, started_at: str
+) -> None:
+    """Equality and exact nanosecond progress remain valid lifecycle orderings."""
+    lifecycle = service(tmp_path)
+    experiment_id, _registered, frozen = frozen_experiment(
+        lifecycle, frozen_at=frozen_at
+    )
+
+    running = lifecycle.start(experiment_id, frozen.digest, started_at=started_at)
+
+    assert running.record["started_at"] == started_at
+
+
+def test_start_rejects_corrupt_manifest_and_changed_frozen_science(
+    tmp_path: Path,
+) -> None:
+    """Starting re-verifies immutable bytes and exact REGISTERED science."""
+    corrupt_service = service(tmp_path / "corrupt")
+    experiment_id, _registered, frozen = frozen_experiment(corrupt_service)
+    digest = cast(str, frozen.record["frozen_manifest_digest"])
+    stored = corrupt_service.object_store.get(digest)
+    stored.path.write_bytes(stored.path.read_bytes() + b" ")
+    with pytest.raises(ObjectCorruptionError, match="digest"):
+        corrupt_service.start(experiment_id, frozen.digest, started_at=STARTED_AT)
+
+    changed_service = service(tmp_path / "changed")
+    changed_id, _registered, changed_frozen = frozen_experiment(changed_service)
+    damaged = deepcopy(changed_frozen.record)
+    damaged["hypothesis"] = "Changed after registration"
+    damaged_bytes = canonicalize_json(damaged)
+    changed_frozen.path.write_bytes(damaged_bytes)
+    changed_digest = sha256_bytes(damaged_bytes)
+    with pytest.raises(ExperimentIntegrityError, match="scientific evidence"):
+        changed_service.start(changed_id, changed_digest, started_at=STARTED_AT)
+
+
+@pytest.mark.parametrize(
+    ("ai_generated", "failed", "expected_ai", "expected_failed"),
+    [
+        (False, False, 0, 0),
+        (True, False, 1, 0),
+        (False, True, 0, 1),
+        (True, True, 1, 1),
+    ],
+)
+def test_attempt_flags_increment_each_applicable_counter_once(
+    tmp_path: Path,
+    ai_generated: bool,
+    failed: bool,
+    expected_ai: int,
+    expected_failed: int,
+) -> None:
+    """Ordinary, AI, failed, and AI-failed attempts count total exposure once."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle, runtime_payload())
+    variant_digest = "sha256:" + "7" * 64
+
+    revision = lifecycle.record_attempt(
+        experiment_id,
+        running.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=ai_generated,
+        failed=failed,
+        exposure_reason="Synthetic search exposure was actually attempted.",
+        variant_configuration_digest=variant_digest,
+    )
+
+    assert revision.record["variants_attempted"] == 1
+    accounting = cast(JsonRecord, revision.record["variant_accounting"])
+    assert accounting["ai_generated_attempts"] == expected_ai
+    assert accounting["failed_attempts"] == expected_failed
+    attempts = cast(list[JsonRecord], revision.record["attempt_records"])
+    assert attempts == [
+        {
+            "attempt_number": 1,
+            "experiment_id": experiment_id,
+            "recorded_at": ATTEMPT_AT,
+            "ai_generated": ai_generated,
+            "failed": failed,
+            "exposure_reason": "Synthetic search exposure was actually attempted.",
+            "variant_configuration_digest": variant_digest,
+        }
+    ]
+
+
+def test_retry_appends_another_exposure_without_erasing_failure(tmp_path: Path) -> None:
+    """A retry is a new attempt linked to its retained failed predecessor."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle, runtime_payload())
+    first = lifecycle.record_attempt(
+        experiment_id,
+        running.digest,
+        recorded_at="2026-09-06T12:04:00.000000100Z",
+        ai_generated=False,
+        failed=True,
+        exposure_reason="Synthetic candidate failed during execution.",
+    )
+    retry = lifecycle.record_attempt(
+        experiment_id,
+        first.digest,
+        recorded_at="2026-09-06T12:04:00.000000101Z",
+        ai_generated=False,
+        failed=False,
+        exposure_reason="Synthetic retry executed after the retained failure.",
+        retry_of_attempt=1,
+    )
+
+    assert retry.record["variants_attempted"] == 2
+    accounting = cast(JsonRecord, retry.record["variant_accounting"])
+    assert accounting["failed_attempts"] == 1
+    attempts = cast(list[JsonRecord], retry.record["attempt_records"])
+    assert attempts[0]["failed"] is True
+    assert attempts[1]["retry_of_attempt"] == 1
+
+
+def test_concurrent_attempt_writers_cannot_lose_exposure(tmp_path: Path) -> None:
+    """One concurrent CAS wins; the stale writer can retry against the retained head."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle, runtime_payload())
+
+    def write(reason: str) -> Revision:
+        return lifecycle.record_attempt(
+            experiment_id,
+            running.digest,
+            recorded_at=ATTEMPT_AT,
+            ai_generated=False,
+            failed=False,
+            exposure_reason=reason,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(write, f"Concurrent synthetic exposure {index}.")
+            for index in range(2)
+        ]
+    successes: list[Revision] = []
+    failures: list[BaseException] = []
+    for future in futures:
+        try:
+            successes.append(future.result())
+        except BaseException as error:
+            failures.append(error)
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert isinstance(failures[0], StaleWriterError)
+    head = lifecycle.registry.verify_object(experiment_id)[-1]
+    assert head.record["variants_attempted"] == 1
+
+    retried = lifecycle.record_attempt(
+        experiment_id,
+        head.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=False,
+        failed=False,
+        exposure_reason="Stale concurrent writer retried as another exposure.",
+        retry_of_attempt=1,
+    )
+    assert retried.record["variants_attempted"] == 2
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        {"variants_attempted": 0},
+        {
+            "variant_accounting": {
+                "ai_generated_attempts": 1,
+                "failed_attempts": 0,
+                "accounting_basis": (
+                    "No attempts; all failed and AI attempts count in total exposure."
+                ),
+            }
+        },
+        {
+            "attempt_records": [
+                {
+                    "attempt_number": 1,
+                    "experiment_id": str(EXPERIMENT_UUID).join(("EXP-", "")),
+                    "recorded_at": ATTEMPT_AT,
+                    "ai_generated": False,
+                    "failed": False,
+                    "exposure_reason": "Substituted historical exposure.",
+                }
+            ]
+        },
+    ],
+)
+def test_counter_reset_or_attempt_substitution_fails(
+    tmp_path: Path, mutation: JsonRecord
+) -> None:
+    """A direct schema-valid revision cannot rewrite cumulative runtime history."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle, runtime_payload())
+    first = lifecycle.record_attempt(
+        experiment_id,
+        running.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=False,
+        failed=False,
+        exposure_reason="Original synthetic exposure.",
+    )
+    payload = revision_payload(first)
+    payload.update(deepcopy(mutation))
+    hostile = lifecycle.registry.append(experiment_id, first.digest, payload)
+
+    with pytest.raises(ExperimentIntegrityError, match=r"counters|append exactly one"):
+        lifecycle.record_attempt(
+            experiment_id,
+            hostile.digest,
+            recorded_at=ATTEMPT_AT,
+            ai_generated=False,
+            failed=False,
+            exposure_reason="Attempt after rewritten history.",
+        )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == hostile
+
+
+def test_attempt_beyond_frozen_budget_fails_without_revision(tmp_path: Path) -> None:
+    """Failed attempts and retries cannot enlarge the preregistered search budget."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(
+        lifecycle, runtime_payload(budget=1)
+    )
+    first = lifecycle.record_attempt(
+        experiment_id,
+        running.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=True,
+        failed=True,
+        exposure_reason="Budgeted synthetic failure.",
+    )
+    revision_count = len(lifecycle.registry.verify_object(experiment_id))
+
+    with pytest.raises(AttemptBudgetExceededError, match="frozen"):
+        lifecycle.record_attempt(
+            experiment_id,
+            first.digest,
+            recorded_at=ATTEMPT_AT,
+            ai_generated=False,
+            failed=False,
+            exposure_reason="Unbudgeted synthetic retry.",
+            retry_of_attempt=1,
+        )
+    assert len(lifecycle.registry.verify_object(experiment_id)) == revision_count
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == first
+
+
+def test_attempt_evidence_rejects_labelled_secret_text(tmp_path: Path) -> None:
+    """Runtime exposure reasons cannot persist obvious credential material."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle)
+
+    with pytest.raises(SensitiveMetadataError, match="attempt exposure reason"):
+        lifecycle.record_attempt(
+            experiment_id,
+            running.digest,
+            recorded_at=ATTEMPT_AT,
+            ai_generated=False,
+            failed=True,
+            exposure_reason="Authorization: Bearer synthetic-secret-value",
+        )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == running
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("hypothesis", "Changed synthetic hypothesis"),
+        ("dataset_ids", ["DATASET-01990f30-7f5e-7b34-9b21-3d74c513d60e"]),
+        (
+            "dataset_vintages",
+            [
+                {
+                    "dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513d60d",
+                    "record_digest": "sha256:" + "b" * 64,
+                    "vintage": "changed-v2",
+                }
+            ],
+        ),
+        (
+            "partitions",
+            {
+                "training": {"start": CREATED_AT, "end": REGISTERED_AT},
+                "validation": {"start": REGISTERED_AT, "end": FROZEN_AT},
+                "sealed_out_of_sample": {"start": FROZEN_AT, "end": STARTED_AT},
+            },
+        ),
+        ("feature_definitions", "Changed feature"),
+        ("label_definitions", "Changed label"),
+        ("candidate_universe", "Changed candidate universe"),
+        ("search_space", "Changed search space"),
+        ("parameters_considered", "Changed parameters"),
+        ("variants_planned", 2),
+        (
+            "multiple_testing",
+            {
+                "family_id": "FAM-01990f30-7f5e-7b34-9b21-3d74c513c844",
+                "budget": 5,
+                "correction_plan": "Changed correction plan.",
+            },
+        ),
+        ("evaluation_metrics", ["changed metric"]),
+        ("statistical_tests", ["changed test"]),
+        ("baselines", ["changed baseline"]),
+        ("execution_cost_assumptions", ["changed cost"]),
+        ("decision_criteria", "Changed criterion"),
+        ("code_revision", "d" * 40),
+        ("configuration_digest", "sha256:" + "d" * 64),
+        ("environment_digest", "sha256:" + "d" * 64),
+        ("frozen_manifest_digest", "sha256:" + "d" * 64),
+    ],
+)
+def test_runtime_revision_cannot_change_frozen_science(
+    tmp_path: Path, field: str, value: JsonValue
+) -> None:
+    """Every material preregistration and freeze binding remains exact at runtime."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle, runtime_payload())
+    payload = revision_payload(running)
+    payload[field] = deepcopy(value)
+    hostile = lifecycle.registry.append(experiment_id, running.digest, payload)
+
+    with pytest.raises(ExperimentIntegrityError, match="changed frozen science"):
+        lifecycle.record_attempt(
+            experiment_id,
+            hostile.digest,
+            recorded_at=ATTEMPT_AT,
+            ai_generated=False,
+            failed=False,
+            exposure_reason="Synthetic attempt after science mutation.",
+        )
+
+
+@pytest.mark.parametrize("field", ["results", "result_artifact_locations", "decision"])
+def test_running_schema_rejects_final_results_or_decision(
+    tmp_path: Path, field: str
+) -> None:
+    """RUNNING revisions cannot smuggle later-lifecycle evidence."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle)
+    payload = revision_payload(running)
+    if field == "results":
+        payload[field] = "Premature synthetic result"
+    elif field == "result_artifact_locations":
+        payload[field] = ["https://example.invalid/premature.json"]
+    else:
+        del payload["decision_pending_reason"]
+        payload["decision"] = "REJECT"
+        payload["reason_for_decision"] = "Premature synthetic decision"
+
+    with pytest.raises(RecordSchemaError):
+        lifecycle.registry.append(experiment_id, running.digest, payload)
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == running
+
+
+def test_running_and_attempt_accounting_never_read_sealed_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Runtime accounting verifies references without dereferencing sealed content."""
+    lifecycle = service(tmp_path)
+    sealed_path = (tmp_path / "sealed" / "holdout.bin").resolve()
+    payload = runtime_payload()
+    experiment_id, _registered, frozen = registered_experiment(lifecycle, payload)
+    frozen_evidence = lifecycle.freeze(
+        experiment_id,
+        frozen.digest,
+        frozen_at=FROZEN_AT,
+        data_manifests=data_manifests(payload, reference=sealed_path.as_uri()),
+    )
+    original_read_bytes = Path.read_bytes
+
+    def guarded_read_bytes(path: Path) -> bytes:
+        if path == sealed_path:
+            raise AssertionError("sealed data was accessed")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", guarded_read_bytes)
+    running = lifecycle.start(
+        experiment_id, frozen_evidence.revision.digest, started_at=STARTED_AT
+    )
+    attempted = lifecycle.record_attempt(
+        experiment_id,
+        running.digest,
+        recorded_at=ATTEMPT_AT,
+        ai_generated=False,
+        failed=False,
+        exposure_reason="Synthetic attempt without sealed access.",
+    )
+
+    assert attempted.record["sealed_data_release"] == {
+        "status": "UNRELEASED",
+        "reason": "Not evaluated.",
+    }
     assert not sealed_path.exists()
