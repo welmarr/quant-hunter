@@ -136,6 +136,19 @@ profiles may produce different physical digests while retaining one logical
 fingerprint. Cross-version, cross-library, and unverified cross-platform exact
 byte equality are not claimed.
 
+Independent-review hardening requires immutable evidence to agree semantically,
+not merely verify in isolation. A derived dataset record, its canonical lineage,
+and its physical artifact sidecar must agree on every shared identifier,
+timestamp, producer, source, parent, reference, configuration, physical-object,
+schema, logical-content, ordering, and quality claim. Parent and reference
+sequences retain their governed order; deduplication is applied only where the
+publication contract already specifies it. Raw-capture metadata and its artifact
+sidecar likewise agree on source, dataset, ingestion time, endpoint/request
+references, payload identity and size, media type, and sidecar identity. A field
+owned by only one representation is bound through that representation's
+canonical digest rather than copied into another schema. These checks do not
+change any of the three identity definitions.
+
 Batch 4B.2 still owns the four timestamp semantics, point-in-time/as-of
 eligibility, future-publication exclusion, revision/vintage eligibility, and
 normalized/curated PIT selection tests.

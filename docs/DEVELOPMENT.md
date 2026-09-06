@@ -327,3 +327,22 @@ semantics, point-in-time/as-of eligibility, future-publication exclusion,
 revision/vintage eligibility, and normalized/curated PIT selection tests. No
 real data, connector, experiment, sealed release, model, backtest, strategy,
 broker, Web, AI, or cloud capability was added.
+
+## Batch 4B.1 provenance-integrity review fix
+
+On 2026-09-05, independent-review hardening made semantic agreement mandatory
+across individually valid immutable evidence. Derived dataset records now bind
+all duplicated record/lineage claims, and artifact/lineage verification compares
+physical identity, creation time, producer code/environment, ordered sources and
+parents, references, and transformation configuration. Logical row ordering is
+rechecked against the lineage schema. Raw-capture verification now compares its
+payload, media type, ingestion time, source, dataset, and publication-defined
+endpoint/request-reference sequence with the artifact manifest. Claims owned by
+only one schema remain bound through the canonical manifest digest.
+
+The complete locked Windows gate passed: `uv lock --check`; Ruff format and lint
+over 50 files; strict mypy over 27 source files; and 272 pytest cases with 93.36%
+combined statement/branch coverage. The offline governed build produced both
+distributions, imports returned package/PyArrow versions `0.1.0` and `25.0.1`,
+and archive inspection passed over 96 combined members. No dependency or paid
+service was added. Batch 4B.2 and roadmap item 7 completion remain deferred.

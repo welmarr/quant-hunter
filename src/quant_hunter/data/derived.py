@@ -30,6 +30,7 @@ from quant_hunter.provenance.hashing import (
     verify_sha256_bytes,
 )
 from quant_hunter.storage.manifests import (
+    ARTIFACT_MANIFEST_SCHEMA,
     ArtifactManifest,
     ArtifactProducer,
     ArtifactProvenance,
@@ -589,6 +590,152 @@ def _require_distinct_identities(
         )
 
 
+def _require_derived_claim(
+    field: str, observed: JsonValue | object, expected: JsonValue | object
+) -> None:
+    if observed != expected:
+        raise DerivedDataIntegrityError(
+            f"Derived provenance claim differs across evidence: {field}"
+        )
+
+
+def _require_record_claim(
+    field: str, observed: JsonValue | object, expected: JsonValue | object
+) -> None:
+    if observed != expected:
+        raise DatasetBindingError(f"Dataset {field} does not match lineage evidence")
+
+
+def _validated_derived_manifest_documents(
+    *,
+    catalog: VersionedSchemaCatalog,
+    evidence: DerivedDatasetEvidence,
+) -> tuple[JsonRecord, JsonRecord]:
+    """Validate each manifest and require agreement on every shared claim."""
+    evidence.artifact_manifest.verify()
+    evidence.lineage_manifest.verify()
+    verify_artifact_binding(evidence.artifact_manifest, evidence.parquet_object)
+    if evidence.artifact_manifest_object.digest != evidence.artifact_manifest.digest:
+        raise DerivedDataIntegrityError("Physical artifact sidecar identity mismatch")
+    if evidence.lineage_manifest_object.digest != evidence.lineage_manifest.digest:
+        raise DerivedDataIntegrityError("Lineage object identity mismatch")
+
+    artifact_document = evidence.artifact_manifest.document
+    lineage_document = evidence.lineage_manifest.document
+    catalog.validate(ARTIFACT_MANIFEST_SCHEMA, artifact_document)
+    catalog.validate(LINEAGE_MANIFEST_SCHEMA, lineage_document)
+
+    if lineage_document.get("logical_schema") != logical_schema_document(
+        evidence.declared_schema, evidence.row_ordering
+    ):
+        raise DerivedDataIntegrityError(
+            "Lineage logical schema does not match evidence"
+        )
+    if lineage_document.get("writer_profile") != evidence.writer_profile.document():
+        raise DerivedDataIntegrityError(
+            "Lineage writer profile does not match evidence"
+        )
+    parent_documents = _ordered_parent_documents(
+        evidence.parent_evidence, evidence.parent_ordering
+    )
+    if lineage_document.get("parent_evidence") != parent_documents:
+        raise DerivedDataIntegrityError(
+            "Lineage parent evidence does not match evidence"
+        )
+    if lineage_document.get("parent_ordering") != evidence.parent_ordering.value:
+        raise DerivedDataIntegrityError(
+            "Lineage parent ordering does not match evidence"
+        )
+    expected_lineage = {
+        "dataset_id": evidence.dataset_id,
+        "layer": evidence.layer.value,
+        "physical_object_digest": evidence.parquet_object.digest,
+        "physical_artifact_manifest_digest": evidence.artifact_manifest.digest,
+        "schema_digest": evidence.schema_digest,
+        "logical_content_fingerprint": evidence.logical_content_fingerprint,
+        "row_ordering": evidence.row_ordering.value,
+        "writer_profile_digest": evidence.writer_profile_digest,
+        "quality_disposition": evidence.quality_disposition.value,
+    }
+    for field, expected in expected_lineage.items():
+        _require_derived_claim(field, lineage_document.get(field), expected)
+
+    artifact_producer = artifact_document.get("producer")
+    artifact_provenance = artifact_document.get("provenance")
+    lineage_producer = lineage_document.get("producer")
+    transformation = lineage_document.get("transformation")
+    if not all(
+        isinstance(value, dict)
+        for value in (
+            artifact_producer,
+            artifact_provenance,
+            lineage_producer,
+            transformation,
+        )
+    ):
+        raise DerivedDataIntegrityError("Derived provenance metadata is malformed")
+    artifact_producer = cast(JsonRecord, artifact_producer)
+    artifact_provenance = cast(JsonRecord, artifact_provenance)
+    lineage_producer = cast(JsonRecord, lineage_producer)
+    transformation = cast(JsonRecord, transformation)
+    parent_dataset_ids = [parent.dataset_id for parent in evidence.parent_evidence]
+    parent_physical_digests = list(
+        dict.fromkeys(
+            parent.physical_object_digest for parent in evidence.parent_evidence
+        )
+    )
+    shared_claims: tuple[tuple[str, JsonValue | object, JsonValue | object], ...] = (
+        (
+            "physical_object_digest",
+            artifact_document.get("artifact_digest"),
+            lineage_document.get("physical_object_digest"),
+        ),
+        (
+            "created_at",
+            artifact_document.get("created_at"),
+            lineage_document.get("created_at"),
+        ),
+        (
+            "producer.code_revision",
+            artifact_producer.get("code_revision"),
+            lineage_producer.get("code_revision"),
+        ),
+        (
+            "producer.environment_digest",
+            artifact_producer.get("environment_digest"),
+            lineage_producer.get("environment_digest"),
+        ),
+        (
+            "source_ids",
+            artifact_provenance.get("source_ids"),
+            lineage_document.get("source_ids"),
+        ),
+        (
+            "parent_dataset_ids",
+            artifact_provenance.get("dataset_ids"),
+            parent_dataset_ids,
+        ),
+        (
+            "parent_physical_digests",
+            artifact_document.get("parent_digests"),
+            parent_physical_digests,
+        ),
+        (
+            "references",
+            artifact_provenance.get("references"),
+            lineage_document.get("references"),
+        ),
+        (
+            "transformation.configuration_digest",
+            artifact_provenance.get("configuration_digest"),
+            transformation.get("configuration_digest"),
+        ),
+    )
+    for field, artifact_value, lineage_value in shared_claims:
+        _require_derived_claim(field, artifact_value, lineage_value)
+    return artifact_document, lineage_document
+
+
 def build_dataset_lineage_manifest(
     *,
     catalog: VersionedSchemaCatalog,
@@ -792,49 +939,7 @@ def verify_derived_dataset_evidence(
         evidence.lineage_manifest_object,
     ):
         store.verify(stored)
-    evidence.artifact_manifest.verify()
-    evidence.lineage_manifest.verify()
-    verify_artifact_binding(evidence.artifact_manifest, evidence.parquet_object)
-    if evidence.artifact_manifest_object.digest != evidence.artifact_manifest.digest:
-        raise DerivedDataIntegrityError("Physical artifact sidecar identity mismatch")
-    if evidence.lineage_manifest_object.digest != evidence.lineage_manifest.digest:
-        raise DerivedDataIntegrityError("Lineage object identity mismatch")
-    lineage_document = evidence.lineage_manifest.document
-    catalog.validate(LINEAGE_MANIFEST_SCHEMA, lineage_document)
-    if lineage_document.get("logical_schema") != logical_schema_document(
-        evidence.declared_schema, evidence.row_ordering
-    ):
-        raise DerivedDataIntegrityError(
-            "Lineage logical schema does not match evidence"
-        )
-    if lineage_document.get("writer_profile") != evidence.writer_profile.document():
-        raise DerivedDataIntegrityError(
-            "Lineage writer profile does not match evidence"
-        )
-    if lineage_document.get("parent_evidence") != _ordered_parent_documents(
-        evidence.parent_evidence, evidence.parent_ordering
-    ):
-        raise DerivedDataIntegrityError(
-            "Lineage parent evidence does not match evidence"
-        )
-    if lineage_document.get("parent_ordering") != evidence.parent_ordering.value:
-        raise DerivedDataIntegrityError(
-            "Lineage parent ordering does not match evidence"
-        )
-    expected_lineage = {
-        "dataset_id": evidence.dataset_id,
-        "layer": evidence.layer.value,
-        "physical_object_digest": evidence.parquet_object.digest,
-        "physical_artifact_manifest_digest": evidence.artifact_manifest.digest,
-        "schema_digest": evidence.schema_digest,
-        "logical_content_fingerprint": evidence.logical_content_fingerprint,
-        "row_ordering": evidence.row_ordering.value,
-        "writer_profile_digest": evidence.writer_profile_digest,
-        "quality_disposition": evidence.quality_disposition.value,
-    }
-    for field, expected in expected_lineage.items():
-        if lineage_document.get(field) != expected:
-            raise DerivedDataIntegrityError(f"Lineage {field} does not match evidence")
+    _validated_derived_manifest_documents(catalog=catalog, evidence=evidence)
     parquet_bytes = store.read_bytes(evidence.parquet_object.digest)
     try:
         observed_table = pq.read_table(pa.BufferReader(parquet_bytes))
@@ -872,9 +977,14 @@ def verify_dataset_record_binding(
         evidence.lineage_manifest.digest,
         evidence.logical_content_fingerprint,
     )
+    _artifact_document, lineage = _validated_derived_manifest_documents(
+        catalog=catalog, evidence=evidence
+    )
     expected = {
         "dataset_id": evidence.dataset_id,
+        "created_at": lineage.get("created_at"),
         "layer": evidence.layer.value,
+        "source_ids": lineage.get("source_ids"),
         "schema_digest": evidence.schema_digest,
         "physical_object_digest": evidence.parquet_object.digest,
         "provenance_lineage_digest": evidence.lineage_manifest.digest,
@@ -882,12 +992,10 @@ def verify_dataset_record_binding(
         "quality_status": evidence.quality_disposition.value,
     }
     for field, expected_value in expected.items():
-        if record.get(field) != expected_value:
-            raise DatasetBindingError(f"Dataset {field} does not match evidence")
+        _require_record_claim(field, record.get(field), expected_value)
     provenance = record.get("provenance")
     if not isinstance(provenance, dict):
         raise DatasetBindingError("Dataset provenance is not an object")
-    lineage = evidence.lineage_manifest.document
     transformation = lineage.get("transformation")
     producer = lineage.get("producer")
     if not isinstance(transformation, dict) or not isinstance(producer, dict):
@@ -901,7 +1009,6 @@ def verify_dataset_record_binding(
         "environment_digest": producer.get("environment_digest"),
     }
     for field, provenance_value in expected_provenance.items():
-        if provenance.get(field) != provenance_value:
-            raise DatasetBindingError(
-                f"Dataset provenance {field} does not match lineage"
-            )
+        _require_record_claim(
+            f"provenance {field}", provenance.get(field), provenance_value
+        )

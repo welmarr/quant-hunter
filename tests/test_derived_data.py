@@ -12,11 +12,12 @@ from typing import cast
 import pyarrow as pa  # type: ignore[import-untyped]
 import pytest
 
-from quant_hunter.config import JsonRecord
+from quant_hunter.config import JsonRecord, canonicalize_json
 from quant_hunter.config.schema import RecordSchemaError, VersionedSchemaCatalog
 from quant_hunter.data import (
     DEFAULT_PARQUET_PROFILE,
     DatasetBindingError,
+    DatasetLineageManifest,
     DerivedDataError,
     DerivedDataIntegrityError,
     DerivedDatasetEvidence,
@@ -39,6 +40,7 @@ from quant_hunter.data import (
 )
 from quant_hunter.provenance import sha256_bytes, sha256_canonical_json
 from quant_hunter.storage import (
+    ArtifactManifest,
     ArtifactProducer,
     ImmutableObjectStore,
     ObjectCorruptionError,
@@ -48,7 +50,9 @@ from quant_hunter.storage import (
 
 SCHEMA_DIRECTORY = Path(__file__).parents[1] / "schemas" / "v1"
 SOURCE_ID = "SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"
+OTHER_SOURCE_ID = "SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c845"
 DATASET_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842"
+OTHER_DATASET_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c846"
 PARENT_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c843"
 SECOND_PARENT_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c844"
 CONFIGURATION_DIGEST = "sha256:" + "c" * 64
@@ -229,6 +233,54 @@ def rebuild_lineage(
         quality_disposition=quality or evidence.quality_disposition,
     )
     return manifest.digest
+
+
+def replace_lineage_document(
+    *,
+    store: ImmutableObjectStore,
+    catalog: VersionedSchemaCatalog,
+    evidence: DerivedDatasetEvidence,
+    document: JsonRecord,
+) -> DerivedDatasetEvidence:
+    """Install independently valid, canonically hashed synthetic lineage."""
+    catalog.validate("dataset-lineage-manifest.schema.json", document)
+    canonical_bytes = canonicalize_json(document)
+    manifest = DatasetLineageManifest(canonical_bytes, sha256_bytes(canonical_bytes))
+    manifest.verify()
+    manifest_object = store.publish(canonical_bytes)
+    return replace(
+        evidence,
+        lineage_manifest=manifest,
+        lineage_manifest_object=manifest_object,
+    )
+
+
+def replace_artifact_document(
+    *,
+    store: ImmutableObjectStore,
+    catalog: VersionedSchemaCatalog,
+    evidence: DerivedDatasetEvidence,
+    document: JsonRecord,
+) -> DerivedDatasetEvidence:
+    """Install valid contradictory artifact provenance and relink its lineage."""
+    catalog.validate("artifact-manifest.schema.json", document)
+    artifact_bytes = canonicalize_json(document)
+    artifact = ArtifactManifest(artifact_bytes, sha256_bytes(artifact_bytes))
+    artifact.verify()
+    artifact_object = store.publish(artifact_bytes)
+    lineage_document = deepcopy(evidence.lineage_manifest.document)
+    lineage_document["physical_artifact_manifest_digest"] = artifact.digest
+    linked = replace(
+        evidence,
+        artifact_manifest=artifact,
+        artifact_manifest_object=artifact_object,
+    )
+    return replace_lineage_document(
+        store=store,
+        catalog=catalog,
+        evidence=linked,
+        document=lineage_document,
+    )
 
 
 def test_logical_schema_serialization_is_explicit_and_deterministic() -> None:
@@ -637,6 +689,164 @@ def test_dataset_schema_binding_requires_all_three_distinct_identities(
         verify_dataset_record_binding(
             catalog=catalog, record=record, evidence=substituted
         )
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "dataset_id",
+        "created_at",
+        "layer",
+        "source_ids",
+        "schema_digest",
+        "physical_object_digest",
+        "provenance_lineage_digest",
+        "logical_content_fingerprint",
+        "parent_dataset_ids",
+        "transformation",
+        "code_revision",
+        "environment_digest",
+        "quality_status",
+    ],
+)
+def test_dataset_record_rejects_schema_valid_contradictory_provenance(
+    tmp_path: Path, claim: str
+) -> None:
+    _store, catalog, evidence = publish(tmp_path)
+    record = dataset_record(evidence)
+    provenance = record["provenance"]
+    assert isinstance(provenance, dict)
+    if claim == "dataset_id":
+        record[claim] = OTHER_DATASET_ID
+    elif claim == "created_at":
+        record[claim] = "2026-09-05T12:00:01Z"
+    elif claim == "layer":
+        record[claim] = "curated"
+    elif claim == "source_ids":
+        record[claim] = [OTHER_SOURCE_ID]
+    elif claim in {
+        "schema_digest",
+        "physical_object_digest",
+        "provenance_lineage_digest",
+        "logical_content_fingerprint",
+    }:
+        record[claim] = "sha256:" + "9" * 64
+    elif claim == "parent_dataset_ids":
+        provenance[claim] = [OTHER_DATASET_ID]
+    elif claim == "transformation":
+        provenance[claim] = "contradictory-synthetic-transform"
+    elif claim == "code_revision":
+        provenance[claim] = "d" * 40
+    elif claim == "environment_digest":
+        provenance[claim] = "sha256:" + "7" * 64
+    else:
+        record[claim] = "QUARANTINED"
+
+    catalog.validate("dataset.schema.json", record)
+    with pytest.raises(DatasetBindingError, match="does not match"):
+        verify_dataset_record_binding(catalog=catalog, record=record, evidence=evidence)
+
+
+def test_dataset_record_binding_rejects_relinked_configuration_contradiction(
+    tmp_path: Path,
+) -> None:
+    store, catalog, evidence = publish(tmp_path)
+    lineage_document = deepcopy(evidence.lineage_manifest.document)
+    transformation = lineage_document["transformation"]
+    assert isinstance(transformation, dict)
+    transformation["configuration_digest"] = "sha256:" + "8" * 64
+    damaged = replace_lineage_document(
+        store=store,
+        catalog=catalog,
+        evidence=evidence,
+        document=lineage_document,
+    )
+    record = dataset_record(damaged)
+    catalog.validate("dataset.schema.json", record)
+
+    with pytest.raises(DerivedDataIntegrityError, match="differs across evidence"):
+        verify_dataset_record_binding(catalog=catalog, record=record, evidence=damaged)
+
+
+def test_dataset_record_binding_rejects_ordering_semantics_mismatch(
+    tmp_path: Path,
+) -> None:
+    _store, catalog, evidence = publish(tmp_path)
+    record = dataset_record(evidence)
+    contradictory = replace(evidence, row_ordering=OrderingSemantics.UNORDERED)
+
+    with pytest.raises(DerivedDataIntegrityError, match="logical schema"):
+        verify_dataset_record_binding(
+            catalog=catalog, record=record, evidence=contradictory
+        )
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "source_ids",
+        "created_at",
+        "producer.code_revision",
+        "producer.environment_digest",
+        "transformation.configuration_digest",
+        "references",
+    ],
+)
+def test_derived_cross_manifest_rejects_valid_contradictory_lineage(
+    tmp_path: Path, claim: str
+) -> None:
+    store, catalog, evidence = publish(tmp_path)
+    document = deepcopy(evidence.lineage_manifest.document)
+    if claim == "source_ids":
+        document["source_ids"] = [OTHER_SOURCE_ID]
+    elif claim == "created_at":
+        document["created_at"] = "2026-09-05T12:00:01Z"
+    elif claim == "producer.code_revision":
+        producer = document["producer"]
+        assert isinstance(producer, dict)
+        producer["code_revision"] = "d" * 40
+    elif claim == "producer.environment_digest":
+        producer = document["producer"]
+        assert isinstance(producer, dict)
+        producer["environment_digest"] = "sha256:" + "7" * 64
+    elif claim == "transformation.configuration_digest":
+        transformation = document["transformation"]
+        assert isinstance(transformation, dict)
+        transformation["configuration_digest"] = "sha256:" + "8" * 64
+    else:
+        document["references"] = ["synthetic://derived/contradiction"]
+    damaged = replace_lineage_document(
+        store=store,
+        catalog=catalog,
+        evidence=evidence,
+        document=document,
+    )
+
+    with pytest.raises(DerivedDataIntegrityError, match="differs across evidence"):
+        verify_derived_dataset_evidence(store=store, catalog=catalog, evidence=damaged)
+
+
+@pytest.mark.parametrize("claim", ["parent_dataset_ids", "parent_physical_digests"])
+def test_derived_cross_manifest_rejects_valid_contradictory_parent_claims(
+    tmp_path: Path, claim: str
+) -> None:
+    store, catalog, evidence = publish(tmp_path)
+    document = deepcopy(evidence.artifact_manifest.document)
+    if claim == "parent_dataset_ids":
+        provenance = document["provenance"]
+        assert isinstance(provenance, dict)
+        provenance["dataset_ids"] = [OTHER_DATASET_ID]
+    else:
+        document["parent_digests"] = ["sha256:" + "9" * 64]
+    damaged = replace_artifact_document(
+        store=store,
+        catalog=catalog,
+        evidence=evidence,
+        document=document,
+    )
+
+    with pytest.raises(DerivedDataIntegrityError, match="differs across evidence"):
+        verify_derived_dataset_evidence(store=store, catalog=catalog, evidence=damaged)
 
 
 def test_lineage_rejects_mismatched_schema_and_secret_text(tmp_path: Path) -> None:

@@ -16,6 +16,7 @@ from quant_hunter.config.schema import VersionedSchemaCatalog
 from quant_hunter.identity.ids import RegistryKind, validate_typed_id
 from quant_hunter.provenance.hashing import sha256_bytes, verify_sha256_bytes
 from quant_hunter.storage.manifests import (
+    ARTIFACT_MANIFEST_SCHEMA,
     ArtifactManifest,
     ArtifactProducer,
     ArtifactProvenance,
@@ -215,7 +216,9 @@ def verify_raw_capture(
     capture.metadata.verify()
     verify_artifact_binding(capture.artifact_manifest, capture.payload)
     document = capture.metadata.document
+    artifact_document = capture.artifact_manifest.document
     catalog.validate(RAW_CAPTURE_SCHEMA, document)
+    catalog.validate(ARTIFACT_MANIFEST_SCHEMA, artifact_document)
     expected = {
         "payload_digest": capture.payload.digest,
         "payload_size": capture.payload.byte_size,
@@ -229,3 +232,60 @@ def verify_raw_capture(
         raise ObjectCorruptionError("Artifact manifest object identity mismatch")
     if capture.metadata_object.digest != capture.metadata.digest:
         raise ObjectCorruptionError("Raw capture metadata object identity mismatch")
+
+    artifact_provenance = artifact_document.get("provenance")
+    request = document.get("request")
+    if not isinstance(artifact_provenance, dict) or not isinstance(request, dict):
+        raise ObjectCorruptionError("Raw capture provenance metadata is malformed")
+    source_endpoint = document.get("source_endpoint")
+    request_reference = request.get("reference")
+    if not isinstance(source_endpoint, str) or not (
+        request_reference is None or isinstance(request_reference, str)
+    ):
+        raise ObjectCorruptionError("Raw capture reference metadata is malformed")
+    expected_references = [source_endpoint]
+    if request_reference is not None:
+        expected_references.append(request_reference)
+    expected_references = list(dict.fromkeys(expected_references))
+    shared_claims: tuple[tuple[str, JsonValue | object, JsonValue | object], ...] = (
+        (
+            "physical payload digest",
+            artifact_document.get("artifact_digest"),
+            document.get("payload_digest"),
+        ),
+        (
+            "physical payload size",
+            artifact_document.get("byte_size"),
+            document.get("payload_size"),
+        ),
+        (
+            "media type",
+            artifact_document.get("media_type"),
+            document.get("media_type"),
+        ),
+        (
+            "ingestion time",
+            artifact_document.get("created_at"),
+            document.get("ingestion_time"),
+        ),
+        (
+            "source ID",
+            artifact_provenance.get("source_ids"),
+            [document.get("source_id")],
+        ),
+        (
+            "dataset ID",
+            artifact_provenance.get("dataset_ids"),
+            [document.get("dataset_id")],
+        ),
+        (
+            "endpoint/request references",
+            artifact_provenance.get("references"),
+            expected_references,
+        ),
+    )
+    for field, artifact_value, metadata_value in shared_claims:
+        if artifact_value != metadata_value:
+            raise ObjectCorruptionError(
+                f"Raw capture {field} differs across immutable evidence"
+            )

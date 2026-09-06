@@ -83,3 +83,10 @@ complete parent/config/code/environment/quality lineage sensitivity, immutable
 publication, and dataset-schema binding. This reduces the derived-identity part
 of RISK-019. RISK-019 remains `OPEN` pending hosted Ubuntu comparison, future
 environment/version upgrades, and Batch 4B.2 point-in-time and vintage controls.
+Independent-review tests additionally rebuild individually schema-valid,
+canonically hashed artifact, lineage, dataset, and raw-capture evidence with
+contradictory provenance. Cross-binding now rejects mismatched identifiers,
+timestamps, producers, sources, parents, references, configuration, physical
+identity/size, logical ordering, and quality while retaining published sequence
+and deduplication rules. This further reduces RISK-005 and RISK-019 without
+changing their `OPEN` status or starting Batch 4B.2.

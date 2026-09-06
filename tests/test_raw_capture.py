@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from quant_hunter.config import JsonRecord, canonicalize_json
 from quant_hunter.config.schema import RecordSchemaError, VersionedSchemaCatalog
 from quant_hunter.provenance import DigestMismatchError, sha256_bytes
 from quant_hunter.storage import (
+    ArtifactManifest,
     ArtifactProducer,
     Compression,
     ImmutableObjectStore,
@@ -26,7 +28,9 @@ from quant_hunter.storage import (
 
 SCHEMA_DIRECTORY = Path(__file__).parents[1] / "schemas" / "v1"
 SOURCE_ID = "SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"
+OTHER_SOURCE_ID = "SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c843"
 DATASET_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842"
+OTHER_DATASET_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c844"
 ENVIRONMENT_DIGEST = "sha256:" + "b" * 64
 CONFIGURATION_DIGEST = "sha256:" + "c" * 64
 
@@ -73,6 +77,42 @@ def capture(
         configuration_digest=CONFIGURATION_DIGEST,
     )
     return store, catalog, result
+
+
+def replace_capture_metadata(
+    *,
+    store: ImmutableObjectStore,
+    catalog: VersionedSchemaCatalog,
+    capture: RawCapture,
+    document: JsonRecord,
+) -> RawCapture:
+    """Install independently schema-valid, canonically hashed capture metadata."""
+    catalog.validate("raw-capture.schema.json", document)
+    canonical_bytes = canonicalize_json(document)
+    metadata = RawCaptureMetadata(canonical_bytes, sha256_bytes(canonical_bytes))
+    metadata.verify()
+    metadata_object = store.publish(canonical_bytes)
+    return replace(capture, metadata=metadata, metadata_object=metadata_object)
+
+
+def replace_capture_artifact(
+    *,
+    store: ImmutableObjectStore,
+    catalog: VersionedSchemaCatalog,
+    capture: RawCapture,
+    document: JsonRecord,
+) -> RawCapture:
+    """Install independently schema-valid, canonically hashed artifact evidence."""
+    catalog.validate("artifact-manifest.schema.json", document)
+    canonical_bytes = canonicalize_json(document)
+    manifest = ArtifactManifest(canonical_bytes, sha256_bytes(canonical_bytes))
+    manifest.verify()
+    manifest_object = store.publish(canonical_bytes)
+    return replace(
+        capture,
+        artifact_manifest=manifest,
+        artifact_manifest_object=manifest_object,
+    )
 
 
 def test_raw_payload_is_stored_byte_for_byte_separately_from_metadata(
@@ -283,6 +323,83 @@ def test_raw_cross_link_mismatch_is_rejected(tmp_path: Path) -> None:
     damaged = replace(result, metadata=metadata, metadata_object=metadata_object)
 
     with pytest.raises(ObjectCorruptionError, match="payload_digest"):
+        verify_raw_capture(store=store, catalog=catalog, capture=damaged)
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "source_id",
+        "dataset_id",
+        "ingestion_time",
+        "source_endpoint",
+        "request_reference",
+        "media_type",
+    ],
+)
+def test_raw_capture_rejects_valid_cross_evidence_contradictions(
+    tmp_path: Path, claim: str
+) -> None:
+    store, catalog, result = capture(tmp_path)
+    document = deepcopy(result.metadata.document)
+    if claim == "source_id":
+        document[claim] = OTHER_SOURCE_ID
+    elif claim == "dataset_id":
+        document[claim] = OTHER_DATASET_ID
+    elif claim == "ingestion_time":
+        document[claim] = "2026-09-05T12:00:01Z"
+    elif claim == "source_endpoint":
+        document[claim] = "https://example.invalid/contradictory"
+    elif claim == "request_reference":
+        request = document["request"]
+        assert isinstance(request, dict)
+        request["reference"] = "synthetic-request-contradiction"
+    else:
+        document[claim] = "application/json"
+    damaged = replace_capture_metadata(
+        store=store,
+        catalog=catalog,
+        capture=result,
+        document=document,
+    )
+
+    with pytest.raises(
+        ObjectCorruptionError, match="differs across immutable evidence"
+    ):
+        verify_raw_capture(store=store, catalog=catalog, capture=damaged)
+
+
+def test_raw_capture_reference_deduplication_remains_ordered(tmp_path: Path) -> None:
+    endpoint = "https://example.invalid/raw"
+    store, catalog, result = capture(
+        tmp_path, endpoint=endpoint, request_reference=endpoint
+    )
+
+    assert result.artifact_manifest.document["provenance"] == {
+        "source_ids": [SOURCE_ID],
+        "dataset_ids": [DATASET_ID],
+        "references": [endpoint],
+        "configuration_digest": CONFIGURATION_DIGEST,
+    }
+    verify_raw_capture(store=store, catalog=catalog, capture=result)
+
+
+def test_raw_capture_rejects_valid_reconfigured_artifact_without_metadata_relink(
+    tmp_path: Path,
+) -> None:
+    store, catalog, result = capture(tmp_path)
+    document = deepcopy(result.artifact_manifest.document)
+    provenance = document["provenance"]
+    assert isinstance(provenance, dict)
+    provenance["configuration_digest"] = "sha256:" + "d" * 64
+    damaged = replace_capture_artifact(
+        store=store,
+        catalog=catalog,
+        capture=result,
+        document=document,
+    )
+
+    with pytest.raises(ObjectCorruptionError, match="artifact_manifest_digest"):
         verify_raw_capture(store=store, catalog=catalog, capture=damaged)
 
 

@@ -17,4 +17,8 @@ the logical schema, deterministic Parquet profile, all three derived identities,
 declared row/parent ordering, complete parent evidence, production environment,
 and quality disposition. The existing dataset schema remains the authoritative
 dataset vocabulary and already binds the three root digests for non-raw layers.
+Verification also requires schema-valid dataset, lineage, artifact, and raw-capture
+records to agree on every provenance claim they share; fields present in only one
+governed representation remain bound through that representation's canonical
+digest rather than being duplicated into another schema.
 Point-in-time eligibility remains Batch 4B.2.
