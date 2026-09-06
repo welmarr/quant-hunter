@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/pit-selection-config.schema.json",
+  "title": "Quant Hunter Point-in-Time Selection Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "input_dataset_id",
+    "as_of",
+    "as_of_epoch_nanoseconds",
+    "availability_mode",
+    "observation_key_columns",
+    "vintage_id_column",
+    "temporal_columns",
+    "revision_status_values",
+    "public_eligibility_rule",
+    "operational_eligibility_rule",
+    "vintage_selection_rule",
+    "ambiguity_policy",
+    "output_ordering"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "input_dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
+    "as_of": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "as_of_epoch_nanoseconds": {
+      "type": "string",
+      "pattern": "^-?(?:0|[1-9][0-9]*)$"
+    },
+    "availability_mode": {"enum": ["PUBLIC", "OPERATIONAL"]},
+    "observation_key_columns": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/column_name"}
+    },
+    "vintage_id_column": {"$ref": "#/$defs/column_name"},
+    "temporal_columns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_time",
+        "publication_time",
+        "ingestion_time",
+        "revision_time",
+        "revision_time_status"
+      ],
+      "properties": {
+        "event_time": {"$ref": "#/$defs/column_name"},
+        "publication_time": {"$ref": "#/$defs/column_name"},
+        "ingestion_time": {"$ref": "#/$defs/column_name"},
+        "revision_time": {"$ref": "#/$defs/column_name"},
+        "revision_time_status": {"$ref": "#/$defs/column_name"}
+      }
+    },
+    "revision_status_values": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["not_applicable", "known", "required_unknown"],
+      "properties": {
+        "not_applicable": {"const": "NOT_APPLICABLE"},
+        "known": {"const": "KNOWN"},
+        "required_unknown": {"const": "REQUIRED_UNKNOWN"}
+      }
+    },
+    "public_eligibility_rule": {
+      "const": "PUBLICATION_AND_APPLICABLE_REVISION_NOT_AFTER_AS_OF"
+    },
+    "operational_eligibility_rule": {
+      "const": "PUBLIC_RULES_AND_INGESTION_NOT_AFTER_AS_OF"
+    },
+    "vintage_selection_rule": {
+      "const": "LATEST_ELIGIBLE_PUBLIC_AVAILABILITY_BOUNDARY"
+    },
+    "ambiguity_policy": {"const": "FAIL_CLOSED"},
+    "output_ordering": {"const": "CANONICAL_OBSERVATION_KEY"}
+  },
+  "$defs": {
+    "column_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    }
+  }
+}

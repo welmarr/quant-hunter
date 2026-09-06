@@ -90,3 +90,17 @@ timestamps, producers, sources, parents, references, configuration, physical
 identity/size, logical ordering, and quality while retaining published sequence
 and deduplication rules. This further reduces RISK-005 and RISK-019 without
 changing their `OPEN` status or starting Batch 4B.2.
+
+## Batch 4B.2 Evidence
+
+On 2026-09-06, synthetic hostile tests exercised explicit UTC as-of boundaries,
+including equality and one-nanosecond future publication; PUBLIC versus
+OPERATIONAL ingestion policy; immutable V1/V2/V3 macro-style vintages; future,
+missing, and contradictory publication/ingestion/revision evidence; deterministic
+permutation-independent selection; and fail-closed equal-priority ambiguity.
+Canonical PIT configuration and audit objects are immutable and referenced by
+the existing verified lineage, while the transformation configuration binds all
+material selection policy. These controls reduce the item-7 portions of
+RISK-003–005 and preserve the three identities under RISK-019. The risks remain
+`OPEN` pending real-source assessment, later experiment/sealed controls, hosted
+cross-platform independent review, and the full Stage 1B reproducibility audit.

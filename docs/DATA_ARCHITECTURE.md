@@ -39,7 +39,28 @@ All timestamps must be timezone-aware; normalize storage to UTC while retaining 
 | `ingestion_time` | When Quant Hunter actually received and persisted the payload | Reconstructs operational availability, outages, and latency |
 | `revision_time` | When a provider published a changed value for an earlier observation | Separates initial releases from later vintages |
 
-Point-in-time joins must use an explicit as-of time and may select only records whose publication time is not later than that time. Operational simulations must also respect ingestion time. When a timestamp is missing or ambiguous, the record must be flagged and excluded from research that requires that time semantics; agents must not infer a convenient value silently.
+Point-in-time joins must use an explicit as-of time and may select only records whose publication time is not later than that time. Equality is eligible. Operational simulations must also respect ingestion time. When a timestamp is missing or ambiguous, the record must be flagged and excluded from research that requires that time semantics; agents must not infer a convenient value silently.
+
+Batch 4B.2 implements these semantics for synthetic normalized and curated
+tables. Every selection configuration names distinct Arrow columns for all four
+concepts, requires an exact timezone-aware UTC `as_of`, and records the same
+instant as fixed nine-digit RFC 3339 plus signed epoch nanoseconds. `PUBLIC`
+reconstructs publicly knowable information: publication and any applicable
+revision must be no later than `as_of`. `OPERATIONAL` applies those rules and
+also requires ingestion no later than `as_of`. Event time aligns what the record
+describes; it does not determine public availability and may legitimately be
+after `as_of` for schedules, forecasts, and future-event metadata.
+
+Initial observations declare revision time `NOT_APPLICABLE`. Revisions declare
+it `KNOWN`; both their publication and revision times must be eligible, and the
+later of those two instants sets selection priority without replacing either
+source field. `REQUIRED_UNKNOWN` is excluded explicitly. Within a caller-declared
+generic observation key, the latest eligible vintage wins. Equal winning
+priorities from distinct vintages are ambiguous and fail closed. Missing
+publication, missing operational ingestion, missing known revision time, future
+availability, and contradictory revision evidence produce deterministic reason
+codes. No row is silently imputed or selected by input position, file order, or
+vintage-name ordering.
 
 ### Macroeconomic releases and vintages
 
@@ -149,9 +170,18 @@ owned by only one representation is bound through that representation's
 canonical digest rather than copied into another schema. These checks do not
 change any of the three identity definitions.
 
-Batch 4B.2 still owns the four timestamp semantics, point-in-time/as-of
-eligibility, future-publication exclusion, revision/vintage eligibility, and
-normalized/curated PIT selection tests.
+The PIT configuration canonically binds the input dataset, exact `as_of`, mode,
+observation and vintage identities, temporal columns, revision states,
+eligibility/selection rules, ambiguity policy, and output ordering. Its digest
+is the derived transformation-configuration identity. Canonical audit evidence
+accounts for selected and excluded vintage IDs. Both immutable objects are
+referenced by the existing lineage manifest. Published selections use the
+existing deterministic Parquet, artifact sidecar, canonical lineage, immutable
+object store, parent evidence, and physical/lineage/logical identities. A mode
+or `as_of` change therefore changes configuration and lineage even when the
+selected logical rows, and correctly their logical fingerprint, remain equal.
+The contract is a focused deterministic selection boundary, not an ingestion
+connector, general query engine, or instrument master.
 
 ## Quality controls
 

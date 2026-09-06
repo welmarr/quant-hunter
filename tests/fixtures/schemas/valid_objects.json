@@ -190,6 +190,32 @@
     "references": ["synthetic://lineage/reference"],
     "quality_disposition": "APPROVED"
   },
+  "pit-selection-config.schema.json": {
+    "schema_version": "1.0.0",
+    "input_dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
+    "as_of": "2026-09-05T12:00:00.000000001Z",
+    "as_of_epoch_nanoseconds": "1788609600000000001",
+    "availability_mode": "PUBLIC",
+    "observation_key_columns": ["series", "event_time"],
+    "vintage_id_column": "vintage_id",
+    "temporal_columns": {
+      "event_time": "event_time",
+      "publication_time": "publication_time",
+      "ingestion_time": "ingestion_time",
+      "revision_time": "revision_time",
+      "revision_time_status": "revision_time_status"
+    },
+    "revision_status_values": {
+      "not_applicable": "NOT_APPLICABLE",
+      "known": "KNOWN",
+      "required_unknown": "REQUIRED_UNKNOWN"
+    },
+    "public_eligibility_rule": "PUBLICATION_AND_APPLICABLE_REVISION_NOT_AFTER_AS_OF",
+    "operational_eligibility_rule": "PUBLIC_RULES_AND_INGESTION_NOT_AFTER_AS_OF",
+    "vintage_selection_rule": "LATEST_ELIGIBLE_PUBLIC_AVAILABILITY_BOUNDARY",
+    "ambiguity_policy": "FAIL_CLOSED",
+    "output_ordering": "CANONICAL_OBSERVATION_KEY"
+  },
   "dataset.schema.json": {
     "schema_version": "1.0.0",
     "dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",

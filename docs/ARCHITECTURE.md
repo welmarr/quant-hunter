@@ -11,8 +11,10 @@ experiment-lifecycle, sealed-release, simulation, and trading behavior remain
 unimplemented. Batch 4A adds only the immutable exact-byte object store, generic
 artifact sidecars, and byte-faithful synthetic raw-capture foundation. Batch 4B.1
 adds deterministic Parquet publication and separate physical, lineage, and
-logical-content identities for explicitly typed synthetic tables. Point-in-time
-and as-of selection remain for Batch 4B.2. The design must be modular,
+logical-content identities for explicitly typed synthetic tables. Batch 4B.2
+adds explicit point-in-time selection for synthetic normalized/curated data with
+PUBLIC and OPERATIONAL availability policies. Roadmap item 7 is ready for
+independent review. The design must be modular,
 reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
@@ -38,7 +40,7 @@ quant-hunter/
 │   ├── provenance/           # SHA-256 and generic freeze-manifest foundation
 │   ├── storage/              # exact-byte objects, sidecars, and raw capture
 │   ├── isolation/            # sealed-release contract; no embedded credentials
-│   ├── data/                 # deterministic derived-table identity and Parquet
+│   ├── data/                 # derived identities, Parquet, and PIT selection
 │   ├── features/
 │   ├── experiments/
 │   ├── models/
@@ -64,7 +66,7 @@ implementation.
 - Runtime: 64-bit standard CPython `>=3.14,<3.15`, pinned to 3.14.7 for the current toolchain; every run records its exact patch/build and platform.
 - Project/environment: PEP 621 `pyproject.toml`, Hatchling, uv, committed `uv.lock`, ignored `.venv`, and version/checksum-pinned uv bootstrap.
 - Evidence metadata: JSON Schema Draft 2020-12, RFC 8785 JCS, UTF-8, and `sha256:<hex>` digests. Precision-sensitive values are normalized strings.
-- Tabular data: deterministic Parquet plus a canonical lineage manifest; raw inputs retain exact provider bytes and byte hashes.
+- Tabular data: deterministic Parquet plus a canonical lineage manifest; explicit UTC as-of selection binds time semantics and immutable vintage policy; raw inputs retain exact provider bytes and byte hashes.
 - Persistent IDs: typed UUIDv7 identifiers and append-only per-object JSON revisions under `registries/`.
 - Quality gate: Ruff, strict mypy, pytest, branch-aware coverage, and provider-neutral `uv run --locked` commands; hosted CI is conditional on free entitlement.
 

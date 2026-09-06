@@ -346,3 +346,32 @@ combined statement/branch coverage. The offline governed build produced both
 distributions, imports returned package/PyArrow versions `0.1.0` and `25.0.1`,
 and archive inspection passed over 96 combined members. No dependency or paid
 service was added. Batch 4B.2 and roadmap item 7 completion remain deferred.
+
+## Batch 4B.2 point-in-time and vintage-selection validation
+
+On 2026-09-06, Batch 4B.2 completed the implementation portion of roadmap item
+7 using synthetic fixtures only. The typed PIT configuration requires an exact
+UTC as-of instant and cryptographically binds PUBLIC or OPERATIONAL policy, the
+generic observation key, vintage identity, all four temporal columns, revision
+states, eligibility and selection rules, fail-closed ambiguity, and canonical
+output ordering. Canonical audit evidence accounts for every selected or
+excluded vintage. Normalized and curated results publish through the existing
+deterministic Parquet, immutable-object, parent-evidence, artifact, lineage, and
+three-identity contracts.
+
+Hostile cases cover exact equality and one-nanosecond future publication,
+second/millisecond/microsecond/nanosecond Arrow units, future and missing
+ingestion or revision evidence, V1/V2/V3 historical reconstruction, event times
+after as-of, input permutation, equal-priority ambiguity, typed evidence
+tampering, unchanged earlier materializations, and different configuration or
+lineage identity for equal logical content. The PIT module reached 95% combined
+statement/branch coverage in its focused run.
+
+The complete locked Windows gate passed: `uv lock --check`; Ruff format over 52
+files; Ruff lint; strict mypy over 29 source files; and 312 pytest cases with
+93.72% combined statement/branch coverage. The offline governed build produced
+both distributions. Package and PyArrow imports returned `0.1.0` and `25.0.1`;
+archive inspection found 100 combined members, included the PIT module in both
+artifacts, and found no `.tools/` or `.venv/` member. `git diff --check` passed.
+No dependency or paid service was added. Roadmap item 7 is ready for independent
+review; Stage 1B item 8 remains unstarted.

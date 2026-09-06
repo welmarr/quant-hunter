@@ -84,6 +84,7 @@ def test_schema_catalog_is_complete_and_meta_valid() -> None:
         "environment-manifest.schema.json",
         "experiment.schema.json",
         "pattern.schema.json",
+        "pit-selection-config.schema.json",
         "raw-capture.schema.json",
         "research-backlog.schema.json",
         "research-object.schema.json",

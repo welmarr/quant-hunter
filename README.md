@@ -13,9 +13,12 @@ registry validation, and generic freeze-manifest construction. No real registry
 object exists. Batch 4A adds local immutable exact-byte object publication,
 generic artifact sidecars, and synthetic byte-faithful raw capture. Batch 4B.1
 adds the synthetic deterministic Parquet and distinct physical, lineage, and
-logical-content identity foundation. Roadmap item 7 remains in progress; no real
-data, point-in-time selection, trading strategy, quantitative algorithm, broker
-connection, backtest engine, portfolio logic, or live-trading capability exists.
+logical-content identity foundation. Batch 4B.2 adds the synthetic point-in-time
+selection contract for explicit UTC as-of queries, PUBLIC and OPERATIONAL
+availability, immutable vintages, and normalized/curated publication. Roadmap
+item 7 is ready for independent review. No real data, connector, experiment,
+trading strategy, quantitative algorithm, broker connection, backtest engine,
+portfolio logic, or live-trading capability exists.
 
 ## Documentation Map
 
