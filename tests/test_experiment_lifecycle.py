@@ -1965,3 +1965,169 @@ def test_evaluation_decision_and_rerun_never_read_sealed_contents(
         }
     ]
     assert not sealed_path.exists()
+
+
+def test_evaluation_rejects_malformed_observed_evidence_without_append(
+    tmp_path: Path,
+) -> None:
+    """Malformed outcome, failure, and artifact evidence cannot advance RUNNING."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle)
+    stored = lifecycle.object_store.publish(b"synthetic result evidence")
+    reference = ResultArtifactReference(
+        "https://example.invalid/results/evidence.json", stored.digest
+    )
+
+    with pytest.raises(ExperimentIntegrityError, match="outcome is malformed"):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome="UNOBSERVED",
+            result_summary="Synthetic malformed outcome.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+    with pytest.raises(
+        ExperimentIntegrityError, match="retain at least one failure mode"
+    ):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.FAILED,
+            result_summary="Synthetic failed outcome without failure evidence.",
+            no_result_artifact_reason="No artifact applies.",
+        )
+    with pytest.raises(
+        ExperimentIntegrityError, match="cannot accompany result artifacts"
+    ):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.POSITIVE,
+            result_summary="Synthetic conflicting artifact evidence.",
+            result_artifacts=(reference,),
+            no_result_artifact_reason="Conflicts with the supplied artifact.",
+        )
+    with pytest.raises(ExperimentIntegrityError, match="reference is malformed"):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.POSITIVE,
+            result_summary="Synthetic malformed artifact reference.",
+            result_artifacts=(cast(ResultArtifactReference, object()),),
+        )
+    with pytest.raises(
+        ExperimentIntegrityError, match="absence reason must be a nonempty string"
+    ):
+        lifecycle.evaluate(
+            experiment_id,
+            running.digest,
+            evaluated_at=EVALUATED_AT,
+            outcome=EvaluationOutcome.NULL,
+            result_summary="Synthetic result without absence evidence.",
+        )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == running
+
+
+@pytest.mark.parametrize(
+    ("artifact_digests", "artifact_locations", "message"),
+    [
+        (
+            ["sha256:" + "a" * 64, "sha256:" + "b" * 64],
+            ["https://example.invalid/results/one.json"],
+            "pair with every digest",
+        ),
+        (
+            [],
+            {"status": "PENDING", "reason": "Absence was not resolved."},
+            "requires an explicit absence reason",
+        ),
+    ],
+)
+def test_rerun_rejects_schema_valid_inconsistent_result_references(
+    tmp_path: Path,
+    artifact_digests: list[JsonValue],
+    artifact_locations: JsonValue,
+    message: str,
+) -> None:
+    """Rerun verification rejects EVALUATED artifact evidence the schema cannot pair."""
+    lifecycle = service(tmp_path)
+    experiment_id, _frozen, running = running_experiment(lifecycle)
+    payload = revision_payload(running)
+    payload.update(
+        {
+            "lifecycle_status": "EVALUATED",
+            "evaluated_at": EVALUATED_AT,
+            "evaluation_outcome": "POSITIVE",
+            "results": "Synthetic observed result.",
+            "result_artifact_digests": artifact_digests,
+            "result_artifact_locations": artifact_locations,
+            "failure_modes": [],
+            "decision_pending_reason": "Evaluation complete; decision pending.",
+            "reason_for_decision": {
+                "status": "PENDING",
+                "reason": "A governed decision has not been recorded.",
+            },
+        }
+    )
+    hostile = lifecycle.registry.append(experiment_id, running.digest, payload)
+
+    with pytest.raises(ExperimentIntegrityError, match=message):
+        lifecycle.resolve_rerun(experiment_id)
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == hostile
+
+
+def test_decision_rejects_stale_cas_without_rewriting_evaluation(
+    tmp_path: Path,
+) -> None:
+    """A decision requires the caller to name the exact EVALUATED head."""
+    lifecycle = service(tmp_path)
+    experiment_id, _running, evaluated = evaluated_experiment(lifecycle)
+
+    with pytest.raises(StaleWriterError, match="current head"):
+        lifecycle.decide(
+            experiment_id,
+            "sha256:" + "f" * 64,
+            decided_at=DECIDED_AT,
+            decision=ExperimentDecision.DEFER,
+            reason="Synthetic decision with stale evidence.",
+        )
+    assert lifecycle.registry.verify_object(experiment_id)[-1] == evaluated
+
+
+def test_rerun_resolution_handles_running_evaluated_and_seed_not_applicable(
+    tmp_path: Path,
+) -> None:
+    """Resolution is stable across active states and preserves governed seed absence."""
+    lifecycle = service(tmp_path / "states")
+    experiment_id, _registered, frozen = frozen_experiment(lifecycle)
+    frozen_resolution = lifecycle.resolve_rerun(experiment_id)
+    running = lifecycle.start(experiment_id, frozen.digest, started_at=STARTED_AT)
+    assert lifecycle.resolve_rerun(experiment_id) == frozen_resolution
+    evaluated = lifecycle.evaluate(
+        experiment_id,
+        running.digest,
+        evaluated_at=EVALUATED_AT,
+        outcome=EvaluationOutcome.NULL,
+        result_summary="Synthetic null evaluation.",
+        no_result_artifact_reason="The result is retained in the revision.",
+    )
+    assert lifecycle.resolve_rerun(experiment_id) == frozen_resolution
+    assert evaluated.record["lifecycle_status"] == "EVALUATED"
+
+    no_seed_lifecycle = service(tmp_path / "no-seed")
+    payload = planned_payload()
+    del payload["random_seed"]
+    payload["random_seed_not_applicable_reason"] = (
+        "The synthetic deterministic calculation has no random component."
+    )
+    no_seed_id, _registered, _frozen = frozen_experiment(no_seed_lifecycle, payload)
+    resolution = no_seed_lifecycle.resolve_rerun(no_seed_id)
+    assert resolution.document["seed_evidence"] == {
+        "not_applicable_reason": (
+            "The synthetic deterministic calculation has no random component."
+        )
+    }

@@ -19,7 +19,7 @@ availability, immutable vintages, and normalized/curated publication. Roadmap
 item 7 is complete after independent review passed commit
 `952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Independent review passed Item
 8A at commit `79730f9ed54d6fcf9c8b33ad70af6181941c0b5e`, and Item 8B at commit
-`747ae70b9b6d95179271d5770239347e24d6b2bd`. Item 8C is in review with only
+`747ae70b9b6d95179271d5770239347e24d6b2bd`. Item 8C is in final review fix with only
 governed `RUNNING → EVALUATED → DECIDED`, permanent result/failure evidence,
 immutable result-object verification, and deterministic rerun-input resolution.
 No real data, connector, executed experiment,
