@@ -25,8 +25,14 @@ objects, and resolving deterministic rerun inputs from REGISTERED/FROZEN
 evidence. Item 9A adds immutable temporal-validation configuration contracts
 for exact UTC intervals, top-level chronological partitions, explicit time-aware
 folds, and purge/embargo evidence. They produce canonical metadata only: they do
-not split data, execute research, or access sealed contents. Actual experiment
-execution, Items 9B–9C, Item 10 sealed-release infrastructure, backtesting, strategies, broker/live
+not split data, execute research, or access sealed contents. Independent review
+passed Item 9A at reviewed head
+`e19c693557fc4debe7a12746ae682e1113e404b1`, merged on main at
+`5636ad431b1c660233189a45ebfd6157308df7fa`. Item 9B adds immutable scientific
+evidence plans and report envelopes. These declare applicability, comparisons,
+metrics, methods, robustness, and structural references to Item 8 frozen
+multiple-testing authority without running scientific calculations or changing
+experiment state. Actual experiment execution, Item 9C, Item 10 sealed-release infrastructure, backtesting, strategies, broker/live
 execution, and later-stage systems remain absent.
 The design must be modular, reproducible, testable, and difficult to misuse.
 
@@ -59,7 +65,7 @@ quant-hunter/
 │   ├── models/
 │   ├── patterns/
 │   ├── backtesting/
-│   ├── validation/           # Item 9A temporal plans; no splitter or evaluator
+│   ├── validation/           # Item 9A temporal and Item 9B evidence contracts
 │   ├── portfolio/
 │   ├── execution_costs/
 │   ├── reporting/

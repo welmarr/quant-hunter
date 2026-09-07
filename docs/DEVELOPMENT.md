@@ -537,7 +537,35 @@ The locked Windows review-fix gate passed: `uv lock --check`; Ruff format over
 91.51% combined statement/branch coverage. The corrected temporal-validation
 module reached 99.34% coverage.
 
-Item 9 is `IN PROGRESS`; Item 9A is `IN PROGRESS / REVIEW FIX`. Item 9B, Item
-9C, and Item 10 are not started. No new dependency or incremental direct cost
-was added, and the owner-reported ChatGPT Pro amount remains unknown pending
-invoice reconciliation.
+Independent review passed Item 9A at reviewed head
+`e19c693557fc4debe7a12746ae682e1113e404b1`, squash-merged on main at
+`5636ad431b1c660233189a45ebfd6157308df7fa`. Final hosted Ubuntu evidence was
+488 passing tests with 91.46% combined statement/branch coverage and 99.34%
+coverage for `temporal.py`; Windows passed all 488 tests. Ubuntu and Windows
+post-merge CI succeeded. Item 9A is `COMPLETE / INDEPENDENT REVIEW PASSED`.
+
+## Stage 1B Item 9B scientific-evidence contracts
+
+Item 9B adds immutable metadata declarations for applicability, baseline roles,
+the complete standard metric inventory, governed statistical methods,
+sample-adequacy and robustness requirements, study-specific conventions, and
+exact numeric evidence. A structural binding rejects family, budget, or
+correction-plan contradictions against supplied Item 8 `FROZEN` metadata while
+leaving attempts and counters in the append-only experiment authority. Canonical
+reports retain unfavorable and pending outcomes, assess V0–V9 without creating
+experiment decisions, and never dereference sealed release references.
+
+The complete locked Windows gate passed with repository-pinned uv 0.12.10:
+`uv lock --check`; Ruff format over 60 files; Ruff lint; strict mypy over 37
+source files; and 532 pytest cases with 92.85% combined statement/branch
+coverage. The scientific-evidence module reached 99.72% coverage. The offline
+governed build produced both distributions; package, PyArrow, plan, report, and
+metric-inventory imports returned `0.1.0`, `25.0.1`,
+`ScientificEvidencePlan`, `ScientificEvidenceReport`, and 31 standard metrics.
+Archive inspection found 113 combined members, included the evidence module in
+both artifacts, and excluded `.tools/` and `.venv/` paths.
+
+Item 9 is `IN PROGRESS`; Item 9B is `IN PROGRESS / REVIEW`. Item 9C and Item 10
+are not started. No new dependency or incremental direct cost was added, and
+the owner-reported ChatGPT Pro amount remains unknown pending invoice
+reconciliation.

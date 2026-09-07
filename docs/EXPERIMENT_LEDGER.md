@@ -105,3 +105,12 @@ in `ROADMAP.md` exist and the work is explicitly authorized. Machine authority
 is the schema-validated JCS revision chain at
 `registries/experiments/<id>/vNNNNNN.json`; generated summaries and rerun
 resolutions are deterministic non-authoritative views of verified evidence.
+
+Item 9B scientific-evidence plans structurally cross-bind the exact family,
+budget, and correction plan declared by an Item 8 `FROZEN` record and retain an
+exact frozen-revision digest reference. They do not copy, reset, or mutate
+runtime attempt counters: AI-generated variants, failed or rejected attempts,
+and selection retries remain solely in the append-only Item 8 experiment chain.
+The Item 9B binding does not by itself prove registry-chain verification or that
+an experiment executed the evidence plan. Its reports provide decision support
+without creating `EVALUATED` or `DECIDED` lifecycle state.
