@@ -16,13 +16,17 @@ PUBLIC and OPERATIONAL availability policies. Independent review passed item 7
 at commit `952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Independent review passed Item
 8A at commit `79730f9ed54d6fcf9c8b33ad70af6181941c0b5e` and Item 8B at commit
 `747ae70b9b6d95179271d5770239347e24d6b2bd`. Independent review passed Item 8C
-and full Item 8 at PR head `c80ca6d2dffba316239880cf6b3ce33c20ee6b2c`.
+and full Item 8, merged on main at
+`265d5f49e06f841a5e23fdf9ea177670bbfbc1e9`.
 Item 8C extends the same experiment
 authority through `RUNNING → EVALUATED → DECIDED`, storing observed result and
 failure evidence in immutable registry revisions, verifying supplied result
 objects, and resolving deterministic rerun inputs from REGISTERED/FROZEN
-evidence. Actual experiment execution, Item 9 validation/simulation interfaces,
-Item 10 sealed-release infrastructure, backtesting, strategies, broker/live
+evidence. Item 9A adds immutable temporal-validation configuration contracts
+for exact UTC intervals, top-level chronological partitions, explicit time-aware
+folds, and purge/embargo evidence. They produce canonical metadata only: they do
+not split data, execute research, or access sealed contents. Actual experiment
+execution, Items 9B–9C, Item 10 sealed-release infrastructure, backtesting, strategies, broker/live
 execution, and later-stage systems remain absent.
 The design must be modular, reproducible, testable, and difficult to misuse.
 
@@ -55,7 +59,7 @@ quant-hunter/
 │   ├── models/
 │   ├── patterns/
 │   ├── backtesting/
-│   ├── validation/
+│   ├── validation/           # Item 9A temporal plans; no splitter or evaluator
 │   ├── portfolio/
 │   ├── execution_costs/
 │   ├── reporting/

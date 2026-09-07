@@ -503,3 +503,41 @@ combined result below 90.00% cannot pass through integer display rounding.
 Item 8 is `COMPLETE / INDEPENDENT REVIEW PASSED`. Stage 1B remains in progress,
 and Item 9 remains `NOT STARTED / NEXT`. This documentation reconciliation adds
 no dependency or incremental direct cost.
+
+## Stage 1B Item 9A temporal-validation contracts
+
+Full Item 8 passed independent review and is merged on main at
+`265d5f49e06f841a5e23fdf9ea177670bbfbc1e9`. Item 9A adds only immutable,
+configuration-driven temporal-validation metadata contracts: exact UTC
+half-open intervals, chronological top-level partitions, explicit
+chronological-holdout, rolling, expanding, and purged folds, exact purge and
+embargo evidence or reasoned non-applicability, and deterministic JCS/SHA-256
+plan evidence. Construction and verification do not split data, execute a
+model or strategy, compute statistics or returns, or dereference sealed-OOS
+references.
+
+The final locked Windows gate passed with repository-pinned uv 0.12.10:
+`uv lock --check`; Ruff format over 58 files; Ruff lint; strict mypy over 35
+source files; and 487 pytest cases with 91.54% combined statement/branch
+coverage. The temporal-validation module reached 99.36% coverage. The offline
+governed build produced both distributions; package, PyArrow, and new validation
+imports returned `0.1.0`, `25.0.1`, `ValidationPlan`, and `ROLLING_WINDOW`.
+Archive inspection found 110 combined members, included the temporal module in
+both artifacts, and excluded `.tools/` and `.venv/` paths.
+
+The Item 9A review fix removes the unsupported global-blackout interpretation
+of fold-local purge and embargo evidence. An exact exclusion remains locally
+bound to its fold and must remain coherent with that fold's boundary; overlap
+with another otherwise-valid fold does not itself invalidate the plan. Actual
+dataset membership and sufficient exclusion sizes require a later authorized
+execution layer with registered temporal dependencies.
+
+The locked Windows review-fix gate passed: `uv lock --check`; Ruff format over
+58 files; Ruff lint; strict mypy over 35 source files; and 488 pytest cases with
+91.51% combined statement/branch coverage. The corrected temporal-validation
+module reached 99.34% coverage.
+
+Item 9 is `IN PROGRESS`; Item 9A is `IN PROGRESS / REVIEW FIX`. Item 9B, Item
+9C, and Item 10 are not started. No new dependency or incremental direct cost
+was added, and the owner-reported ChatGPT Pro amount remains unknown pending
+invoice reconciliation.

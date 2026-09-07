@@ -371,3 +371,17 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** DEC-0007, DEC-0009, DEC-0021–DEC-0023, `EXPERIMENT_LEDGER.md`, `ROADMAP.md` item 8, `schemas/v1/experiment.schema.json`, `src/quant_hunter/experiments/lifecycle.py`, and `tests/test_experiment_lifecycle.py`.
 - **Supersedes / superseded by:** Extends the reviewed Item 8B lifecycle without replacing its experiment, attempt, freeze, timestamp, registry, or object authority. Item 8C remains in review; full Item 8 is not complete until that review passes. Item 9 remains separately gated and unstarted.
 - **Owner and approver:** Project owner through explicit Stage 1B Item 8C authorization dated 2026-09-06.
+
+### DEC-0025 — Use Exact Half-Open Boundaries for Temporal Validation
+
+- **Date:** 2026-09-07
+- **Status:** ACCEPTED
+- **Scope:** methodology / validation / reproducibility
+- **Context:** The experiment schema requires explicit UTC partition starts and ends, but the governing documents did not state whether boundary instants were included. Item 9A needs one deterministic interpretation before any real validation plan exists.
+- **Decision:** Every Item 9A temporal interval is nonempty and half-open: `[start, end)`, with the start included and the end excluded. Exact equality between one interval's end and the next interval's start is valid non-overlapping adjacency. Parse the existing strict UTC timestamp shape, validate calendar values, and compare every fractional-second digit exactly without float conversion or microsecond/nanosecond truncation. Top-level roles must remain ordered TRAINING/DEVELOPMENT → VALIDATION → SEALED OUT-OF-SAMPLE. Explicit folds declare their sequence and identity; input ordering cannot define chronology. Purge and embargo evidence uses exact excluded intervals or a nonempty reason for non-applicability. Plan evidence uses existing JCS and SHA-256 primitives and remains metadata-only; sealed references are never dereferenced.
+- **Alternatives considered:** Closed boundaries make adjacent partitions share an instant. Inferring an epsilon or a bar duration silently assumes a sampling frequency. Importing the private experiment-lifecycle timestamp helper would couple separate authorities.
+- **Scientific/statistical consequences:** Boundary adjacency and overlap now have one testable meaning at all accepted timestamp precision. These contracts reject obvious temporal contradictions but do not prove label independence or choose sufficient purge/embargo sizes; a later authorized execution layer must derive those from the registered label horizon, feature dependencies, and sampling structure.
+- **Reproducibility and cost consequences:** Canonical plans have deterministic bytes and `sha256:<64 lowercase hex>` identity under the existing local dependencies. No dependency, service, data, infrastructure, or incremental direct cost is added. The owner-reported ChatGPT Pro amount remains unknown pending invoice reconciliation.
+- **References:** `VALIDATION_STANDARD.md`; `EXPERIMENT_LEDGER.md`; `schemas/v1/experiment.schema.json`; `src/quant_hunter/validation/temporal.py`; `tests/test_temporal_validation.py`.
+- **Supersedes / superseded by:** Clarifies previously unspecified interval boundaries without changing the reviewed Item 8 experiment/freeze authority. Item 9B, Item 9C, and Item 10 remain separately gated.
+- **Owner and approver:** Project owner through explicit Stage 1B Item 9A authorization dated 2026-09-07.

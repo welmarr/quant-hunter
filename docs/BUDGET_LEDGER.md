@@ -70,6 +70,11 @@ Item 8C reuses those same local foundations for evaluation evidence, decisions,
 immutable result-object verification, and deterministic rerun resolution. It
 adds no dependency, service, data, infrastructure, subscription, usage
 commitment, or incremental direct cost.
+Item 9A reuses the standard library and existing JCS/SHA-256 configuration
+foundation for metadata-only temporal-validation contracts. It adds no
+dependency, service, data, infrastructure, subscription, usage commitment, or
+incremental direct cost. The owner-reported ChatGPT Pro amount remains
+`UNKNOWN` pending invoice reconciliation and no amount is imputed here.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 

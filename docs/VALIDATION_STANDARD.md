@@ -47,7 +47,25 @@ Use strict chronological train/development, validation, and untouched test separ
 - **Validation:** compare bounded choices and assess stability without touching final evidence.
 - **Sealed out-of-sample:** perform the prespecified final evaluation only after the experiment is frozen.
 
+All temporal-validation intervals use half-open boundaries: the start instant is
+included and the end instant is excluded, written `[start, end)`. Every interval
+must be nonempty (`start < end`) and use an explicit UTC timestamp. Exact equality
+between an earlier end and a later start is valid adjacency, not overlap. Every
+fractional-second digit accepted by the common timestamp contract remains
+significant when ordering boundaries; implementations must not compare through a
+float or silently truncate to microseconds or nanoseconds. DEC-0025 records this
+pre-use clarification.
+
 Random cross-validation is not an acceptable default for market time series. Use rolling or expanding windows, walk-forward validation, purged time-series cross-validation, and embargo periods when dictated by forecast horizon, label overlap, feature construction, or dependency structure.
+
+Item 9A represents purge and embargo evidence as exact excluded intervals, or as
+an explicit reason that the control is not applicable. This configuration
+evidence is local to its declared fold; it does not establish a global blackout
+for other folds. This configuration contract neither determines a scientifically
+sufficient gap nor resolves actual observation membership. A later authorized
+execution layer must derive and verify effective training exclusions and the
+actual purge and embargo extent from the registered label horizon, temporal
+feature dependencies, and sampling structure.
 
 ### Access control
 
