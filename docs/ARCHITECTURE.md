@@ -41,9 +41,14 @@ interfaces require explicit BUY/SELL price-side rules for executable pricing,
 with side rules as the sole execution-price authority. Standard executable
 MARKET assumptions require BUY to ASK and SELL to BID and reject LAST_TRADE as a
 direct side quote; explicitly described limit/resting alternatives remain valid.
-They also require reasoned partial-fill treatment and coherent pending/failed output states. They
-cannot execute a strategy, match an order, generate a fill, calculate performance
-or cost, assess V6, or access sealed contents. Item 10 sealed-release
+They also require reasoned partial-fill treatment and coherent pending/failed output states.
+DEC-0028 cross-binds these existing authorities without adding runtime behavior:
+a typed binding exactly matches Item 9A partitions to supplied Item 8 FROZEN
+metadata; Item 9B requires that temporal and multiple-testing bindings identify
+the same experiment and frozen revision; and Item 9C derives compact plan digests
+from verified Item 9A and 9B objects. These interfaces cannot execute a strategy,
+match an order, generate a fill, calculate performance or cost, verify a registry
+chain, assess V6, or access sealed contents. Item 10 sealed-release
 infrastructure, executable backtesting, strategies, broker/live execution, and
 later-stage systems remain absent.
 The design must be modular, reproducible, testable, and difficult to misuse.

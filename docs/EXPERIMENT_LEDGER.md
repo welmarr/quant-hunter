@@ -106,9 +106,16 @@ is the schema-validated JCS revision chain at
 `registries/experiments/<id>/vNNNNNN.json`; generated summaries and rerun
 resolutions are deterministic non-authoritative views of verified evidence.
 
+A metadata-only temporal binding exactly compares a verified Item 9A
+ValidationPlan with the training, validation, and sealed-out-of-sample boundary
+strings in supplied Item 8 `FROZEN` metadata. It retains the experiment identity,
+frozen-revision digest, and temporal-plan digest without verifying the registry
+chain or dereferencing the sealed reference.
+
 Item 9B scientific-evidence plans structurally cross-bind the exact family,
-budget, and correction plan declared by an Item 8 `FROZEN` record and retain an
-exact frozen-revision digest reference. They do not copy, reset, or mutate
+budget, and correction plan declared by Item 8 `FROZEN` metadata and require the
+temporal and multiple-testing bindings to identify the same experiment and exact
+frozen revision. They do not copy, reset, or mutate
 runtime attempt counters: AI-generated variants, failed or rejected attempts,
 and selection retries remain solely in the append-only Item 8 experiment chain.
 The Item 9B binding does not by itself prove registry-chain verification or that
@@ -116,6 +123,8 @@ an experiment executed the evidence plan. Its reports provide decision support
 without creating `EVALUATED` or `DECIDED` lifecycle state.
 
 Item 9C simulation inputs and outputs likewise remain non-authoritative evidence
-contracts. They reference an experiment and the exact Item 9A/9B plan identities
-without allocating or mutating an experiment. Simulation output cannot create
+contracts. Inputs require verified Item 9A and Item 9B objects and derive their
+compact plan digests; they cannot combine unrelated experiment or temporal
+identities. They do not prove that an executor consumed either plan and do not
+allocate or mutate an experiment. Simulation output cannot create
 `EVALUATED` or `DECIDED`; only the Item 8 append-only lifecycle may do so.

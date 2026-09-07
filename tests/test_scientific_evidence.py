@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import NoReturn, cast
 
 import pytest
+from item9_test_support import temporal_binding
 
 from quant_hunter.config import JsonRecord
 from quant_hunter.provenance.hashing import DigestMismatchError, sha256_bytes
@@ -20,6 +21,7 @@ from quant_hunter.validation import (
     EvidenceOutcome,
     ExactNumericEvidence,
     FrozenMultipleTestingBinding,
+    FrozenTemporalValidationBinding,
     GateAssessment,
     GateStatus,
     MetricDeclaration,
@@ -237,7 +239,7 @@ def reporting_conventions() -> ReportingConventions:
 def evidence_plan() -> ScientificEvidencePlan:
     return build_scientific_evidence_plan(
         experiment_id=EXPERIMENT_ID,
-        temporal_validation_plan_digest=OTHER_DIGEST,
+        temporal_validation=temporal_binding(),
         baselines=baseline_declarations(),
         metrics=metric_declarations(),
         statistical_methods=method_declarations(),
@@ -368,7 +370,7 @@ def test_unordered_declaration_permutations_do_not_change_identity() -> None:
     original = evidence_plan()
     permuted = build_scientific_evidence_plan(
         experiment_id=EXPERIMENT_ID,
-        temporal_validation_plan_digest=OTHER_DIGEST,
+        temporal_validation=temporal_binding(),
         baselines=tuple(reversed(baseline_declarations())),
         metrics=tuple(reversed(metric_declarations())),
         statistical_methods=tuple(reversed(method_declarations())),
@@ -391,7 +393,7 @@ def test_duplicate_declaration_identity_fails_across_categories() -> None:
     with pytest.raises(ScientificEvidenceError, match="identities must be unique"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_declarations(),
             metrics=metrics,
             statistical_methods=method_declarations(),
@@ -440,7 +442,7 @@ def test_custom_metric_cannot_replace_a_standard_declaration() -> None:
     with pytest.raises(ScientificEvidenceError, match="Every standard metric"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_declarations(),
             metrics=metrics,
             statistical_methods=method_declarations(),
@@ -793,7 +795,7 @@ def test_plan_integrity_rejects_digest_bytes_and_typed_tampering() -> None:
         replace(plan, digest="sha256:" + "f" * 64).verify()
     with pytest.raises(DigestMismatchError):
         replace(plan, canonical_bytes=plan.canonical_bytes + b" ").verify()
-    with pytest.raises(ScientificEvidenceIntegrityError, match="typed fields"):
+    with pytest.raises(ScientificEvidenceError, match="temporal digest"):
         replace(plan, temporal_validation_plan_digest=DIGEST).verify()
 
 
@@ -977,7 +979,7 @@ def test_plan_requires_authoritative_typed_inputs_and_matching_experiment() -> N
     with pytest.raises(ScientificEvidenceError, match="identity must be explicit"):
         build_scientific_evidence_plan(
             experiment_id=cast(str, None),
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_values,
             metrics=metric_values,
             statistical_methods=method_values,
@@ -985,10 +987,10 @@ def test_plan_requires_authoritative_typed_inputs_and_matching_experiment() -> N
             reporting_conventions=reporting_conventions(),
             multiple_testing=multiple_testing_binding(),
         )
-    with pytest.raises(ScientificEvidenceError, match="digest is malformed"):
+    with pytest.raises(ScientificEvidenceError, match="temporal-validation binding"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=cast(str, None),
+            temporal_validation=cast(FrozenTemporalValidationBinding, None),
             baselines=baseline_values,
             metrics=metric_values,
             statistical_methods=method_values,
@@ -999,7 +1001,7 @@ def test_plan_requires_authoritative_typed_inputs_and_matching_experiment() -> N
     with pytest.raises(ScientificEvidenceError, match="conventions must be explicit"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_values,
             metrics=metric_values,
             statistical_methods=method_values,
@@ -1010,7 +1012,7 @@ def test_plan_requires_authoritative_typed_inputs_and_matching_experiment() -> N
     with pytest.raises(ScientificEvidenceError, match="binding is required"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_values,
             metrics=metric_values,
             statistical_methods=method_values,
@@ -1018,10 +1020,10 @@ def test_plan_requires_authoritative_typed_inputs_and_matching_experiment() -> N
             reporting_conventions=reporting_conventions(),
             multiple_testing=cast(FrozenMultipleTestingBinding, None),
         )
-    with pytest.raises(ScientificEvidenceError, match="contradicts its binding"):
+    with pytest.raises(ScientificEvidenceError, match="temporal binding"):
         build_scientific_evidence_plan(
             experiment_id=OTHER_EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_values,
             metrics=metric_values,
             statistical_methods=method_values,
@@ -1035,7 +1037,7 @@ def test_plan_requires_complete_typed_declaration_inventories() -> None:
     with pytest.raises(ScientificEvidenceError, match="typed metric"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_declarations(),
             metrics=(cast(MetricDeclaration, object()),),
             statistical_methods=method_declarations(),
@@ -1046,7 +1048,7 @@ def test_plan_requires_complete_typed_declaration_inventories() -> None:
     with pytest.raises(ScientificEvidenceError, match="Naive, simple"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_declarations()[:-1],
             metrics=metric_declarations(),
             statistical_methods=method_declarations(),
@@ -1057,7 +1059,7 @@ def test_plan_requires_complete_typed_declaration_inventories() -> None:
     with pytest.raises(ScientificEvidenceError, match="Every statistical method"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_declarations(),
             metrics=metric_declarations(),
             statistical_methods=method_declarations()[:-1],
@@ -1068,7 +1070,7 @@ def test_plan_requires_complete_typed_declaration_inventories() -> None:
     with pytest.raises(ScientificEvidenceError, match="Every robustness"):
         build_scientific_evidence_plan(
             experiment_id=EXPERIMENT_ID,
-            temporal_validation_plan_digest=OTHER_DIGEST,
+            temporal_validation=temporal_binding(),
             baselines=baseline_declarations(),
             metrics=metric_declarations(),
             statistical_methods=method_declarations(),

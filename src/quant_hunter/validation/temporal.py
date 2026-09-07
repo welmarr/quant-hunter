@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,7 +18,12 @@ from quant_hunter.config import (
     canonicalize_json,
     parse_json_document,
 )
-from quant_hunter.provenance.hashing import sha256_bytes, verify_sha256_bytes
+from quant_hunter.identity import RegistryKind, validate_typed_id
+from quant_hunter.provenance.hashing import (
+    require_sha256_digest,
+    sha256_bytes,
+    verify_sha256_bytes,
+)
 
 _TIMESTAMP_PATTERN: Final = re.compile(
     r"^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})"
@@ -300,6 +305,126 @@ class ValidationPlan:
             raise TemporalValidationIntegrityError(
                 "Validation plan canonical evidence does not match typed fields"
             )
+
+
+@dataclass(frozen=True, slots=True)
+class FrozenTemporalValidationBinding:
+    """A verified match between Item 9A metadata and supplied Item 8 FROZEN data."""
+
+    experiment_id: str
+    frozen_revision_digest: str
+    temporal_validation_plan_digest: str
+    validation_plan: ValidationPlan
+    frozen_training: TemporalInterval
+    frozen_validation: TemporalInterval
+    frozen_sealed_out_of_sample: TemporalInterval
+
+    def verify(self) -> None:
+        """Recheck immutable identities, exact boundaries, and plan integrity."""
+        validate_typed_id(self.experiment_id, RegistryKind.EXPERIMENT)
+        require_sha256_digest(self.frozen_revision_digest)
+        require_sha256_digest(self.temporal_validation_plan_digest)
+        if not isinstance(self.validation_plan, ValidationPlan):
+            raise TemporalValidationError("A verified ValidationPlan is required")
+        self.validation_plan.verify()
+        if self.temporal_validation_plan_digest != self.validation_plan.digest:
+            raise TemporalValidationIntegrityError(
+                "Temporal binding digest differs from its ValidationPlan"
+            )
+        typed_intervals = (
+            self.frozen_training,
+            self.frozen_validation,
+            self.frozen_sealed_out_of_sample,
+        )
+        if any(not isinstance(value, TemporalInterval) for value in typed_intervals):
+            raise TemporalValidationError("Frozen partition boundaries are malformed")
+        plan_partitions = self.validation_plan.partitions
+        comparisons = (
+            (self.frozen_training, plan_partitions.training_development, "training"),
+            (self.frozen_validation, plan_partitions.validation, "validation"),
+            (
+                self.frozen_sealed_out_of_sample,
+                plan_partitions.sealed_out_of_sample,
+                "sealed_out_of_sample",
+            ),
+        )
+        for frozen, planned, label in comparisons:
+            if frozen.start != planned.start or frozen.end != planned.end:
+                raise TemporalValidationError(
+                    f"Frozen {label} boundaries contradict the ValidationPlan"
+                )
+
+    def document(self) -> JsonRecord:
+        """Return compact cross-binding evidence without sealed-data access."""
+        return {
+            "binding_type": "FROZEN_TEMPORAL_VALIDATION_BINDING",
+            "experiment_id": self.experiment_id,
+            "frozen_revision_digest": self.frozen_revision_digest,
+            "temporal_validation_plan_digest": self.temporal_validation_plan_digest,
+            "frozen_partitions": {
+                "training": self.frozen_training.document(),
+                "validation": self.frozen_validation.document(),
+                "sealed_out_of_sample": self.frozen_sealed_out_of_sample.document(),
+            },
+            "registry_chain_verified": False,
+            "sealed_reference_dereferenced": False,
+        }
+
+
+def _frozen_partition(value: object, label: str) -> TemporalInterval:
+    if not isinstance(value, dict) or set(value) != {"start", "end"}:
+        raise TemporalValidationError(
+            f"Frozen {label} partition must contain exact start and end boundaries"
+        )
+    start = value.get("start")
+    end = value.get("end")
+    if not isinstance(start, str) or not isinstance(end, str):
+        raise TemporalValidationError(
+            f"Frozen {label} partition boundaries must be strings"
+        )
+    return TemporalInterval(start, end)
+
+
+def bind_frozen_temporal_validation(
+    frozen_record: Mapping[str, JsonValue],
+    frozen_revision_digest: str,
+    validation_plan: ValidationPlan,
+) -> FrozenTemporalValidationBinding:
+    """Cross-check supplied FROZEN partition metadata against a verified plan."""
+    if not isinstance(frozen_record, Mapping):
+        raise TemporalValidationError("Frozen experiment metadata must be a mapping")
+    if frozen_record.get("lifecycle_status") != "FROZEN":
+        raise TemporalValidationError("Temporal binding requires FROZEN input")
+    experiment_id = frozen_record.get("experiment_id")
+    if not isinstance(experiment_id, str):
+        raise TemporalValidationError("Frozen experiment identity is malformed")
+    validate_typed_id(experiment_id, RegistryKind.EXPERIMENT)
+    require_sha256_digest(frozen_revision_digest)
+    if not isinstance(validation_plan, ValidationPlan):
+        raise TemporalValidationError("A verified ValidationPlan is required")
+    validation_plan.verify()
+    partitions = frozen_record.get("partitions")
+    if not isinstance(partitions, dict) or set(partitions) != {
+        "training",
+        "validation",
+        "sealed_out_of_sample",
+    }:
+        raise TemporalValidationError(
+            "Frozen partition object is structurally incomplete"
+        )
+    binding = FrozenTemporalValidationBinding(
+        experiment_id=experiment_id,
+        frozen_revision_digest=frozen_revision_digest,
+        temporal_validation_plan_digest=validation_plan.digest,
+        validation_plan=validation_plan,
+        frozen_training=_frozen_partition(partitions["training"], "training"),
+        frozen_validation=_frozen_partition(partitions["validation"], "validation"),
+        frozen_sealed_out_of_sample=_frozen_partition(
+            partitions["sealed_out_of_sample"], "sealed_out_of_sample"
+        ),
+    )
+    binding.verify()
+    return binding
 
 
 def _plan_document(

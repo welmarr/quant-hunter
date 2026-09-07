@@ -28,6 +28,8 @@ from quant_hunter.validation import (
     EvidenceOutcome,
     ExactNumericEvidence,
     PartitionRole,
+    ScientificEvidencePlan,
+    ValidationPlan,
 )
 
 _IDENTITY: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -994,6 +996,8 @@ def _validate_input(
     experiment_id: object,
     temporal_plan_digest: object,
     evidence_plan_digest: object,
+    temporal_validation_plan: object,
+    scientific_evidence_plan: object,
     data_manifests: tuple[DataManifestReference, ...],
     code_revision: object,
     configuration_digest: object,
@@ -1017,6 +1021,31 @@ def _validate_input(
         if not isinstance(digest, str):
             raise SimulationContractError(f"{field} must be a SHA-256 digest")
         require_sha256_digest(digest)
+    if not isinstance(temporal_validation_plan, ValidationPlan):
+        raise SimulationContractError("A verified ValidationPlan is required")
+    if not isinstance(scientific_evidence_plan, ScientificEvidencePlan):
+        raise SimulationContractError("A verified ScientificEvidencePlan is required")
+    temporal_validation_plan.verify()
+    scientific_evidence_plan.verify()
+    if scientific_evidence_plan.experiment_id != experiment_id:
+        raise SimulationContractError(
+            "Simulation experiment contradicts its ScientificEvidencePlan"
+        )
+    if (
+        scientific_evidence_plan.temporal_validation_plan_digest
+        != temporal_validation_plan.digest
+    ):
+        raise SimulationContractError(
+            "ScientificEvidencePlan is bound to a different ValidationPlan"
+        )
+    if temporal_plan_digest != temporal_validation_plan.digest:
+        raise SimulationIntegrityError(
+            "Stored temporal digest differs from the verified ValidationPlan"
+        )
+    if evidence_plan_digest != scientific_evidence_plan.digest:
+        raise SimulationIntegrityError(
+            "Stored evidence digest differs from the verified ScientificEvidencePlan"
+        )
     _data_manifests(data_manifests)
     if (
         not isinstance(code_revision, str)
@@ -1090,6 +1119,8 @@ class SimulationInput:
     experiment_id: str
     temporal_validation_plan_digest: str
     scientific_evidence_plan_digest: str
+    temporal_validation_plan: ValidationPlan
+    scientific_evidence_plan: ScientificEvidencePlan
     data_manifests: tuple[DataManifestReference, ...]
     code_revision: str
     configuration_digest: str
@@ -1116,6 +1147,8 @@ class SimulationInput:
             self.experiment_id,
             self.temporal_validation_plan_digest,
             self.scientific_evidence_plan_digest,
+            self.temporal_validation_plan,
+            self.scientific_evidence_plan,
             self.data_manifests,
             self.code_revision,
             self.configuration_digest,
@@ -1149,8 +1182,8 @@ class SimulationInput:
 def build_simulation_input(
     *,
     experiment_id: str,
-    temporal_validation_plan_digest: str,
-    scientific_evidence_plan_digest: str,
+    temporal_validation_plan: ValidationPlan,
+    scientific_evidence_plan: ScientificEvidencePlan,
     data_manifests: Sequence[DataManifestReference],
     code_revision: str,
     configuration_digest: str,
@@ -1163,10 +1196,18 @@ def build_simulation_input(
     sealed_release_evidence_reference: str | None = None,
 ) -> SimulationInput:
     manifests = tuple(data_manifests)
+    if not isinstance(temporal_validation_plan, ValidationPlan):
+        raise SimulationContractError("A verified ValidationPlan is required")
+    if not isinstance(scientific_evidence_plan, ScientificEvidencePlan):
+        raise SimulationContractError("A verified ScientificEvidencePlan is required")
+    temporal_validation_plan_digest = temporal_validation_plan.digest
+    scientific_evidence_plan_digest = scientific_evidence_plan.digest
     _validate_input(
         experiment_id,
         temporal_validation_plan_digest,
         scientific_evidence_plan_digest,
+        temporal_validation_plan,
+        scientific_evidence_plan,
         manifests,
         code_revision,
         configuration_digest,
@@ -1201,6 +1242,8 @@ def build_simulation_input(
         experiment_id,
         temporal_validation_plan_digest,
         scientific_evidence_plan_digest,
+        temporal_validation_plan,
+        scientific_evidence_plan,
         ordered_manifests,
         code_revision,
         configuration_digest,

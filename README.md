@@ -33,9 +33,10 @@ REVIEW PASSED` at reviewed head
 `26f1a8a5d62651aad9d545725d3200bad4170500`, with
 metadata-only applicability, baseline, metric, statistical-method, robustness,
 multiple-testing binding, and scientific-report contracts. Item 9 is `IN
-PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS / REVIEW FIX` with
-metadata-only side-aware execution, cost, simulation-input, and fail-closed
-simulation-output contracts. Side rules are the execution-price authority;
+PROGRESS / FULL REVIEW FIX`; Item 9C is `COMPLETE / INDEPENDENT REVIEW PASSED`
+with metadata-only side-aware execution, cost, simulation-input, and fail-closed
+simulation-output contracts. The full-review fix cross-binds Items 9A–9C to the
+same supplied Item 8 FROZEN experiment and revision authority. Side rules are the execution-price authority;
 standard executable MARKET assumptions require BUY to ASK and SELL to BID. Item
 10 is `NOT STARTED`.
 No real data, connector, executed experiment,
