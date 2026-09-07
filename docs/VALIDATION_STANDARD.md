@@ -181,6 +181,25 @@ Execution assumptions must be appropriate to instrument, venue, sampling frequen
 
 If data cannot support a claimed execution model—for example, bar data used to infer queue position—the limitation must constrain the claim rather than be hidden behind optimistic assumptions.
 
+Item 9C represents this standard as canonical metadata contracts only. Execution
+plans distinguish bid, ask, midpoint, last-trade, indicative, and executable
+price semantics; assumed, measured, and empirically supported inputs; exact
+physical latency units; order/fill assumptions; data capabilities; and complete
+session, closure, and gap policies. Transaction-cost plans require explicit
+applicability for spread, commission, fees, financing, carry, rollover, slippage,
+latency impact, and partial-fill impact. Missing treatment never means zero.
+Midpoint or indicative pricing cannot claim executable-price realism, and exact
+queue realism requires full-depth queue-event capability. Executable pricing
+requires explicit rules for both order sides, and those rules are the
+authoritative execution-price policy rather than the non-authoritative reference
+source. A standard immediately executable MARKET assumption requires BUY to ASK
+and SELL to BID; LAST_TRADE is not a direct executable side quote for that
+policy. Resting, limit, or custom price semantics may use different side rules
+but must state their alternative rule and rationale. Custom price, order-type, and
+time-in-force vocabulary requires a description. Partial-fill suppression or a
+full-fill assumption requires an explicit rationale. These contracts do not read
+market data, calculate outputs, or mark Item 9B V6 as passed.
+
 ## Required reporting metrics
 
 Standard reports must include every applicable metric below. If a metric is not meaningful, mark it not applicable and state why; do not silently omit unfavorable metrics.
@@ -255,6 +274,17 @@ supporting evidence. Item 8 remains the sole lifecycle, evaluation, and decision
 authority. A sealed release reference is required before a report can represent
 sealed-OOS evidence, but Item 9B does not verify that Item 10 authorized the
 release and never dereferences the sealed reference.
+
+Item 9C simulation outputs are evidence envelopes rather than validation or
+experiment-state authority. They keep gross signal evidence, gross trading
+evidence, transaction costs, financing/carry, net performance, orders, and fills
+separate and retain warnings, limitations, and failures. Artifact references are
+claims with digest syntax only; Item 9C does not verify their bytes or semantics.
+Completed positive, negative, null, or inconclusive outcomes reject pending or
+failed evidence categories. Any pending category requires a pending overall
+outcome, and a pending outcome requires at least one pending category. A failed
+category requires a failed overall outcome and retained failure evidence.
+Reasoned non-applicability remains a completed disposition.
 
 ## Probability and calibration standard
 

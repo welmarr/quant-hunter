@@ -175,6 +175,15 @@ Every backtest and empirical result must be reproducible from configuration. A r
 
 If nondeterminism cannot be eliminated, quantify it by repeated runs and record its sources. Results that cannot be reproduced are not admissible evidence.
 
+Item 9C supplies deterministic input and output envelopes for a future executor.
+The input binds the exact Item 9A and Item 9B plan digests, data-manifest
+identities, code/configuration/environment identities, candidate reference,
+partition, execution and cost plan identities, and randomness declaration. The
+output separates evidence categories without computing them or changing the Item
+8 lifecycle. A digest identifies declared metadata; it does not prove that a
+future executor consumed the inputs, that an artifact was verified, or that Item
+10 authorized sealed access.
+
 ## Interpretation and decision discipline
 
 Research reports must distinguish estimated effect size from uncertainty, statistical significance from economic significance, gross from net performance, calibration from discrimination, and exploration from confirmation. Conclusions must be proportional to sample size and validation strength.

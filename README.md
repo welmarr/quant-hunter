@@ -27,14 +27,21 @@ permanent result/failure evidence, immutable result-object verification, and
 deterministic rerun-input resolution. Item 9 is in progress. Item 9A is
 `COMPLETE / INDEPENDENT REVIEW PASSED` at reviewed head
 `e19c693557fc4debe7a12746ae682e1113e404b1` and merged on main at
-`5636ad431b1c660233189a45ebfd6157308df7fa`. Item 9B is `IN PROGRESS / REVIEW
-FIX` with
+`5636ad431b1c660233189a45ebfd6157308df7fa`. Item 9B is `COMPLETE / INDEPENDENT
+REVIEW PASSED` at reviewed head
+`d828fb498de44df25d9fba908ac9a32868e6fbff`, merged on main at
+`26f1a8a5d62651aad9d545725d3200bad4170500`, with
 metadata-only applicability, baseline, metric, statistical-method, robustness,
-multiple-testing binding, and scientific-report contracts. Item 9C is not
-started.
+multiple-testing binding, and scientific-report contracts. Item 9 is `IN
+PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS / REVIEW FIX` with
+metadata-only side-aware execution, cost, simulation-input, and fail-closed
+simulation-output contracts. Side rules are the execution-price authority;
+standard executable MARKET assumptions require BUY to ASK and SELL to BID. Item
+10 is `NOT STARTED`.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
-portfolio logic, or live-trading capability exists.
+order matcher, fill simulator, transaction-cost calculator, portfolio logic, or
+live-trading capability exists.
 
 ## Documentation Map
 

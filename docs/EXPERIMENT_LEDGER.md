@@ -114,3 +114,8 @@ and selection retries remain solely in the append-only Item 8 experiment chain.
 The Item 9B binding does not by itself prove registry-chain verification or that
 an experiment executed the evidence plan. Its reports provide decision support
 without creating `EVALUATED` or `DECIDED` lifecycle state.
+
+Item 9C simulation inputs and outputs likewise remain non-authoritative evidence
+contracts. They reference an experiment and the exact Item 9A/9B plan identities
+without allocating or mutating an experiment. Simulation output cannot create
+`EVALUATED` or `DECIDED`; only the Item 8 append-only lifecycle may do so.
