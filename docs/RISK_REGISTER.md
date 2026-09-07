@@ -192,3 +192,21 @@ repository-governance action under RISK-024 before Stage 2; the public/private
 and licensing review remains required under RISK-023; and secret/dependency
 scanning remains required under RISK-011 before real credentials or connectors.
 Item 8C and this reconciliation add USD 0 direct cost. Item 9 remains unstarted.
+
+## Item 9A Temporal-Validation Evidence
+
+Full Item 8 passed independent review and is merged on main at
+`265d5f49e06f841a5e23fdf9ea177670bbfbc1e9`. Item 9A adds synthetic hostile
+coverage for exact UTC half-open intervals, chronological top-level partitions,
+explicit fold ordering, time-aware scheme vocabulary, purge and embargo
+evidence, deterministic canonical plan identity, and metadata-only sealed-OOS
+references. These controls further reduce the configuration portions of
+RISK-001, RISK-003, RISK-004, RISK-006, and RISK-010.
+
+Those risks remain `OPEN`. The contracts do not inspect labels or features,
+derive a sufficient purge/embargo interval, bind an executed experiment to a
+plan, run validation, or enforce the Item 10 access boundary. Actual gap sizing
+must later follow the registered label horizon, feature dependencies, and
+sampling structure. Item 9B, Item 9C, and Item 10 are not started. Item 9A adds
+USD 0 direct cost; RISK-013 and RISK-021 remain `OPEN` because the ChatGPT Pro
+charge and total Month-1 headroom remain unknown pending invoice reconciliation.
