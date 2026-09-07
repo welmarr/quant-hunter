@@ -35,8 +35,12 @@ multiple-testing authority without running scientific calculations or changing
 experiment state. Its V0–V9 assessments use the authoritative gate meanings,
 including V5 search adjustment. Pending evidence is narrative-only; pending or
 failed required evidence cannot support a validated report. Actual experiment
-execution, Item 9C, Item 10 sealed-release infrastructure, backtesting, strategies, broker/live
-execution, and later-stage systems remain absent.
+execution remains absent. Item 9C adds canonical, metadata-only execution and
+transaction-cost plans plus simulation input/output evidence envelopes. These
+interfaces cannot execute a strategy, match an order, generate a fill, calculate
+performance or cost, assess V6, or access sealed contents. Item 10 sealed-release
+infrastructure, executable backtesting, strategies, broker/live execution, and
+later-stage systems remain absent.
 The design must be modular, reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
@@ -67,7 +71,7 @@ quant-hunter/
 │   ├── experiments/
 │   ├── models/
 │   ├── patterns/
-│   ├── backtesting/
+│   ├── backtesting/          # Item 9C metadata-only simulation contracts
 │   ├── validation/           # Item 9A temporal and Item 9B evidence contracts
 │   ├── portfolio/
 │   ├── execution_costs/

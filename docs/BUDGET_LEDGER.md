@@ -80,6 +80,11 @@ evidence plans and reports. It adds no dependency, service, data,
 infrastructure, subscription, usage commitment, or incremental direct cost.
 The ChatGPT Pro charge, tax, proration, and Plus credit remain `UNKNOWN` pending
 invoice reconciliation; no amount is imputed.
+Item 9C reuses the same local canonicalization, hashing, identity, and validation
+dependencies for metadata-only execution, cost, and simulation evidence
+contracts. It adds no dependency, service, data, infrastructure, subscription,
+usage commitment, or incremental direct cost. ChatGPT Pro charge, tax,
+proration, and Plus credit remain `UNKNOWN` pending invoice reconciliation.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 

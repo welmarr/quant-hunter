@@ -214,25 +214,37 @@ Item 10 are not started. Item 9A adds
 USD 0 direct cost; RISK-013 and RISK-021 remain `OPEN` because the ChatGPT Pro
 charge and total Month-1 headroom remain unknown pending invoice reconciliation.
 
-## Item 9A Closure and Item 9B Scientific-Evidence Review Fix
+## Item 9A/9B Closure and Item 9C Simulation Interfaces
 
 Independent review passed Item 9A at reviewed head
 `e19c693557fc4debe7a12746ae682e1113e404b1`, merged on main at
 `5636ad431b1c660233189a45ebfd6157308df7fa`; final Ubuntu and Windows CI passed.
-Item 9B adds explicit applicability and reason-bearing omission controls for
-baselines, metrics, statistical methods, and robustness requirements. It also
+Independent review passed Item 9B at reviewed head
+`d828fb498de44df25d9fba908ac9a32868e6fbff`, merged on main at
+`26f1a8a5d62651aad9d545725d3200bad4170500`; final review and post-merge Ubuntu
+and Windows CI passed. Item 9B adds explicit applicability and reason-bearing
+omission controls for baselines, metrics, statistical methods, and robustness
+requirements. It also
 records study-specific conventions, exact numeric evidence, frozen
 multiple-testing references, unfavorable outcomes, limitations, failures, and
 the authoritative V0–V9 assessments, including V5 search adjustment. The review
 fix makes pending observations narrative-only and prevents pending or failed
 required evidence from contradicting a validated report, while retaining
-negative, null, inconclusive, and failed scientific records. These contracts further reduce the configuration and
-evidence-retention portions of RISK-001–003, RISK-006–008, RISK-010, RISK-011,
-and RISK-015.
+negative, null, inconclusive, and failed scientific records. These contracts
+further reduce the configuration and evidence-retention portions of RISK-001–003,
+RISK-006–008, RISK-010, RISK-011, and RISK-015.
 
-Those risks remain `OPEN`: Item 9B performs no statistical method, does not
-verify semantic correctness of artifact or release references, does not prove
-that an experiment executed its plan, and does not change Item 8 authority.
-Item 9C and Item 10 are not started. Item 9B adds USD 0 direct cost; RISK-013
+Item 9C adds fail-closed metadata for price quality, exact latency, order/fill
+assumptions, data capability, costs, sessions/gaps, and future evidence outputs.
+This reduces silent optimistic-assumption exposure in RISK-001, RISK-002,
+RISK-006, RISK-007, RISK-010, and RISK-011 without estimating or validating any
+result.
+
+Those risks remain `OPEN`: Item 9B performs no statistical method; Item 9C runs
+no simulator and calculates no execution result; and neither contract verifies
+external evidence semantics, proves that an experiment executed its plan, or
+changes Item 8 authority.
+Full Item 9 is `IN PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS /
+REVIEW`; Item 10 is `NOT STARTED`. Item 9C adds USD 0 direct cost; RISK-013
 and RISK-021 remain `OPEN` because the ChatGPT Pro charge and total Month-1
 headroom remain unknown pending invoice reconciliation.
