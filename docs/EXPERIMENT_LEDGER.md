@@ -95,9 +95,11 @@ A result is not complete until another controlled run can reproduce it from reco
 
 No experiments are registered yet. Independent review passed Item 8A at commit
 `79730f9ed54d6fcf9c8b33ad70af6181941c0b5e` and Item 8B at commit
-`747ae70b9b6d95179271d5770239347e24d6b2bd`. Item 8C adds only synthetic-tested
-evaluation, decision, evidence retention, and rerun resolution; it does not
-execute an experiment or release sealed data. Documentation work is not a
+`747ae70b9b6d95179271d5770239347e24d6b2bd`. Independent review passed Item 8C
+and full Item 8 at PR head `c80ca6d2dffba316239880cf6b3ce33c20ee6b2c`.
+Item 8C adds only synthetic-tested evaluation, decision, evidence retention,
+and rerun resolution; it does not execute an experiment or release sealed data.
+Documentation work is not a
 trading experiment, and no strategy experiment may begin until Stage 1 controls
 in `ROADMAP.md` exist and the work is explicitly authorized. Machine authority
 is the schema-validated JCS revision chain at
