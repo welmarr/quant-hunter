@@ -328,7 +328,35 @@ def test_contradictory_embargo_evidence_fails() -> None:
         )
 
 
-def test_embargo_consumed_by_another_fold_fails() -> None:
+def test_fold_local_purge_does_not_create_a_global_training_blackout() -> None:
+    first = ValidationFold(
+        fold_id="rolling-1",
+        sequence=1,
+        scheme=ValidationScheme.ROLLING_WINDOW,
+        training=interval("01", "08"),
+        validation=interval("10", "12"),
+        purge=GapEvidence.excluded(interval("08", "10")),
+        embargo=not_applicable(),
+    )
+    second = ValidationFold(
+        fold_id="rolling-2",
+        sequence=2,
+        scheme=ValidationScheme.ROLLING_WINDOW,
+        training=interval("02", "09"),
+        validation=interval("12", "14"),
+        purge=not_applicable(),
+        embargo=not_applicable(),
+    )
+
+    plan = build_validation_plan(
+        partitions(), ValidationScheme.ROLLING_WINDOW, (first, second)
+    )
+
+    assert plan.folds == (first, second)
+    plan.verify()
+
+
+def test_fold_local_embargo_does_not_create_a_global_validation_blackout() -> None:
     first, second = rolling_folds()
     first = replace(
         first,
@@ -336,10 +364,12 @@ def test_embargo_consumed_by_another_fold_fails() -> None:
     )
     second = replace(second, validation=interval("12", "14"))
 
-    with pytest.raises(TemporalValidationError, match="consumed by a fold"):
-        build_validation_plan(
-            partitions(), ValidationScheme.ROLLING_WINDOW, (first, second)
-        )
+    plan = build_validation_plan(
+        partitions(), ValidationScheme.ROLLING_WINDOW, (first, second)
+    )
+
+    assert plan.folds == (first, second)
+    plan.verify()
 
 
 def test_not_applicable_gap_evidence_requires_explicit_rationale() -> None:

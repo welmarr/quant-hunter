@@ -523,8 +523,21 @@ coverage. The temporal-validation module reached 99.36% coverage. The offline
 governed build produced both distributions; package, PyArrow, and new validation
 imports returned `0.1.0`, `25.0.1`, `ValidationPlan`, and `ROLLING_WINDOW`.
 Archive inspection found 110 combined members, included the temporal module in
-both artifacts, and excluded `.tools/` and `.venv/` paths. Item 9 is `IN
-PROGRESS`; Item 9A is `IN PROGRESS / REVIEW`. Item 9B, Item 9C, and Item 10 are
-not started. No new dependency or incremental direct cost was added, and the
-owner-reported ChatGPT Pro amount remains unknown pending invoice
-reconciliation.
+both artifacts, and excluded `.tools/` and `.venv/` paths.
+
+The Item 9A review fix removes the unsupported global-blackout interpretation
+of fold-local purge and embargo evidence. An exact exclusion remains locally
+bound to its fold and must remain coherent with that fold's boundary; overlap
+with another otherwise-valid fold does not itself invalidate the plan. Actual
+dataset membership and sufficient exclusion sizes require a later authorized
+execution layer with registered temporal dependencies.
+
+The locked Windows review-fix gate passed: `uv lock --check`; Ruff format over
+58 files; Ruff lint; strict mypy over 35 source files; and 488 pytest cases with
+91.51% combined statement/branch coverage. The corrected temporal-validation
+module reached 99.34% coverage.
+
+Item 9 is `IN PROGRESS`; Item 9A is `IN PROGRESS / REVIEW FIX`. Item 9B, Item
+9C, and Item 10 are not started. No new dependency or incremental direct cost
+was added, and the owner-reported ChatGPT Pro amount remains unknown pending
+invoice reconciliation.

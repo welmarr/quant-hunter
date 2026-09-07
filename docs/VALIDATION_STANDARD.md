@@ -60,9 +60,12 @@ Random cross-validation is not an acceptable default for market time series. Use
 
 Item 9A represents purge and embargo evidence as exact excluded intervals, or as
 an explicit reason that the control is not applicable. This configuration
-contract does not determine a scientifically sufficient gap. A later authorized
-execution layer must derive and verify the actual purge and embargo extent from
-the registered label horizon, feature dependencies, and sampling structure.
+evidence is local to its declared fold; it does not establish a global blackout
+for other folds. This configuration contract neither determines a scientifically
+sufficient gap nor resolves actual observation membership. A later authorized
+execution layer must derive and verify effective training exclusions and the
+actual purge and embargo extent from the registered label horizon, temporal
+feature dependencies, and sampling structure.
 
 ### Access control
 

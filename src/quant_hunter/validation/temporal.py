@@ -161,7 +161,7 @@ class ChronologicalPartitions:
 
 @dataclass(frozen=True, slots=True)
 class GapEvidence:
-    """Exact excluded interval or explicit rationale that a gap is not applicable."""
+    """Fold-local exact interval or rationale that a gap is not applicable."""
 
     disposition: GapDisposition
     interval: TemporalInterval | None = None
@@ -208,7 +208,7 @@ class GapEvidence:
 
 @dataclass(frozen=True, slots=True)
 class ValidationFold:
-    """One explicitly sequenced temporal fold with purge and embargo evidence."""
+    """One explicitly sequenced fold with local purge and embargo evidence."""
 
     fold_id: str
     sequence: int
@@ -362,6 +362,9 @@ def _validate_fold_sequence(
                 partitions.sealed_out_of_sample
             ):
                 raise TemporalValidationError("Gap evidence consumes sealed OOS")
+
+    # Gap evidence is fold-local. Cross-fold membership requires label and feature
+    # dependency information that this metadata-only contract does not possess.
     for previous, current in pairwise(folds):
         if previous.validation.end_key > current.validation.start_key:
             raise TemporalValidationError("Validation folds run backward or overlap")
@@ -377,18 +380,6 @@ def _validate_fold_sequence(
             raise TemporalValidationError(
                 "Expanding training windows must share a start"
             )
-
-    included_intervals = tuple(
-        interval for fold in folds for interval in (fold.training, fold.validation)
-    )
-    for fold in folds:
-        for evidence in (fold.purge, fold.embargo):
-            if evidence.interval is not None and any(
-                evidence.interval.overlaps(included) for included in included_intervals
-            ):
-                raise TemporalValidationError(
-                    "Excluded purge or embargo interval is consumed by a fold"
-                )
 
 
 def build_validation_plan(

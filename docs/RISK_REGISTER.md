@@ -203,10 +203,13 @@ evidence, deterministic canonical plan identity, and metadata-only sealed-OOS
 references. These controls further reduce the configuration portions of
 RISK-001, RISK-003, RISK-004, RISK-006, and RISK-010.
 
-Those risks remain `OPEN`. The contracts do not inspect labels or features,
+Those risks remain `OPEN`. Purge and embargo evidence applies only to its
+declared fold and creates no inferred global exclusion across other folds. The
+contracts do not inspect labels or features, resolve actual dataset membership,
 derive a sufficient purge/embargo interval, bind an executed experiment to a
-plan, run validation, or enforce the Item 10 access boundary. Actual gap sizing
-must later follow the registered label horizon, feature dependencies, and
-sampling structure. Item 9B, Item 9C, and Item 10 are not started. Item 9A adds
+plan, run validation, or enforce the Item 10 access boundary. Effective training
+exclusions and gap sizing must later follow the registered label horizon,
+temporal feature dependencies, and sampling structure. Item 9B, Item 9C, and
+Item 10 are not started. Item 9A adds
 USD 0 direct cost; RISK-013 and RISK-021 remain `OPEN` because the ChatGPT Pro
 charge and total Month-1 headroom remain unknown pending invoice reconciliation.

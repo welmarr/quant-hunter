@@ -24,8 +24,8 @@ item 7 is complete after independent review passed commit
 after independent review and is merged on main at
 `265d5f49e06f841a5e23fdf9ea177670bbfbc1e9`. It provides the governed lifecycle through `DECIDED`,
 permanent result/failure evidence, immutable result-object verification, and
-deterministic rerun-input resolution. Item 9 is in progress. Item 9A is in
-review with immutable, metadata-only contracts for exact UTC intervals,
+deterministic rerun-input resolution. Item 9 is in progress. Item 9A is `IN
+PROGRESS / REVIEW FIX` with immutable, metadata-only contracts for exact UTC intervals,
 chronological partitions, explicit time-aware folds, and purge/embargo evidence.
 Items 9B and 9C are not started.
 No real data, connector, executed experiment,
