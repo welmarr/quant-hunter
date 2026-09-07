@@ -191,7 +191,8 @@ remain Stage 1B audit work under RISK-018. Main branch protection remains a
 repository-governance action under RISK-024 before Stage 2; the public/private
 and licensing review remains required under RISK-023; and secret/dependency
 scanning remains required under RISK-011 before real credentials or connectors.
-Item 8C and this reconciliation add USD 0 direct cost. Item 9 remains unstarted.
+Item 8C and that reconciliation added USD 0 direct cost. At that review
+point, Item 9 remained unstarted.
 
 ## Item 9A Temporal-Validation Evidence
 
@@ -209,8 +210,8 @@ contracts do not inspect labels or features, resolve actual dataset membership,
 derive a sufficient purge/embargo interval, bind an executed experiment to a
 plan, run validation, or enforce the Item 10 access boundary. Effective training
 exclusions and gap sizing must later follow the registered label horizon,
-temporal feature dependencies, and sampling structure. Item 9B, Item 9C, and
-Item 10 are not started. Item 9A adds
+temporal feature dependencies, and sampling structure. At the Item 9A review
+point, Items 9B, 9C, and 10 had not started. Item 9A added
 USD 0 direct cost; RISK-013 and RISK-021 remain `OPEN` because the ChatGPT Pro
 charge and total Month-1 headroom remain unknown pending invoice reconciliation.
 
@@ -248,7 +249,12 @@ Those risks remain `OPEN`: Item 9B performs no statistical method; Item 9C runs
 no simulator and calculates no execution result; and neither contract verifies
 external evidence semantics, proves that an experiment executed its plan, or
 changes Item 8 authority.
-Full Item 9 is `IN PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS /
-REVIEW FIX`; Item 10 is `NOT STARTED`. Item 9C adds USD 0 direct cost; RISK-013
+DEC-0028 reduces cross-object identity inconsistency by exactly matching Item 9A
+partitions to supplied FROZEN metadata, requiring Item 9B temporal and
+multiple-testing bindings to share one experiment and revision, and deriving Item
+9C plan digests from verified objects. It does not verify the registry chain,
+consume a plan, access sealed contents, or close the underlying risks.
+Item 9C is `COMPLETE / INDEPENDENT REVIEW PASSED`. Full Item 9 is `IN PROGRESS /
+FULL REVIEW FIX` pending independent re-audit; Item 10 is `NOT STARTED`. Item 9C adds USD 0 direct cost; RISK-013
 and RISK-021 remain `OPEN` because the ChatGPT Pro charge and total Month-1
 headroom remain unknown pending invoice reconciliation.

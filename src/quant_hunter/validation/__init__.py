@@ -35,6 +35,7 @@ from quant_hunter.validation.evidence import (
 from quant_hunter.validation.temporal import (
     INTERVAL_BOUNDARY_SEMANTICS,
     ChronologicalPartitions,
+    FrozenTemporalValidationBinding,
     GapDisposition,
     GapEvidence,
     TemporalInterval,
@@ -43,6 +44,7 @@ from quant_hunter.validation.temporal import (
     ValidationFold,
     ValidationPlan,
     ValidationScheme,
+    bind_frozen_temporal_validation,
     build_validation_plan,
 )
 
@@ -58,6 +60,7 @@ __all__ = [
     "EvidenceOutcome",
     "ExactNumericEvidence",
     "FrozenMultipleTestingBinding",
+    "FrozenTemporalValidationBinding",
     "GapDisposition",
     "GapEvidence",
     "GateAssessment",
@@ -85,6 +88,7 @@ __all__ = [
     "ValidationPlan",
     "ValidationScheme",
     "bind_frozen_multiple_testing",
+    "bind_frozen_temporal_validation",
     "build_scientific_evidence_plan",
     "build_scientific_evidence_report",
     "build_validation_plan",

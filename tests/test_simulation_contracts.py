@@ -10,6 +10,16 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from item9_test_support import (
+    FROZEN_DIGEST,
+    OTHER_EXPERIMENT_ID,
+    OTHER_FROZEN_DIGEST,
+    frozen_record,
+    multiple_testing_binding,
+    scientific_evidence_plan,
+    temporal_binding,
+    validation_plan,
+)
 
 import quant_hunter.backtesting as backtesting
 from quant_hunter.backtesting import (
@@ -53,9 +63,19 @@ from quant_hunter.backtesting import (
     build_simulation_output,
     build_transaction_cost_plan,
 )
+from quant_hunter.config import JsonRecord
 from quant_hunter.provenance import DataManifestReference
 from quant_hunter.provenance.hashing import DigestMismatchError
-from quant_hunter.validation import Applicability, EvidenceOutcome, PartitionRole
+from quant_hunter.validation import (
+    Applicability,
+    EvidenceOutcome,
+    FrozenTemporalValidationBinding,
+    PartitionRole,
+    ScientificEvidenceError,
+    ScientificEvidencePlan,
+    TemporalValidationError,
+    ValidationPlan,
+)
 
 EXPERIMENT_ID = "EXP-01990f30-7f5e-7b34-9b21-3d74c513c848"
 DIGEST_A = "sha256:" + "a" * 64
@@ -196,11 +216,14 @@ def simulation_input(
     partition_role: PartitionRole = PartitionRole.VALIDATION,
     release_reference: str | None = None,
     manifests: tuple[DataManifestReference, ...] | None = None,
+    experiment_id: str = EXPERIMENT_ID,
+    temporal_plan: ValidationPlan | None = None,
+    evidence_plan: ScientificEvidencePlan | None = None,
 ) -> SimulationInput:
     return build_simulation_input(
-        experiment_id=EXPERIMENT_ID,
-        temporal_validation_plan_digest=DIGEST_A,
-        scientific_evidence_plan_digest=DIGEST_B,
+        experiment_id=experiment_id,
+        temporal_validation_plan=temporal_plan or validation_plan(),
+        scientific_evidence_plan=evidence_plan or scientific_evidence_plan(),
         data_manifests=manifests
         or (
             DataManifestReference("manifest://synthetic/a", DIGEST_A),
@@ -606,8 +629,12 @@ def test_session_closure_and_gap_policies_cannot_disappear() -> None:
 def test_simulation_input_binds_exact_item_9a_and_item_9b_digests() -> None:
     simulation = simulation_input()
 
-    assert simulation.document["temporal_validation_plan_digest"] == DIGEST_A
-    assert simulation.document["scientific_evidence_plan_digest"] == DIGEST_B
+    assert simulation.document["temporal_validation_plan_digest"] == (
+        simulation.temporal_validation_plan.digest
+    )
+    assert simulation.document["scientific_evidence_plan_digest"] == (
+        simulation.scientific_evidence_plan.digest
+    )
     assert simulation.document["execution_assumption_plan_digest"] == (
         simulation.execution_plan.digest
     )
@@ -636,7 +663,7 @@ def test_typed_field_and_canonical_integrity_tampering_fails() -> None:
         replace(execution, canonical_bytes=execution.canonical_bytes + b" ").verify()
 
     simulation = simulation_input()
-    with pytest.raises(SimulationIntegrityError, match="typed fields"):
+    with pytest.raises(SimulationIntegrityError, match="Stored temporal digest"):
         replace(simulation, temporal_validation_plan_digest=DIGEST_C).verify()
 
 
@@ -893,3 +920,242 @@ def test_no_execution_engine_or_broker_entry_point_exists() -> None:
     }
 
     assert forbidden.isdisjoint(vars(backtesting))
+
+
+@pytest.mark.parametrize(
+    ("partition", "boundary", "changed_value"),
+    [
+        ("training", "end", "2020-01-09T00:00:00Z"),
+        ("validation", "start", "2020-01-11T00:00:00Z"),
+        ("sealed_out_of_sample", "end", "2020-01-29T00:00:00Z"),
+    ],
+)
+def test_frozen_temporal_binding_rejects_each_partition_mismatch(
+    partition: str,
+    boundary: str,
+    changed_value: str,
+) -> None:
+    record = frozen_record()
+    partition_values = cast(JsonRecord, record["partitions"])
+    interval_values = cast(JsonRecord, partition_values[partition])
+    interval_values[boundary] = changed_value
+
+    with pytest.raises(TemporalValidationError, match=partition):
+        temporal_binding(record=record)
+
+
+def test_frozen_temporal_binding_requires_complete_frozen_authority() -> None:
+    nonfrozen = frozen_record()
+    nonfrozen["lifecycle_status"] = "RUNNING"
+    with pytest.raises(TemporalValidationError, match="requires FROZEN"):
+        temporal_binding(record=nonfrozen)
+
+    malformed_id = frozen_record()
+    malformed_id["experiment_id"] = "EXP-not-a-uuid"
+    with pytest.raises(ValueError, match="Malformed typed"):
+        temporal_binding(record=malformed_id)
+
+    incomplete = frozen_record()
+    cast(JsonRecord, incomplete["partitions"]).pop("validation")
+    with pytest.raises(TemporalValidationError, match="structurally incomplete"):
+        temporal_binding(record=incomplete)
+
+    with pytest.raises(ValueError, match="sha256"):
+        temporal_binding(frozen_revision_digest="sha256:not-a-digest")
+
+
+def test_frozen_temporal_binding_compares_exact_boundary_strings() -> None:
+    record = frozen_record()
+    partitions = cast(JsonRecord, record["partitions"])
+    training = cast(JsonRecord, partitions["training"])
+    training["start"] = "2020-01-01T00:00:00.0Z"
+
+    with pytest.raises(TemporalValidationError, match="training"):
+        temporal_binding(record=record)
+
+
+def test_coherent_frozen_item9_chain_passes_and_retains_identities() -> None:
+    record = frozen_record()
+    temporal = temporal_binding(record=record)
+    multiple = multiple_testing_binding(record=record)
+    evidence = scientific_evidence_plan(
+        temporal=temporal,
+        multiple_testing=multiple,
+    )
+    simulation = simulation_input(
+        temporal_plan=temporal.validation_plan,
+        evidence_plan=evidence,
+    )
+
+    temporal.verify()
+    evidence.verify()
+    simulation.verify()
+    assert temporal.experiment_id == EXPERIMENT_ID
+    assert temporal.frozen_revision_digest == FROZEN_DIGEST
+    assert temporal.temporal_validation_plan_digest == temporal.validation_plan.digest
+    assert evidence.temporal_validation_plan_digest == temporal.validation_plan.digest
+    assert simulation.temporal_validation_plan_digest == temporal.validation_plan.digest
+    assert simulation.scientific_evidence_plan_digest == evidence.digest
+    assert evidence.document["temporal_validation"] == temporal.document()
+    assert temporal.document()["registry_chain_verified"] is False
+    assert temporal.document()["sealed_reference_dereferenced"] is False
+    assert simulation.document["input_consumption_verified"] is False
+
+
+def test_evidence_rejects_temporal_and_multiple_testing_experiment_mismatch() -> None:
+    other_record = frozen_record(experiment_id=OTHER_EXPERIMENT_ID)
+    with pytest.raises(ScientificEvidenceError, match="multiple-testing binding"):
+        scientific_evidence_plan(
+            temporal=temporal_binding(),
+            multiple_testing=multiple_testing_binding(record=other_record),
+        )
+
+
+def test_evidence_rejects_different_frozen_revision_bindings() -> None:
+    with pytest.raises(ScientificEvidenceError, match="different frozen revisions"):
+        scientific_evidence_plan(
+            temporal=temporal_binding(frozen_revision_digest=FROZEN_DIGEST),
+            multiple_testing=multiple_testing_binding(
+                frozen_revision_digest=OTHER_FROZEN_DIGEST
+            ),
+        )
+
+
+def test_evidence_cannot_accept_unbound_temporal_digest() -> None:
+    with pytest.raises(ScientificEvidenceError, match="binding is required"):
+        scientific_evidence_plan(
+            temporal=cast(FrozenTemporalValidationBinding, DIGEST_C)
+        )
+
+
+def test_evidence_rejects_temporal_digest_tampering() -> None:
+    evidence = scientific_evidence_plan()
+
+    with pytest.raises(ScientificEvidenceError, match="temporal digest"):
+        replace(evidence, temporal_validation_plan_digest=DIGEST_C).verify()
+
+
+def test_simulation_rejects_evidence_for_another_experiment() -> None:
+    other_record = frozen_record(experiment_id=OTHER_EXPERIMENT_ID)
+    other_temporal = temporal_binding(record=other_record)
+    other_evidence = scientific_evidence_plan(
+        experiment_id=OTHER_EXPERIMENT_ID,
+        temporal=other_temporal,
+        multiple_testing=multiple_testing_binding(record=other_record),
+    )
+
+    with pytest.raises(SimulationContractError, match="Simulation experiment"):
+        simulation_input(
+            experiment_id=EXPERIMENT_ID,
+            temporal_plan=other_temporal.validation_plan,
+            evidence_plan=other_evidence,
+        )
+
+
+def test_simulation_rejects_evidence_bound_to_different_validation_plan() -> None:
+    plan_b = validation_plan(sealed_reference="sealed://synthetic/other-holdout")
+    temporal_b = temporal_binding(plan=plan_b)
+    evidence_b = scientific_evidence_plan(temporal=temporal_b)
+
+    with pytest.raises(SimulationContractError, match="different ValidationPlan"):
+        simulation_input(
+            temporal_plan=validation_plan(),
+            evidence_plan=evidence_b,
+        )
+
+
+def test_nested_plan_digest_tampering_fails_simulation_verification() -> None:
+    simulation = simulation_input()
+    tampered_temporal = replace(
+        simulation.temporal_validation_plan,
+        digest=OTHER_FROZEN_DIGEST,
+    )
+    with pytest.raises(DigestMismatchError):
+        replace(simulation, temporal_validation_plan=tampered_temporal).verify()
+
+    tampered_evidence = replace(
+        simulation.scientific_evidence_plan,
+        digest=OTHER_FROZEN_DIGEST,
+    )
+    with pytest.raises(DigestMismatchError):
+        replace(simulation, scientific_evidence_plan=tampered_evidence).verify()
+
+
+def test_cross_bound_identity_is_deterministic_for_unordered_inputs() -> None:
+    temporal = temporal_binding()
+    multiple = multiple_testing_binding()
+    normal_evidence = scientific_evidence_plan(
+        temporal=temporal,
+        multiple_testing=multiple,
+    )
+    permuted_evidence = scientific_evidence_plan(
+        temporal=temporal,
+        multiple_testing=multiple,
+        reverse_unordered_inputs=True,
+    )
+
+    assert normal_evidence.canonical_bytes == permuted_evidence.canonical_bytes
+    assert normal_evidence.digest == permuted_evidence.digest
+    normal_input = simulation_input(
+        temporal_plan=temporal.validation_plan,
+        evidence_plan=normal_evidence,
+    )
+    permuted_input = simulation_input(
+        temporal_plan=temporal.validation_plan,
+        evidence_plan=permuted_evidence,
+        manifests=tuple(reversed(normal_input.data_manifests)),
+    )
+    assert normal_input.canonical_bytes == permuted_input.canonical_bytes
+    assert normal_input.digest == permuted_input.digest
+
+
+def test_full_cross_binding_chain_never_accesses_sealed_contents(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sealed_reference = str(tmp_path / "sealed" / "holdout.parquet")
+
+    def reject_access(*args: object, **kwargs: object) -> object:
+        raise AssertionError("Item 9 cross-binding attempted sealed filesystem access")
+
+    monkeypatch.setattr(builtins, "open", reject_access)
+    monkeypatch.setattr(Path, "open", reject_access)
+    monkeypatch.setattr(Path, "read_bytes", reject_access)
+    monkeypatch.setattr(Path, "stat", reject_access)
+    monkeypatch.setattr(Path, "iterdir", reject_access)
+    monkeypatch.setattr(os, "stat", reject_access)
+    monkeypatch.setattr(os, "listdir", reject_access)
+
+    temporal = temporal_binding(plan=validation_plan(sealed_reference=sealed_reference))
+    evidence = scientific_evidence_plan(temporal=temporal)
+    simulation = simulation_input(
+        partition_role=PartitionRole.SEALED_OUT_OF_SAMPLE,
+        release_reference=sealed_reference,
+        temporal_plan=temporal.validation_plan,
+        evidence_plan=evidence,
+    )
+
+    temporal.verify()
+    evidence.verify()
+    simulation.verify()
+    assert simulation.document["item_10_authorization_verified"] is False
+    assert simulation.document["input_consumption_verified"] is False
+
+
+@pytest.mark.parametrize(
+    ("temporal_plan", "evidence_plan", "message"),
+    [
+        (cast(ValidationPlan, object()), None, "ValidationPlan"),
+        (None, cast(ScientificEvidencePlan, object()), "ScientificEvidencePlan"),
+    ],
+)
+def test_simulation_requires_verified_item9_plan_objects(
+    temporal_plan: ValidationPlan | None,
+    evidence_plan: ScientificEvidencePlan | None,
+    message: str,
+) -> None:
+    with pytest.raises(SimulationContractError, match=message):
+        simulation_input(
+            temporal_plan=temporal_plan,
+            evidence_plan=evidence_plan,
+        )

@@ -275,6 +275,14 @@ authority. A sealed release reference is required before a report can represent
 sealed-OOS evidence, but Item 9B does not verify that Item 10 authorized the
 release and never dereferences the sealed reference.
 
+Under DEC-0028, a temporal binding compares exact Item 8 FROZEN training,
+validation, and sealed-out-of-sample boundary strings with a verified Item 9A
+plan. Item 9B requires that binding and its multiple-testing binding to identify
+the same experiment and frozen revision. Item 9C accepts verified Item 9A and 9B
+objects and derives their plan digests, rejecting unrelated temporal or experiment
+identities. These digest bindings prove declared identity only; they do not prove
+registry-chain verification, plan consumption, evaluation, or sealed release.
+
 Item 9C simulation outputs are evidence envelopes rather than validation or
 experiment-state authority. They keep gross signal evidence, gross trading
 evidence, transaction costs, financing/carry, net performance, orders, and fills

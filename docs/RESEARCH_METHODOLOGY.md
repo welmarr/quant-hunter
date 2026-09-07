@@ -175,9 +175,12 @@ Every backtest and empirical result must be reproducible from configuration. A r
 
 If nondeterminism cannot be eliminated, quantify it by repeated runs and record its sources. Results that cannot be reproduced are not admissible evidence.
 
+DEC-0028 requires a verified temporal binding to match exact Item 8 FROZEN
+partition strings before an Item 9B plan can be built. The Item 9B temporal and
+multiple-testing bindings must identify the same experiment and frozen revision.
 Item 9C supplies deterministic input and output envelopes for a future executor.
-The input binds the exact Item 9A and Item 9B plan digests, data-manifest
-identities, code/configuration/environment identities, candidate reference,
+The input derives the exact Item 9A and Item 9B plan digests from verified objects
+and also binds data-manifest identities, code/configuration/environment identities, candidate reference,
 partition, execution and cost plan identities, and randomness declaration. The
 output separates evidence categories without computing them or changing the Item
 8 lifecycle. A digest identifies declared metadata; it does not prove that a

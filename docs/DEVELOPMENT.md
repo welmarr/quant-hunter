@@ -613,7 +613,36 @@ simulation input, and simulation output imports succeeded. Archive inspection
 found 118 combined members, included the Item 9C contracts in both artifacts,
 and excluded `.tools/` and `.venv/` paths.
 
-Item 9 is `IN PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS / REVIEW FIX`;
-Item 10 is `NOT STARTED`. No new dependency or incremental direct cost was added, and
+Item 9C is `COMPLETE / INDEPENDENT REVIEW PASSED` at reviewed head
+`97141bce973258f4393314f4205702eed2f5a67c`, squash-merged on main at
+`529f401b5b75e9b213067abb00bbaa1c633b7ac8`. Full Item 9 is `IN PROGRESS / FULL
+REVIEW FIX`; Item 10 is `NOT STARTED`. No new dependency or incremental direct cost was added, and
 the owner-reported ChatGPT Pro amount remains unknown pending invoice
 reconciliation.
+
+
+## Stage 1B Full Item 9 cross-binding review fix
+
+DEC-0028 adds a metadata-only `FrozenTemporalValidationBinding` that verifies an
+Item 9A plan and exactly compares its partition boundary strings with supplied
+Item 8 FROZEN metadata. Scientific-evidence plans derive the temporal digest from
+that binding and require it to share the experiment and frozen-revision identity
+of the existing multiple-testing binding. Simulation inputs accept verified Item
+9A and Item 9B objects and derive their canonical digests. Canonical inputs still
+state that consumption, execution, and Item 10 authorization are unverified.
+
+Hostile tests reject mismatched training, validation, and sealed boundaries;
+malformed frozen authority; cross-experiment and cross-revision bindings;
+unbound or tampered plan digests; and unrelated Item 9A/9B objects. Sealed
+references remain metadata-only under patched file, stat, and directory-listing
+operations. The final locked Windows gate passed with `630` tests and
+`91.03%` combined statement/branch coverage; the temporal, evidence,
+and simulation contract modules reached `95.29%`,
+`98.70%`, and `83.67%`, respectively. The governed
+offline build/import/archive checks also passed.
+
+Full Item 9 remains `IN PROGRESS / FULL REVIEW FIX` pending independent re-audit.
+Item 10 is `NOT STARTED`. This fix performs no statistical calculation, split,
+evaluation, simulation, experiment execution, registry-chain verification, or
+sealed-content access. No new dependency or incremental direct cost was added;
+the ChatGPT Pro charge remains unknown pending invoice reconciliation.

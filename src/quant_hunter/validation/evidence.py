@@ -20,6 +20,7 @@ from quant_hunter.provenance.hashing import (
     sha256_bytes,
     verify_sha256_bytes,
 )
+from quant_hunter.validation.temporal import FrozenTemporalValidationBinding
 
 _DECLARATION_ID: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _NORMALIZED_DECIMAL: Final = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:[.][0-9]+)?$")
@@ -648,6 +649,7 @@ def _ids(values: Sequence[object]) -> tuple[str, ...]:
 def _validate_plan_inputs(
     experiment_id: object,
     temporal_validation_plan_digest: object,
+    temporal_validation: object,
     baselines: tuple[BaselineDeclaration, ...],
     metrics: tuple[MetricDeclaration, ...],
     methods: tuple[StatisticalMethodDeclaration, ...],
@@ -661,6 +663,20 @@ def _validate_plan_inputs(
     if not isinstance(temporal_validation_plan_digest, str):
         raise ScientificEvidenceError("Temporal validation plan digest is malformed")
     require_sha256_digest(temporal_validation_plan_digest)
+    if not isinstance(temporal_validation, FrozenTemporalValidationBinding):
+        raise ScientificEvidenceError("Frozen temporal-validation binding is required")
+    temporal_validation.verify()
+    if temporal_validation.experiment_id != experiment_id:
+        raise ScientificEvidenceError(
+            "Evidence plan experiment contradicts its temporal binding"
+        )
+    if (
+        temporal_validation_plan_digest
+        != temporal_validation.temporal_validation_plan_digest
+    ):
+        raise ScientificEvidenceError(
+            "Evidence plan temporal digest contradicts its temporal binding"
+        )
     if not isinstance(conventions, ReportingConventions):
         raise ScientificEvidenceError("Reporting conventions must be explicit")
     if not isinstance(binding, FrozenMultipleTestingBinding):
@@ -668,7 +684,15 @@ def _validate_plan_inputs(
     binding._validate_shape()
     if binding.experiment_id != experiment_id:
         raise ScientificEvidenceError(
-            "Evidence plan experiment contradicts its binding"
+            "Evidence plan experiment contradicts its multiple-testing binding"
+        )
+    if binding.experiment_id != temporal_validation.experiment_id:
+        raise ScientificEvidenceError(
+            "Temporal and multiple-testing bindings reference different experiments"
+        )
+    if binding.frozen_revision_digest != temporal_validation.frozen_revision_digest:
+        raise ScientificEvidenceError(
+            "Temporal and multiple-testing bindings reference different frozen revisions"
         )
     typed_groups: tuple[tuple[Sequence[object], type[object], str], ...] = (
         (baselines, BaselineDeclaration, "baseline"),
@@ -728,6 +752,7 @@ def _validate_plan_inputs(
 def _plan_document(
     experiment_id: str,
     temporal_validation_plan_digest: str,
+    temporal_validation: FrozenTemporalValidationBinding,
     baselines: tuple[BaselineDeclaration, ...],
     metrics: tuple[MetricDeclaration, ...],
     methods: tuple[StatisticalMethodDeclaration, ...],
@@ -744,6 +769,7 @@ def _plan_document(
         "plan_type": "SCIENTIFIC_EVIDENCE_PLAN",
         "experiment_id": experiment_id,
         "temporal_validation_plan_digest": temporal_validation_plan_digest,
+        "temporal_validation": temporal_validation.document(),
         "multiple_testing": binding.document(),
         "reporting_conventions": conventions.document(),
         "baselines": baseline_values,
@@ -759,6 +785,7 @@ class ScientificEvidencePlan:
 
     experiment_id: str
     temporal_validation_plan_digest: str
+    temporal_validation: FrozenTemporalValidationBinding
     baselines: tuple[BaselineDeclaration, ...]
     metrics: tuple[MetricDeclaration, ...]
     statistical_methods: tuple[StatisticalMethodDeclaration, ...]
@@ -782,6 +809,7 @@ class ScientificEvidencePlan:
         _validate_plan_inputs(
             self.experiment_id,
             self.temporal_validation_plan_digest,
+            self.temporal_validation,
             self.baselines,
             self.metrics,
             self.statistical_methods,
@@ -792,6 +820,7 @@ class ScientificEvidencePlan:
         expected = _plan_document(
             self.experiment_id,
             self.temporal_validation_plan_digest,
+            self.temporal_validation,
             self.baselines,
             self.metrics,
             self.statistical_methods,
@@ -808,7 +837,7 @@ class ScientificEvidencePlan:
 def build_scientific_evidence_plan(
     *,
     experiment_id: str,
-    temporal_validation_plan_digest: str,
+    temporal_validation: FrozenTemporalValidationBinding,
     baselines: Sequence[BaselineDeclaration],
     metrics: Sequence[MetricDeclaration],
     statistical_methods: Sequence[StatisticalMethodDeclaration],
@@ -821,9 +850,15 @@ def build_scientific_evidence_plan(
     metric_values = tuple(metrics)
     method_values = tuple(statistical_methods)
     robustness_values = tuple(robustness_requirements)
+    if not isinstance(temporal_validation, FrozenTemporalValidationBinding):
+        raise ScientificEvidenceError("Frozen temporal-validation binding is required")
+    temporal_validation_plan_digest = (
+        temporal_validation.temporal_validation_plan_digest
+    )
     _validate_plan_inputs(
         experiment_id,
         temporal_validation_plan_digest,
+        temporal_validation,
         baseline_values,
         metric_values,
         method_values,
@@ -846,6 +881,7 @@ def build_scientific_evidence_plan(
     document = _plan_document(
         experiment_id,
         temporal_validation_plan_digest,
+        temporal_validation,
         ordered_baselines,
         ordered_metrics,
         ordered_methods,
@@ -857,6 +893,7 @@ def build_scientific_evidence_plan(
     plan = ScientificEvidencePlan(
         experiment_id,
         temporal_validation_plan_digest,
+        temporal_validation,
         ordered_baselines,
         ordered_metrics,
         ordered_methods,

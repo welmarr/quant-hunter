@@ -413,3 +413,18 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** `VALIDATION_STANDARD.md`; `RESEARCH_METHODOLOGY.md`; `EXPERIMENT_LEDGER.md`; `ARCHITECTURE.md`; `ROADMAP.md` Item 9; `src/quant_hunter/backtesting/contracts.py`; `tests/test_simulation_contracts.py`.
 - **Supersedes / superseded by:** Extends DEC-0025 and DEC-0026 without changing their authorities. Full Item 9 remains pending independent cross-item review. Item 10 remains separately gated and unstarted.
 - **Owner and approver:** Project owner through explicit Stage 1B Item 9C authorization dated 2026-09-07.
+
+
+### DEC-0028 — Cross-Bind Item 9 Plans to Frozen Experiment Authority
+
+- **Date:** 2026-09-07
+- **Status:** ACCEPTED
+- **Scope:** scientific identity / validation / reproducibility
+- **Context:** Independently valid Item 8, Item 9A, Item 9B, and Item 9C digests could be combined while referring to different experiments, FROZEN revisions, or temporal partitions. Full Item 9 review requires one structural identity chain without authorizing execution.
+- **Decision:** Item 8 FROZEN experiment partitions remain authoritative. Add an immutable metadata-only binding that verifies an Item 9A ValidationPlan and exactly compares its training/development, validation, and sealed-out-of-sample boundary strings with supplied FROZEN metadata. Item 9B must derive its temporal digest from that binding, and its temporal and multiple-testing bindings must identify the same experiment and exact frozen-revision digest. Item 9C must accept verified Item 9A and Item 9B objects, derive their compact digests, and reject mismatched experiment or temporal identities. Item 9A remains reusable temporal metadata. Item 8 retains lifecycle, attempt, evaluation, and decision authority.
+- **Alternatives considered:** Independent digest strings preserve the integration defect. Copying Item 8 counters or state into Item 9 would create competing authority. Registry reads, sealed-data reads, or an executor would exceed this review fix.
+- **Scientific/statistical consequences:** The chain proves structural coherence of supplied frozen metadata and declared plans. It performs no split, statistical calculation, evaluation, simulation, or experiment execution. Exact registered boundary strings are compared without rounding or float conversion.
+- **Reproducibility and security consequences:** Canonical evidence retains the experiment, frozen revision, temporal plan, and scientific plan identities. Digests prove identity, not registry-chain verification or actual executor consumption. Construction and verification remain metadata-only, never dereference sealed references, and do not verify Item 10 authorization. No dependency, paid service, data, or infrastructure is added; incremental direct cost is USD 0.
+- **References:** `EXPERIMENT_LEDGER.md`; `VALIDATION_STANDARD.md`; `RESEARCH_METHODOLOGY.md`; `ARCHITECTURE.md`; `ROADMAP.md` Item 9; `src/quant_hunter/validation/temporal.py`; `src/quant_hunter/validation/evidence.py`; `src/quant_hunter/backtesting/contracts.py`; `tests/test_simulation_contracts.py`.
+- **Supersedes / superseded by:** Cross-binds DEC-0025, DEC-0026, and DEC-0027 without changing their separate authorities. Full Item 9 remains `IN PROGRESS / FULL REVIEW FIX` pending independent re-audit. Item 10 remains separately gated and `NOT STARTED`.
+- **Owner and approver:** Project owner through explicit Stage 1B Full Item 9 cross-binding-fix authorization dated 2026-09-07.
