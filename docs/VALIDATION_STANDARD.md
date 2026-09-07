@@ -189,8 +189,13 @@ session, closure, and gap policies. Transaction-cost plans require explicit
 applicability for spread, commission, fees, financing, carry, rollover, slippage,
 latency impact, and partial-fill impact. Missing treatment never means zero.
 Midpoint or indicative pricing cannot claim executable-price realism, and exact
-queue realism requires full-depth queue-event capability. These contracts do not
-read market data, calculate outputs, or mark Item 9B V6 as passed.
+queue realism requires full-depth queue-event capability. Executable pricing
+requires explicit rules for both order sides; the normal immediately executable
+mapping is BUY to ASK and SELL to BID. Resting, limit, or custom price semantics
+must state their alternative rule and rationale. Custom price, order-type, and
+time-in-force vocabulary requires a description. Partial-fill suppression or a
+full-fill assumption requires an explicit rationale. These contracts do not read
+market data, calculate outputs, or mark Item 9B V6 as passed.
 
 ## Required reporting metrics
 
@@ -272,6 +277,11 @@ experiment-state authority. They keep gross signal evidence, gross trading
 evidence, transaction costs, financing/carry, net performance, orders, and fills
 separate and retain warnings, limitations, and failures. Artifact references are
 claims with digest syntax only; Item 9C does not verify their bytes or semantics.
+Completed positive, negative, null, or inconclusive outcomes reject pending or
+failed evidence categories. Any pending category requires a pending overall
+outcome, and a pending outcome requires at least one pending category. A failed
+category requires a failed overall outcome and retained failure evidence.
+Reasoned non-applicability remains a completed disposition.
 
 ## Probability and calibration standard
 

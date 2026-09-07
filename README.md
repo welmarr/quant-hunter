@@ -33,9 +33,9 @@ REVIEW PASSED` at reviewed head
 `26f1a8a5d62651aad9d545725d3200bad4170500`, with
 metadata-only applicability, baseline, metric, statistical-method, robustness,
 multiple-testing binding, and scientific-report contracts. Item 9 is `IN
-PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS / REVIEW` with
-metadata-only execution, cost, simulation-input, and simulation-output
-contracts. Item 10 is `NOT STARTED`.
+PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS / REVIEW FIX` with
+metadata-only side-aware execution, cost, simulation-input, and fail-closed
+simulation-output contracts. Item 10 is `NOT STARTED`.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 order matcher, fill simulator, transaction-cost calculator, portfolio logic, or

@@ -234,8 +234,9 @@ negative, null, inconclusive, and failed scientific records. These contracts
 further reduce the configuration and evidence-retention portions of RISK-001–003,
 RISK-006–008, RISK-010, RISK-011, and RISK-015.
 
-Item 9C adds fail-closed metadata for price quality, exact latency, order/fill
-assumptions, data capability, costs, sessions/gaps, and future evidence outputs.
+Item 9C adds fail-closed metadata for side-aware price quality, exact latency,
+reasoned partial-fill assumptions, data capability, costs, sessions/gaps, and
+state-consistent future evidence outputs.
 This reduces silent optimistic-assumption exposure in RISK-001, RISK-002,
 RISK-006, RISK-007, RISK-010, and RISK-011 without estimating or validating any
 result.
@@ -245,6 +246,6 @@ no simulator and calculates no execution result; and neither contract verifies
 external evidence semantics, proves that an experiment executed its plan, or
 changes Item 8 authority.
 Full Item 9 is `IN PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS /
-REVIEW`; Item 10 is `NOT STARTED`. Item 9C adds USD 0 direct cost; RISK-013
+REVIEW FIX`; Item 10 is `NOT STARTED`. Item 9C adds USD 0 direct cost; RISK-013
 and RISK-021 remain `OPEN` because the ChatGPT Pro charge and total Month-1
 headroom remain unknown pending invoice reconciliation.

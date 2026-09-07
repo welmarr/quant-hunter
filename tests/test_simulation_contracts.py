@@ -29,6 +29,7 @@ from quant_hunter.backtesting import (
     MarketPolicyArea,
     MarketPolicyDeclaration,
     OrderAssumptions,
+    OrderSide,
     OrderType,
     OutputEvidenceCategory,
     OutputEvidenceDisposition,
@@ -40,6 +41,7 @@ from quant_hunter.backtesting import (
     RandomnessDeclaration,
     RandomnessMode,
     RealismLevel,
+    SidePriceRule,
     SimulationContractError,
     SimulationInput,
     SimulationIntegrityError,
@@ -130,6 +132,7 @@ def order_assumptions(
         time_in_force=TimeInForce.DAY,
         cancellation_behavior="Cancel at the registered expiry condition.",
         partial_fill_policy=PartialFillPolicy.ALLOW,
+        partial_fill_rationale="Partial fills remain relevant and explicitly allowed.",
         fill_priority_assumption="No exact queue position is claimed.",
         marketability_assumption="Limit crossing is governed by future data.",
         capacity_liquidity_limitation="Future executor must enforce registered capacity.",
@@ -163,6 +166,18 @@ def execution_plan(
             assumed(),
             "Executable bid use remains an explicit synthetic assumption.",
             ExactQuantity("1.2345", "USD per unit", "reference price", "USD"),
+            (
+                SidePriceRule(
+                    OrderSide.BUY,
+                    PriceSource.ASK,
+                    "An immediately executable BUY uses the ask.",
+                ),
+                SidePriceRule(
+                    OrderSide.SELL,
+                    PriceSource.BID,
+                    "An immediately executable SELL uses the bid.",
+                ),
+            ),
         ),
         timeline=ExecutionTimeline(
             "Use only information available at the registered event time.",
@@ -349,6 +364,65 @@ def test_indicative_price_cannot_claim_realistically_modeled() -> None:
         )
 
 
+def test_standard_side_aware_market_pricing_maps_buy_ask_sell_bid() -> None:
+    price = execution_plan().price_assumption
+    mapping = {value.side: value.source for value in price.side_price_rules}
+
+    assert mapping == {
+        OrderSide.BUY: PriceSource.ASK,
+        OrderSide.SELL: PriceSource.BID,
+    }
+
+
+@pytest.mark.parametrize("source", [PriceSource.BID, PriceSource.ASK])
+def test_global_one_sided_price_cannot_masquerade_as_executable_policy(
+    source: PriceSource,
+) -> None:
+    with pytest.raises(SimulationContractError, match="BUY and SELL"):
+        PriceAssumption(
+            source,
+            PriceQuality.EXECUTABLE,
+            RealismLevel.REALISTICALLY_MODELED,
+            assumed(),
+            "A global source alone is not a two-sided policy.",
+        )
+
+
+def test_other_price_source_requires_explicit_description() -> None:
+    with pytest.raises(SimulationContractError, match="custom price source"):
+        PriceAssumption(
+            PriceSource.OTHER,
+            PriceQuality.INDICATIVE,
+            RealismLevel.IDEALIZED,
+            assumed(),
+            "A custom source must be defined.",
+        )
+    with pytest.raises(SimulationContractError, match="custom side price source"):
+        SidePriceRule(
+            OrderSide.BUY,
+            PriceSource.OTHER,
+            "A custom resting-order source is required.",
+        )
+
+
+@pytest.mark.parametrize(
+    ("order_type", "time_in_force", "match"),
+    [
+        (OrderType.OTHER, TimeInForce.DAY, "custom order type"),
+        (OrderType.LIMIT, TimeInForce.OTHER, "custom time in force"),
+    ],
+)
+def test_other_order_vocabulary_requires_explicit_description(
+    order_type: OrderType, time_in_force: TimeInForce, match: str
+) -> None:
+    with pytest.raises(SimulationContractError, match=match):
+        replace(
+            order_assumptions(),
+            order_type=order_type,
+            time_in_force=time_in_force,
+        )
+
+
 @pytest.mark.parametrize(
     "basis", [AssumptionBasis.MEASURED, AssumptionBasis.EMPIRICALLY_SUPPORTED]
 )
@@ -532,6 +606,140 @@ def test_simulation_output_retains_failures_warnings_and_limitations() -> None:
     assert result.document["limitations"] == ["Synthetic limitation retained."]
     assert result.document["failures"] == ["Synthetic failure retained."]
     assert result.document["decision_authority"] == "ITEM_8_EXPERIMENT_LIFECYCLE"
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        EvidenceOutcome.POSITIVE,
+        EvidenceOutcome.NEGATIVE,
+        EvidenceOutcome.NULL,
+        EvidenceOutcome.INCONCLUSIVE,
+    ],
+)
+def test_completed_output_rejects_pending_category(
+    outcome: EvidenceOutcome,
+) -> None:
+    evidence = list(output_evidence())
+    evidence[0] = replace(
+        evidence[0],
+        disposition=OutputEvidenceDisposition.PENDING,
+        artifact=None,
+    )
+
+    with pytest.raises(SimulationContractError, match="PENDING report outcome"):
+        build_simulation_output(
+            simulation_input=simulation_input(),
+            outcome=outcome,
+            evidence=evidence,
+        )
+
+
+def test_completed_output_rejects_failed_category() -> None:
+    evidence = list(output_evidence())
+    evidence[0] = replace(
+        evidence[0],
+        disposition=OutputEvidenceDisposition.FAILED,
+        artifact=None,
+    )
+
+    with pytest.raises(SimulationContractError, match="FAILED report outcome"):
+        build_simulation_output(
+            simulation_input=simulation_input(),
+            outcome=EvidenceOutcome.POSITIVE,
+            evidence=evidence,
+        )
+
+
+def test_pending_output_requires_and_accepts_pending_category() -> None:
+    with pytest.raises(SimulationContractError, match="requires pending"):
+        build_simulation_output(
+            simulation_input=simulation_input(),
+            outcome=EvidenceOutcome.PENDING,
+            evidence=output_evidence(),
+        )
+
+    evidence = list(output_evidence())
+    evidence[0] = replace(
+        evidence[0],
+        disposition=OutputEvidenceDisposition.PENDING,
+        artifact=None,
+    )
+    result = build_simulation_output(
+        simulation_input=simulation_input(),
+        outcome=EvidenceOutcome.PENDING,
+        evidence=evidence,
+    )
+    assert result.document["outcome"] == "PENDING"
+
+
+def test_failed_category_is_retained_with_failed_report_semantics() -> None:
+    evidence = list(output_evidence())
+    evidence[0] = replace(
+        evidence[0],
+        disposition=OutputEvidenceDisposition.FAILED,
+        artifact=None,
+    )
+    result = build_simulation_output(
+        simulation_input=simulation_input(),
+        outcome=EvidenceOutcome.FAILED,
+        evidence=evidence,
+        failures=("Synthetic category failure retained.",),
+    )
+
+    assert any(
+        value.disposition is OutputEvidenceDisposition.FAILED
+        for value in result.evidence
+    )
+
+
+def test_not_applicable_output_category_remains_reasoned_and_completed() -> None:
+    evidence = list(output_evidence())
+    evidence[0] = SimulationOutputEvidence(
+        evidence[0].category,
+        OutputEvidenceDisposition.NOT_APPLICABLE,
+        "Gross signal evidence is not applicable to this synthetic study.",
+    )
+    result = build_simulation_output(
+        simulation_input=simulation_input(),
+        outcome=EvidenceOutcome.INCONCLUSIVE,
+        evidence=evidence,
+    )
+
+    assert any(
+        value.disposition is OutputEvidenceDisposition.NOT_APPLICABLE
+        for value in result.evidence
+    )
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [EvidenceOutcome.NEGATIVE, EvidenceOutcome.NULL, EvidenceOutcome.INCONCLUSIVE],
+)
+def test_nonpositive_completed_outputs_remain_representable(
+    outcome: EvidenceOutcome,
+) -> None:
+    result = build_simulation_output(
+        simulation_input=simulation_input(),
+        outcome=outcome,
+        evidence=output_evidence(),
+    )
+
+    assert result.outcome is outcome
+
+
+@pytest.mark.parametrize(
+    "policy", [PartialFillPolicy.REQUIRE_FULL_FILL, PartialFillPolicy.NOT_APPLICABLE]
+)
+def test_partial_fill_suppression_requires_rationale(
+    policy: PartialFillPolicy,
+) -> None:
+    with pytest.raises(SimulationContractError, match="partial-fill rationale"):
+        replace(
+            order_assumptions(),
+            partial_fill_policy=policy,
+            partial_fill_rationale=" ",
+        )
 
 
 def test_output_evidence_categories_remain_explicitly_separable() -> None:

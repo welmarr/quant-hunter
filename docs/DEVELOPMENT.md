@@ -581,14 +581,19 @@ succeeded. Item 9B is `COMPLETE / INDEPENDENT REVIEW PASSED`.
 ## Stage 1B Item 9C simulation and execution-realism interfaces
 
 Item 9C adds a metadata-only `backtesting` contract package. Canonical execution
-plans record explicit pricing quality, evidence basis, exact physical latency,
-order/fill assumptions, input data capabilities, and complete market-session and
-gap policies. Canonical cost plans require explicit applicability and a protocol
+plans record explicit BUY/SELL pricing rules, pricing quality, evidence basis,
+exact physical latency, reasoned partial-fill assumptions, input data
+capabilities, and complete market-session and gap policies. Executable plans
+normally map BUY to ASK and SELL to BID; resting or custom behavior must describe
+its alternate semantics. Canonical cost plans require explicit applicability and a protocol
 or reason for each governed cost component. Immutable simulation inputs bind the
 Item 9A and 9B plan identities, data manifests, reproducibility identities,
 candidate reference, partition, execution/cost plans, randomness, and optional
 sealed-release metadata. Outputs retain separate claimed evidence references,
-warnings, limitations, and failures without changing Item 8 authority.
+warnings, limitations, and failures without changing Item 8 authority. Completed
+outcomes reject pending or failed categories; pending and failed category states
+require matching report-level outcomes, while reasoned non-applicability remains
+a completed disposition.
 
 These interfaces contain no strategy, data iterator, event loop, backtest engine,
 order matcher, fill simulator, PnL or transaction-cost calculation, market
@@ -597,15 +602,15 @@ sealed contents, verify Item 10 authorization, or mark Item 9B V6 as passed.
 
 The complete locked Windows gate passed with repository-pinned uv 0.12.10:
 `uv lock --check`; Ruff format over 63 files; Ruff lint; strict mypy over 40
-source files; and 586 pytest cases with 91.47% combined statement/branch
-coverage. The new metadata-only simulation contract module reached 83.48%
+source files; and 605 pytest cases with 91.36% combined statement/branch
+coverage. The metadata-only simulation contract module reached 83.65%
 statement/branch coverage through hostile interface tests. The offline governed
 build produced both distributions; package, PyArrow, execution plan, cost plan,
 simulation input, and simulation output imports succeeded. Archive inspection
 found 118 combined members, included the Item 9C contracts in both artifacts,
 and excluded `.tools/` and `.venv/` paths.
 
-Item 9 is `IN PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS / REVIEW`;
+Item 9 is `IN PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS / REVIEW FIX`;
 Item 10 is `NOT STARTED`. No new dependency or incremental direct cost was added, and
 the owner-reported ChatGPT Pro amount remains unknown pending invoice
 reconciliation.

@@ -69,6 +69,11 @@ class PriceQuality(StrEnum):
     EXECUTABLE = "EXECUTABLE"
 
 
+class OrderSide(StrEnum):
+    BUY = "BUY"
+    SELL = "SELL"
+
+
 class DataCapability(StrEnum):
     BAR_OHLC = "BAR_OHLC"
     TRADE_TICK = "TRADE_TICK"
@@ -239,6 +244,35 @@ class ExactDuration:
 
 
 @dataclass(frozen=True, slots=True)
+class SidePriceRule:
+    """The declared price source for one order side; no lookup is performed."""
+
+    side: OrderSide
+    source: PriceSource
+    rationale: str
+    custom_source_description: str | None = None
+
+    def __post_init__(self) -> None:
+        _enum(self.side, OrderSide, "order side")
+        _enum(self.source, PriceSource, "side price source")
+        _nonempty(self.rationale, "side price rationale")
+        if self.source is PriceSource.OTHER:
+            _nonempty(self.custom_source_description, "custom side price source")
+        elif self.custom_source_description is not None:
+            raise SimulationContractError(
+                "Only an OTHER side price source may have a custom description"
+            )
+
+    def document(self) -> JsonRecord:
+        return {
+            "side": self.side.value,
+            "source": self.source.value,
+            "rationale": self.rationale,
+            "custom_source_description": self.custom_source_description,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ClaimedArtifact:
     """A claimed immutable reference; Item 9C does not access or verify its bytes."""
 
@@ -292,6 +326,8 @@ class PriceAssumption:
     support: AssumptionSupport
     rationale_or_limitation: str
     representative_price: ExactQuantity | None = None
+    side_price_rules: tuple[SidePriceRule, ...] = ()
+    custom_source_description: str | None = None
 
     def __post_init__(self) -> None:
         _enum(self.source, PriceSource, "price source")
@@ -300,6 +336,12 @@ class PriceAssumption:
         if not isinstance(self.support, AssumptionSupport):
             raise SimulationContractError("Price support must be typed")
         _nonempty(self.rationale_or_limitation, "price rationale or limitation")
+        if self.source is PriceSource.OTHER:
+            _nonempty(self.custom_source_description, "custom price source")
+        elif self.custom_source_description is not None:
+            raise SimulationContractError(
+                "Only an OTHER price source may have a custom description"
+            )
         if self.representative_price is not None and not isinstance(
             self.representative_price, ExactQuantity
         ):
@@ -318,6 +360,23 @@ class PriceAssumption:
             raise SimulationContractError(
                 "INDICATIVE pricing cannot claim executable-price realism"
             )
+        if not isinstance(self.side_price_rules, tuple) or any(
+            not isinstance(value, SidePriceRule) for value in self.side_price_rules
+        ):
+            raise SimulationContractError("Side-aware price rules must be typed")
+        sides = tuple(value.side for value in self.side_price_rules)
+        if len(sides) != len(set(sides)):
+            raise SimulationContractError("Side-aware price rules must be unique")
+        if self.quality is PriceQuality.EXECUTABLE and set(sides) != set(OrderSide):
+            raise SimulationContractError(
+                "Executable pricing requires explicit BUY and SELL side rules"
+            )
+        if self.quality is PriceQuality.EXECUTABLE and any(
+            value.source is PriceSource.MIDPOINT for value in self.side_price_rules
+        ):
+            raise SimulationContractError(
+                "MIDPOINT side pricing cannot claim executable-price realism"
+            )
 
     def document(self) -> JsonRecord:
         return {
@@ -331,6 +390,13 @@ class PriceAssumption:
                 if self.representative_price
                 else None
             ),
+            "side_price_rules": [
+                value.document()
+                for value in sorted(
+                    self.side_price_rules, key=lambda item: item.side.value
+                )
+            ],
+            "custom_source_description": self.custom_source_description,
         }
 
 
@@ -476,11 +542,14 @@ class OrderAssumptions:
     time_in_force: TimeInForce
     cancellation_behavior: str
     partial_fill_policy: PartialFillPolicy
+    partial_fill_rationale: str
     fill_priority_assumption: str
     marketability_assumption: str
     capacity_liquidity_limitation: str
     order_expiry_behavior: str
     queue_realism: QueueRealismDeclaration
+    custom_order_type_description: str | None = None
+    custom_time_in_force_description: str | None = None
     representative_quantity: ExactQuantity | None = None
     representative_notional: ExactQuantity | None = None
 
@@ -488,6 +557,19 @@ class OrderAssumptions:
         _enum(self.order_type, OrderType, "order type")
         _enum(self.time_in_force, TimeInForce, "time in force")
         _enum(self.partial_fill_policy, PartialFillPolicy, "partial-fill policy")
+        _nonempty(self.partial_fill_rationale, "partial-fill rationale")
+        if self.order_type is OrderType.OTHER:
+            _nonempty(self.custom_order_type_description, "custom order type")
+        elif self.custom_order_type_description is not None:
+            raise SimulationContractError(
+                "Only OTHER order type may have a custom description"
+            )
+        if self.time_in_force is TimeInForce.OTHER:
+            _nonempty(self.custom_time_in_force_description, "custom time in force")
+        elif self.custom_time_in_force_description is not None:
+            raise SimulationContractError(
+                "Only OTHER time in force may have a custom description"
+            )
         for value, field in (
             (self.cancellation_behavior, "cancellation behavior"),
             (self.fill_priority_assumption, "fill-priority assumption"),
@@ -511,11 +593,14 @@ class OrderAssumptions:
             "time_in_force": self.time_in_force.value,
             "cancellation_behavior": self.cancellation_behavior,
             "partial_fill_policy": self.partial_fill_policy.value,
+            "partial_fill_rationale": self.partial_fill_rationale,
             "fill_priority_assumption": self.fill_priority_assumption,
             "marketability_assumption": self.marketability_assumption,
             "capacity_liquidity_limitation": self.capacity_liquidity_limitation,
             "order_expiry_behavior": self.order_expiry_behavior,
             "queue_realism": self.queue_realism.document(),
+            "custom_order_type_description": self.custom_order_type_description,
+            "custom_time_in_force_description": (self.custom_time_in_force_description),
             "representative_quantity": (
                 self.representative_quantity.document()
                 if self.representative_quantity
@@ -1169,6 +1254,28 @@ def _validate_output(
     if not isinstance(outcome, EvidenceOutcome):
         raise SimulationContractError("Simulation outcome must use evidence vocabulary")
     _output_evidence(evidence)
+    has_pending = any(
+        value.disposition is OutputEvidenceDisposition.PENDING for value in evidence
+    )
+    has_failed = any(
+        value.disposition is OutputEvidenceDisposition.FAILED for value in evidence
+    )
+    if has_pending and outcome is not EvidenceOutcome.PENDING:
+        raise SimulationContractError(
+            "PENDING output evidence requires a PENDING report outcome"
+        )
+    if outcome is EvidenceOutcome.PENDING and not has_pending:
+        raise SimulationContractError(
+            "A PENDING report outcome requires pending output evidence"
+        )
+    if has_failed and outcome is not EvidenceOutcome.FAILED:
+        raise SimulationContractError(
+            "FAILED output evidence requires a FAILED report outcome"
+        )
+    if outcome is EvidenceOutcome.FAILED and has_pending:
+        raise SimulationContractError(
+            "A FAILED report outcome cannot retain PENDING output evidence"
+        )
     _strings(warnings, "simulation warning")
     _strings(limitations, "simulation limitation")
     _strings(failures, "simulation failure", required=outcome is EvidenceOutcome.FAILED)
