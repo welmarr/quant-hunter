@@ -234,9 +234,12 @@ negative, null, inconclusive, and failed scientific records. These contracts
 further reduce the configuration and evidence-retention portions of RISK-001–003,
 RISK-006–008, RISK-010, RISK-011, and RISK-015.
 
-Item 9C adds fail-closed metadata for side-aware price quality, exact latency,
+Item 9C adds fail-closed metadata for order-type-cross-validated side-aware
+price quality, unambiguous side-rule execution-price authority, exact latency,
 reasoned partial-fill assumptions, data capability, costs, sessions/gaps, and
-state-consistent future evidence outputs.
+state-consistent future evidence outputs. Standard executable `MARKET` claims
+require BUY to ASK and SELL to BID and cannot use `LAST_TRADE` as a direct side
+quote; alternate order policies retain explicit rationale requirements.
 This reduces silent optimistic-assumption exposure in RISK-001, RISK-002,
 RISK-006, RISK-007, RISK-010, and RISK-011 without estimating or validating any
 result.

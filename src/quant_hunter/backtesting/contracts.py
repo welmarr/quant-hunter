@@ -320,33 +320,36 @@ class AssumptionSupport:
 
 @dataclass(frozen=True, slots=True)
 class PriceAssumption:
-    source: PriceSource
+    reference_source: PriceSource
     quality: PriceQuality
     realism: RealismLevel
     support: AssumptionSupport
     rationale_or_limitation: str
     representative_price: ExactQuantity | None = None
     side_price_rules: tuple[SidePriceRule, ...] = ()
-    custom_source_description: str | None = None
+    custom_reference_source_description: str | None = None
 
     def __post_init__(self) -> None:
-        _enum(self.source, PriceSource, "price source")
+        _enum(self.reference_source, PriceSource, "reference price source")
         _enum(self.quality, PriceQuality, "price quality")
         _enum(self.realism, RealismLevel, "price realism")
         if not isinstance(self.support, AssumptionSupport):
             raise SimulationContractError("Price support must be typed")
         _nonempty(self.rationale_or_limitation, "price rationale or limitation")
-        if self.source is PriceSource.OTHER:
-            _nonempty(self.custom_source_description, "custom price source")
-        elif self.custom_source_description is not None:
+        if self.reference_source is PriceSource.OTHER:
+            _nonempty(
+                self.custom_reference_source_description,
+                "custom reference price source",
+            )
+        elif self.custom_reference_source_description is not None:
             raise SimulationContractError(
-                "Only an OTHER price source may have a custom description"
+                "Only an OTHER reference price source may have a custom description"
             )
         if self.representative_price is not None and not isinstance(
             self.representative_price, ExactQuantity
         ):
             raise SimulationContractError("Representative price must be exact")
-        if self.source is PriceSource.MIDPOINT and (
+        if self.reference_source is PriceSource.MIDPOINT and (
             self.quality is PriceQuality.EXECUTABLE
             or self.realism is RealismLevel.REALISTICALLY_MODELED
         ):
@@ -380,7 +383,11 @@ class PriceAssumption:
 
     def document(self) -> JsonRecord:
         return {
-            "source": self.source.value,
+            "reference_source": self.reference_source.value,
+            "reference_source_is_execution_authority": False,
+            "execution_price_authority": (
+                "SIDE_PRICE_RULES" if self.side_price_rules else "NOT_APPLICABLE"
+            ),
             "quality": self.quality.value,
             "realism": self.realism.value,
             "support": self.support.document(),
@@ -396,7 +403,9 @@ class PriceAssumption:
                     self.side_price_rules, key=lambda item: item.side.value
                 )
             ],
-            "custom_source_description": self.custom_source_description,
+            "custom_reference_source_description": (
+                self.custom_reference_source_description
+            ),
         }
 
 
@@ -810,6 +819,22 @@ def _validate_execution_plan(
         raise SimulationContractError(
             "Queue realism exceeds the declared data capability"
         )
+    if (
+        orders.order_type is OrderType.MARKET
+        and price.quality is PriceQuality.EXECUTABLE
+    ):
+        side_sources = {value.side: value.source for value in price.side_price_rules}
+        if PriceSource.LAST_TRADE in side_sources.values():
+            raise SimulationContractError(
+                "LAST_TRADE is not an executable side quote for a MARKET order"
+            )
+        if side_sources != {
+            OrderSide.BUY: PriceSource.ASK,
+            OrderSide.SELL: PriceSource.BID,
+        }:
+            raise SimulationContractError(
+                "Standard executable MARKET pricing requires BUY to ASK and SELL to BID"
+            )
 
 
 def _execution_plan_document(

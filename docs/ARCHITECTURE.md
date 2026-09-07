@@ -38,7 +38,10 @@ failed required evidence cannot support a validated report. Actual experiment
 execution remains absent. Item 9C adds canonical, metadata-only execution and
 transaction-cost plans plus simulation input/output evidence envelopes. These
 interfaces require explicit BUY/SELL price-side rules for executable pricing,
-reasoned partial-fill treatment, and coherent pending/failed output states. They
+with side rules as the sole execution-price authority. Standard executable
+MARKET assumptions require BUY to ASK and SELL to BID and reject LAST_TRADE as a
+direct side quote; explicitly described limit/resting alternatives remain valid.
+They also require reasoned partial-fill treatment and coherent pending/failed output states. They
 cannot execute a strategy, match an order, generate a fill, calculate performance
 or cost, assess V6, or access sealed contents. Item 10 sealed-release
 infrastructure, executable backtesting, strategies, broker/live execution, and

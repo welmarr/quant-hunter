@@ -365,13 +365,103 @@ def test_indicative_price_cannot_claim_realistically_modeled() -> None:
 
 
 def test_standard_side_aware_market_pricing_maps_buy_ask_sell_bid() -> None:
-    price = execution_plan().price_assumption
+    orders = replace(order_assumptions(), order_type=OrderType.MARKET)
+    plan = execution_plan(orders=orders)
+    price = plan.price_assumption
     mapping = {value.side: value.source for value in price.side_price_rules}
 
     assert mapping == {
         OrderSide.BUY: PriceSource.ASK,
         OrderSide.SELL: PriceSource.BID,
     }
+
+
+def side_price_assumption(
+    buy_source: PriceSource,
+    sell_source: PriceSource,
+) -> PriceAssumption:
+    return replace(
+        execution_plan().price_assumption,
+        side_price_rules=(
+            SidePriceRule(
+                OrderSide.BUY,
+                buy_source,
+                "The BUY-side rule is explicit for this synthetic study.",
+            ),
+            SidePriceRule(
+                OrderSide.SELL,
+                sell_source,
+                "The SELL-side rule is explicit for this synthetic study.",
+            ),
+        ),
+    )
+
+
+def test_market_executable_rejects_reversed_side_mapping() -> None:
+    with pytest.raises(SimulationContractError, match="BUY to ASK and SELL to BID"):
+        execution_plan(
+            price=side_price_assumption(PriceSource.BID, PriceSource.ASK),
+            orders=replace(order_assumptions(), order_type=OrderType.MARKET),
+        )
+
+
+@pytest.mark.parametrize(
+    ("buy_source", "sell_source"),
+    [
+        (PriceSource.BID, PriceSource.BID),
+        (PriceSource.ASK, PriceSource.ASK),
+    ],
+)
+def test_market_executable_rejects_each_wrong_side_even_with_rationale(
+    buy_source: PriceSource,
+    sell_source: PriceSource,
+) -> None:
+    with pytest.raises(SimulationContractError, match="BUY to ASK and SELL to BID"):
+        execution_plan(
+            price=side_price_assumption(buy_source, sell_source),
+            orders=replace(order_assumptions(), order_type=OrderType.MARKET),
+        )
+
+
+@pytest.mark.parametrize("side", [OrderSide.BUY, OrderSide.SELL])
+def test_market_executable_rejects_last_trade_as_side_quote(side: OrderSide) -> None:
+    buy_source = PriceSource.LAST_TRADE if side is OrderSide.BUY else PriceSource.ASK
+    sell_source = PriceSource.LAST_TRADE if side is OrderSide.SELL else PriceSource.BID
+    with pytest.raises(SimulationContractError, match="LAST_TRADE"):
+        execution_plan(
+            price=side_price_assumption(buy_source, sell_source),
+            orders=replace(order_assumptions(), order_type=OrderType.MARKET),
+        )
+
+
+def test_limit_study_can_retain_explicit_alternate_side_semantics() -> None:
+    plan = execution_plan(
+        price=side_price_assumption(PriceSource.BID, PriceSource.ASK),
+        orders=order_assumptions(),
+    )
+
+    assert plan.order_assumptions.order_type is OrderType.LIMIT
+    assert all(value.rationale for value in plan.price_assumption.side_price_rules)
+
+
+def test_side_rule_permutation_preserves_canonical_identity() -> None:
+    normal = execution_plan()
+    permuted_price = replace(
+        normal.price_assumption,
+        side_price_rules=tuple(reversed(normal.price_assumption.side_price_rules)),
+    )
+    permuted = execution_plan(price=permuted_price)
+
+    assert normal.canonical_bytes == permuted.canonical_bytes
+    assert normal.digest == permuted.digest
+
+
+def test_canonical_price_document_has_one_execution_authority() -> None:
+    document = execution_plan().price_assumption.document()
+
+    assert "source" not in document
+    assert document["reference_source_is_execution_authority"] is False
+    assert document["execution_price_authority"] == "SIDE_PRICE_RULES"
 
 
 @pytest.mark.parametrize("source", [PriceSource.BID, PriceSource.ASK])
@@ -389,7 +479,7 @@ def test_global_one_sided_price_cannot_masquerade_as_executable_policy(
 
 
 def test_other_price_source_requires_explicit_description() -> None:
-    with pytest.raises(SimulationContractError, match="custom price source"):
+    with pytest.raises(SimulationContractError, match="custom reference price source"):
         PriceAssumption(
             PriceSource.OTHER,
             PriceQuality.INDICATIVE,

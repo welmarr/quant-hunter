@@ -190,9 +190,12 @@ applicability for spread, commission, fees, financing, carry, rollover, slippage
 latency impact, and partial-fill impact. Missing treatment never means zero.
 Midpoint or indicative pricing cannot claim executable-price realism, and exact
 queue realism requires full-depth queue-event capability. Executable pricing
-requires explicit rules for both order sides; the normal immediately executable
-mapping is BUY to ASK and SELL to BID. Resting, limit, or custom price semantics
-must state their alternative rule and rationale. Custom price, order-type, and
+requires explicit rules for both order sides, and those rules are the
+authoritative execution-price policy rather than the non-authoritative reference
+source. A standard immediately executable MARKET assumption requires BUY to ASK
+and SELL to BID; LAST_TRADE is not a direct executable side quote for that
+policy. Resting, limit, or custom price semantics may use different side rules
+but must state their alternative rule and rationale. Custom price, order-type, and
 time-in-force vocabulary requires a description. Partial-fill suppression or a
 full-fill assumption requires an explicit rationale. These contracts do not read
 market data, calculate outputs, or mark Item 9B V6 as passed.

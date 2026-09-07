@@ -35,7 +35,9 @@ metadata-only applicability, baseline, metric, statistical-method, robustness,
 multiple-testing binding, and scientific-report contracts. Item 9 is `IN
 PROGRESS / FULL REVIEW PENDING`; Item 9C is `IN PROGRESS / REVIEW FIX` with
 metadata-only side-aware execution, cost, simulation-input, and fail-closed
-simulation-output contracts. Item 10 is `NOT STARTED`.
+simulation-output contracts. Side rules are the execution-price authority;
+standard executable MARKET assumptions require BUY to ASK and SELL to BID. Item
+10 is `NOT STARTED`.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 order matcher, fill simulator, transaction-cost calculator, portfolio logic, or
