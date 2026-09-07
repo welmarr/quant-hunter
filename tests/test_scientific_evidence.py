@@ -257,6 +257,8 @@ type _Declaration = (
 
 def observations_for_plan(
     plan: ScientificEvidencePlan,
+    *,
+    outcome: EvidenceOutcome = EvidenceOutcome.POSITIVE,
 ) -> tuple[
     tuple[EvidenceObservation, ...],
     tuple[EvidenceObservation, ...],
@@ -269,9 +271,13 @@ def observations_for_plan(
         return tuple(
             EvidenceObservation(
                 declaration_id=value.declaration_id,
-                outcome=EvidenceOutcome.POSITIVE,
+                outcome=outcome,
                 narrative="Synthetic evidence placeholder supplied by a future evaluator.",
-                numeric_value=ExactNumericEvidence("0.125", "decimal ratio"),
+                numeric_value=(
+                    None
+                    if outcome is EvidenceOutcome.PENDING
+                    else ExactNumericEvidence("0.125", "decimal ratio")
+                ),
             )
             for value in declarations
             if value.applicability is Applicability.REQUIRED
@@ -303,9 +309,13 @@ def evidence_report(
     gates: tuple[GateAssessment, ...] | None = None,
     partition_role: PartitionRole = PartitionRole.VALIDATION,
     release_reference: str | None = None,
+    evidence_outcome: EvidenceOutcome = EvidenceOutcome.POSITIVE,
 ) -> ScientificEvidenceReport:
     plan = evidence_plan()
-    baseline, metric, methods, robustness = observations_for_plan(plan)
+    baseline, metric, methods, robustness = observations_for_plan(
+        plan,
+        outcome=evidence_outcome,
+    )
     return build_scientific_evidence_report(
         plan=plan,
         partition_role=partition_role,
@@ -336,6 +346,22 @@ def test_complete_plan_is_canonical_and_reproducible() -> None:
     assert first.canonical_bytes == second.canonical_bytes
     assert first.digest == second.digest
     assert first.document["plan_type"] == "SCIENTIFIC_EVIDENCE_PLAN"
+
+
+def test_validation_gate_mapping_matches_authoritative_v0_v9_semantics() -> None:
+    assert [(gate.name, gate.value) for gate in ValidationGate] == [
+        ("V0_REGISTRATION", "V0_REGISTRATION"),
+        ("V1_DATA_PROVENANCE", "V1_DATA_PROVENANCE"),
+        ("V2_TEMPORAL_INTEGRITY", "V2_TEMPORAL_INTEGRITY"),
+        ("V3_BASELINE", "V3_BASELINE"),
+        ("V4_CHRONOLOGICAL_EVIDENCE", "V4_CHRONOLOGICAL_EVIDENCE"),
+        ("V5_SEARCH_ADJUSTMENT", "V5_SEARCH_ADJUSTMENT"),
+        ("V6_EXECUTION_REALISM", "V6_EXECUTION_REALISM"),
+        ("V7_ROBUSTNESS", "V7_ROBUSTNESS"),
+        ("V8_REPRODUCIBILITY", "V8_REPRODUCIBILITY"),
+        ("V9_REPORTING_AND_DECISION", "V9_REPORTING_AND_DECISION"),
+    ]
+    assert not hasattr(ValidationGate, "V5_STATISTICAL_RELIABILITY")
 
 
 def test_unordered_declaration_permutations_do_not_change_identity() -> None:
@@ -560,10 +586,151 @@ def test_pending_report_evidence_is_distinct_from_not_applicable() -> None:
         outcome=EvidenceOutcome.PENDING,
         report_status=ReportStatus.NOT_YET_EVALUATED,
         gates=tuple(gates),
+        evidence_outcome=EvidenceOutcome.PENDING,
     )
 
     assert report.document["outcome"] == "PENDING"
     assert report.document["status"] == "NOT_YET_EVALUATED"
+
+
+def test_pending_observation_is_narrative_only() -> None:
+    observation = EvidenceObservation(
+        "metric-total-return",
+        EvidenceOutcome.PENDING,
+        "Required evidence has not yet been produced.",
+    )
+
+    assert observation.document()["numeric_value"] is None
+    assert observation.document()["artifact_references"] == []
+
+    with pytest.raises(ScientificEvidenceError, match="numeric evidence"):
+        replace(
+            observation,
+            numeric_value=ExactNumericEvidence("0.125", "decimal return"),
+        )
+    with pytest.raises(ScientificEvidenceError, match="artifact references"):
+        replace(
+            observation,
+            artifact_references=(
+                EvidenceArtifactReference("artifact://synthetic/pending", DIGEST),
+            ),
+        )
+
+
+def test_validated_report_rejects_pending_report_outcome() -> None:
+    with pytest.raises(ScientificEvidenceError, match="must occur together"):
+        evidence_report(outcome=EvidenceOutcome.PENDING)
+
+
+def test_validated_report_rejects_pending_required_metric_evidence() -> None:
+    report = evidence_report()
+    pending_metric = replace(
+        report.metric_evidence[0],
+        outcome=EvidenceOutcome.PENDING,
+        numeric_value=None,
+    )
+
+    with pytest.raises(ScientificEvidenceError, match="required evidence item"):
+        replace(report, metric_evidence=(pending_metric,)).verify()
+
+
+def test_validated_report_rejects_pending_required_method_evidence() -> None:
+    report = evidence_report()
+    pending_method = replace(
+        report.statistical_method_evidence[0],
+        outcome=EvidenceOutcome.PENDING,
+        numeric_value=None,
+    )
+
+    with pytest.raises(ScientificEvidenceError, match="required evidence item"):
+        replace(report, statistical_method_evidence=(pending_method,)).verify()
+
+
+@pytest.mark.parametrize("category", ["baseline", "robustness"])
+def test_validated_report_rejects_other_pending_required_evidence(
+    category: str,
+) -> None:
+    report = evidence_report()
+    if category == "baseline":
+        pending = replace(
+            report.baseline_evidence[0],
+            outcome=EvidenceOutcome.PENDING,
+            numeric_value=None,
+        )
+        changed = replace(
+            report,
+            baseline_evidence=(pending, *report.baseline_evidence[1:]),
+        )
+    else:
+        pending = replace(
+            report.robustness_evidence[0],
+            outcome=EvidenceOutcome.PENDING,
+            numeric_value=None,
+        )
+        changed = replace(report, robustness_evidence=(pending,))
+
+    with pytest.raises(ScientificEvidenceError, match="required evidence item"):
+        changed.verify()
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        EvidenceOutcome.POSITIVE,
+        EvidenceOutcome.NEGATIVE,
+        EvidenceOutcome.NULL,
+        EvidenceOutcome.FAILED,
+        EvidenceOutcome.INCONCLUSIVE,
+    ],
+)
+def test_not_yet_evaluated_rejects_completed_report_outcome(
+    outcome: EvidenceOutcome,
+) -> None:
+    with pytest.raises(ScientificEvidenceError, match="must occur together"):
+        evidence_report(
+            outcome=outcome,
+            report_status=ReportStatus.NOT_YET_EVALUATED,
+        )
+
+
+def test_required_failed_evidence_is_retained_but_cannot_validate() -> None:
+    failed = EvidenceObservation(
+        "metric-total-return",
+        EvidenceOutcome.FAILED,
+        "The required evidence process failed and was retained.",
+    )
+    assert failed.document()["outcome"] == "FAILED"
+
+    report = evidence_report()
+    with pytest.raises(ScientificEvidenceError, match="required evidence item"):
+        replace(report, metric_evidence=(failed,)).verify()
+
+    retained = evidence_report(
+        outcome=EvidenceOutcome.FAILED,
+        report_status=ReportStatus.NOT_VALIDATED,
+        evidence_outcome=EvidenceOutcome.FAILED,
+    )
+    retained_metrics = cast(list[JsonRecord], retained.document["metric_evidence"])
+    assert retained_metrics[0]["outcome"] == "FAILED"
+
+
+def test_validated_report_rejects_failed_report_outcome() -> None:
+    with pytest.raises(ScientificEvidenceError, match="FAILED report outcome"):
+        evidence_report(outcome=EvidenceOutcome.FAILED)
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [EvidenceOutcome.NEGATIVE, EvidenceOutcome.NULL, EvidenceOutcome.INCONCLUSIVE],
+)
+def test_completed_nonpositive_required_evidence_can_validate(
+    outcome: EvidenceOutcome,
+) -> None:
+    report = evidence_report(evidence_outcome=outcome)
+
+    assert report.document["status"] == "VALIDATED"
+    metric_evidence = cast(list[JsonRecord], report.document["metric_evidence"])
+    assert metric_evidence[0]["outcome"] == outcome.value
 
 
 def test_pass_gate_cannot_be_evidence_free() -> None:

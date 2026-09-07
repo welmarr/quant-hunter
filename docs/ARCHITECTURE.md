@@ -32,7 +32,10 @@ passed Item 9A at reviewed head
 evidence plans and report envelopes. These declare applicability, comparisons,
 metrics, methods, robustness, and structural references to Item 8 frozen
 multiple-testing authority without running scientific calculations or changing
-experiment state. Actual experiment execution, Item 9C, Item 10 sealed-release infrastructure, backtesting, strategies, broker/live
+experiment state. Its V0–V9 assessments use the authoritative gate meanings,
+including V5 search adjustment. Pending evidence is narrative-only; pending or
+failed required evidence cannot support a validated report. Actual experiment
+execution, Item 9C, Item 10 sealed-release infrastructure, backtesting, strategies, broker/live
 execution, and later-stage systems remain absent.
 The design must be modular, reproducible, testable, and difficult to misuse.
 

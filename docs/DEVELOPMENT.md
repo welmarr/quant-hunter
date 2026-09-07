@@ -553,19 +553,25 @@ exact numeric evidence. A structural binding rejects family, budget, or
 correction-plan contradictions against supplied Item 8 `FROZEN` metadata while
 leaving attempts and counters in the append-only experiment authority. Canonical
 reports retain unfavorable and pending outcomes, assess V0–V9 without creating
-experiment decisions, and never dereference sealed release references.
+experiment decisions, and never dereference sealed release references. The
+review fix restores the exact authoritative gate names, including V5 search
+adjustment, makes pending observations narrative-only, binds report-level
+`PENDING` to `NOT_YET_EVALUATED`, and prevents pending or failed required
+evidence from supporting `VALIDATED`. Negative, null, and inconclusive completed
+evidence remains valid scientific evidence and does not require positive
+performance.
 
 The complete locked Windows gate passed with repository-pinned uv 0.12.10:
 `uv lock --check`; Ruff format over 60 files; Ruff lint; strict mypy over 37
-source files; and 532 pytest cases with 92.85% combined statement/branch
-coverage. The scientific-evidence module reached 99.72% coverage. The offline
+source files; and 549 pytest cases with 92.89% combined statement/branch
+coverage. The scientific-evidence module reached 99.73% coverage. The offline
 governed build produced both distributions; package, PyArrow, plan, report, and
 metric-inventory imports returned `0.1.0`, `25.0.1`,
 `ScientificEvidencePlan`, `ScientificEvidenceReport`, and 31 standard metrics.
 Archive inspection found 113 combined members, included the evidence module in
 both artifacts, and excluded `.tools/` and `.venv/` paths.
 
-Item 9 is `IN PROGRESS`; Item 9B is `IN PROGRESS / REVIEW`. Item 9C and Item 10
-are not started. No new dependency or incremental direct cost was added, and
+Item 9 is `IN PROGRESS`; Item 9B is `IN PROGRESS / REVIEW FIX`. Item 9C and Item
+10 are `NOT STARTED`. No new dependency or incremental direct cost was added, and
 the owner-reported ChatGPT Pro amount remains unknown pending invoice
 reconciliation.

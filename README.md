@@ -27,7 +27,8 @@ permanent result/failure evidence, immutable result-object verification, and
 deterministic rerun-input resolution. Item 9 is in progress. Item 9A is
 `COMPLETE / INDEPENDENT REVIEW PASSED` at reviewed head
 `e19c693557fc4debe7a12746ae682e1113e404b1` and merged on main at
-`5636ad431b1c660233189a45ebfd6157308df7fa`. Item 9B is in review with
+`5636ad431b1c660233189a45ebfd6157308df7fa`. Item 9B is `IN PROGRESS / REVIEW
+FIX` with
 metadata-only applicability, baseline, metric, statistical-method, robustness,
 multiple-testing binding, and scientific-report contracts. Item 9C is not
 started.

@@ -162,10 +162,10 @@ class ValidationGate(StrEnum):
     V0_REGISTRATION = "V0_REGISTRATION"
     V1_DATA_PROVENANCE = "V1_DATA_PROVENANCE"
     V2_TEMPORAL_INTEGRITY = "V2_TEMPORAL_INTEGRITY"
-    V3_BASELINES = "V3_BASELINES"
+    V3_BASELINE = "V3_BASELINE"
     V4_CHRONOLOGICAL_EVIDENCE = "V4_CHRONOLOGICAL_EVIDENCE"
-    V5_STATISTICAL_RELIABILITY = "V5_STATISTICAL_RELIABILITY"
-    V6_REALISTIC_EXECUTION = "V6_REALISTIC_EXECUTION"
+    V5_SEARCH_ADJUSTMENT = "V5_SEARCH_ADJUSTMENT"
+    V6_EXECUTION_REALISM = "V6_EXECUTION_REALISM"
     V7_ROBUSTNESS = "V7_ROBUSTNESS"
     V8_REPRODUCIBILITY = "V8_REPRODUCIBILITY"
     V9_REPORTING_AND_DECISION = "V9_REPORTING_AND_DECISION"
@@ -935,6 +935,15 @@ class EvidenceObservation:
         )
         if len(set(pairs)) != len(pairs):
             raise ScientificEvidenceError("Artifact evidence references must be unique")
+        if self.outcome is EvidenceOutcome.PENDING:
+            if self.numeric_value is not None:
+                raise ScientificEvidenceError(
+                    "PENDING evidence cannot contain numeric evidence"
+                )
+            if self.artifact_references:
+                raise ScientificEvidenceError(
+                    "PENDING evidence cannot contain artifact references"
+                )
 
     def document(self) -> JsonRecord:
         references: list[JsonValue] = [
@@ -1060,6 +1069,12 @@ def _validate_report_inputs(
         raise ScientificEvidenceError("Report status is malformed")
     if not isinstance(outcome, EvidenceOutcome):
         raise ScientificEvidenceError("Report outcome is malformed")
+    if (report_status is ReportStatus.NOT_YET_EVALUATED) is not (
+        outcome is EvidenceOutcome.PENDING
+    ):
+        raise ScientificEvidenceError(
+            "NOT_YET_EVALUATED status and PENDING report outcome must occur together"
+        )
     _observations(
         baseline_evidence,
         _required_ids(plan.baselines),
@@ -1085,13 +1100,31 @@ def _validate_report_inputs(
     gates = tuple(value.gate for value in gate_assessments)
     if len(gates) != len(set(gates)) or set(gates) != set(ValidationGate):
         raise ScientificEvidenceError("Every V0-V9 gate must be assessed exactly once")
-    if report_status is ReportStatus.VALIDATED and any(
-        value.status in {GateStatus.FAIL, GateStatus.PENDING}
-        for value in gate_assessments
-    ):
-        raise ScientificEvidenceError(
-            "Validated status is forbidden with a FAIL or PENDING gate"
+    if report_status is ReportStatus.VALIDATED:
+        if any(
+            value.status in {GateStatus.FAIL, GateStatus.PENDING}
+            for value in gate_assessments
+        ):
+            raise ScientificEvidenceError(
+                "Validated status is forbidden with a FAIL or PENDING gate"
+            )
+        required_evidence = (
+            *baseline_evidence,
+            *metric_evidence,
+            *statistical_method_evidence,
+            *robustness_evidence,
         )
+        if any(
+            value.outcome in {EvidenceOutcome.PENDING, EvidenceOutcome.FAILED}
+            for value in required_evidence
+        ):
+            raise ScientificEvidenceError(
+                "Validated status requires every required evidence item to be completed"
+            )
+        if outcome is EvidenceOutcome.FAILED:
+            raise ScientificEvidenceError(
+                "Validated status is forbidden with a FAILED report outcome"
+            )
     _strings(warnings, "report warnings", required=False)
     _strings(limitations, "report limitations", required=False)
     _strings(failures, "report failures", required=outcome is EvidenceOutcome.FAILED)
