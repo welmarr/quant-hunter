@@ -24,10 +24,14 @@ item 7 is complete after independent review passed commit
 after independent review and is merged on main at
 `265d5f49e06f841a5e23fdf9ea177670bbfbc1e9`. It provides the governed lifecycle through `DECIDED`,
 permanent result/failure evidence, immutable result-object verification, and
-deterministic rerun-input resolution. Item 9 is in progress. Item 9A is `IN
-PROGRESS / REVIEW FIX` with immutable, metadata-only contracts for exact UTC intervals,
-chronological partitions, explicit time-aware folds, and purge/embargo evidence.
-Items 9B and 9C are not started.
+deterministic rerun-input resolution. Item 9 is in progress. Item 9A is
+`COMPLETE / INDEPENDENT REVIEW PASSED` at reviewed head
+`e19c693557fc4debe7a12746ae682e1113e404b1` and merged on main at
+`5636ad431b1c660233189a45ebfd6157308df7fa`. Item 9B is `IN PROGRESS / REVIEW
+FIX` with
+metadata-only applicability, baseline, metric, statistical-method, robustness,
+multiple-testing binding, and scientific-report contracts. Item 9C is not
+started.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 portfolio logic, or live-trading capability exists.

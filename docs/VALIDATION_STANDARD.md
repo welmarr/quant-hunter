@@ -232,6 +232,30 @@ Standard reports must include every applicable metric below. If a metric is not 
 
 Reports must define conventions such as return frequency, annualization factor, risk-free rate, trade counting, portfolio aggregation, missing-data treatment, and confidence-interval method. Metrics must be shown for chronological development, validation, and sealed out-of-sample partitions separately, together with gross and net results where applicable.
 
+Item 9B represents this inventory as immutable declarations rather than computed
+values. Every standard metric, governed statistical method, core baseline role, and
+robustness requirement must carry explicit `REQUIRED` or `NOT_APPLICABLE`
+status; non-applicability requires a scientific reason. Study-specific additions
+cannot displace the standard inventory. Exact numeric report evidence uses
+normalized decimal text rather than binary floating point. An observation with a
+`PENDING` outcome means evidence has not yet been produced, is narrative-only,
+and cannot contain a numeric value or result-artifact reference. `PENDING` is
+distinct from non-applicability.
+
+Item 9B reports are decision-support envelopes only. Their gate identities map
+exactly to V0 registration, V1 data provenance, V2 temporal integrity, V3
+baseline, V4 chronological evidence, V5 search adjustment, V6 execution realism,
+V7 robustness, V8 reproducibility, and V9 reporting and decision. A
+`NOT_YET_EVALUATED` status and report-level `PENDING` outcome must occur together.
+`VALIDATED` is forbidden while an applicable gate is `FAIL` or `PENDING`, while
+any required evidence remains `PENDING` or `FAILED`, or when the report outcome is
+`FAILED`. Negative, null, and inconclusive observations remain completed evidence
+and do not by themselves prevent scientific validation. A passing gate must cite
+supporting evidence. Item 8 remains the sole lifecycle, evaluation, and decision
+authority. A sealed release reference is required before a report can represent
+sealed-OOS evidence, but Item 9B does not verify that Item 10 authorized the
+release and never dereferences the sealed reference.
+
 ## Probability and calibration standard
 
 A directional label or high win rate is not sufficient. Probabilistic models must be evaluated for calibration and resolution using prespecified appropriate tools, with reliability examined through time and across relevant regimes. State the forecast horizon, event definition, probability threshold, decision rule, class balance, and consequences of abstention.
