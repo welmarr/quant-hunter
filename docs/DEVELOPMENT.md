@@ -487,3 +487,19 @@ artifacts, and excluded disposable tool/cache and virtual-environment paths.
 Item 8B is `IN PROGRESS / REVIEW`. Item 8C and Item 9 were not started. The
 incremental direct project cost is USD 0, and the existing USD 10 prepaid Codex
 purchase was not counted again.
+
+## Stage 1B Item 8C and Item 8 independent-review closure
+
+Independent review passed Item 8C and the technical implementation of full
+Stage 1B Item 8 at final PR head
+`c80ca6d2dffba316239880cf6b3ce33c20ee6b2c`. The hosted final gate used CPython
+3.14.7 and uv 0.12.10. Ubuntu passed 448 tests with exact combined
+statement/branch coverage of 90.75%; `lifecycle.py` coverage was 84.59%.
+Windows compatibility also passed all 448 tests. Ruff formatting, Ruff lint,
+strict mypy, and `uv lock --check` passed.
+
+Coverage reporting now sets `precision = 2` with `fail_under = 90`, so a true
+combined result below 90.00% cannot pass through integer display rounding.
+Item 8 is `COMPLETE / INDEPENDENT REVIEW PASSED`. Stage 1B remains in progress,
+and Item 9 remains `NOT STARTED / NEXT`. This documentation reconciliation adds
+no dependency or incremental direct cost.

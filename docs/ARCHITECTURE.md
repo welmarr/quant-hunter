@@ -6,20 +6,25 @@ Stage 1A planning is complete and Stage 1B is in progress. Batches 1–2 provide
 the package shell, locked toolchain, engineering quality gate, and versioned
 Draft 2020-12 schemas. Batches 3A–3B implement typed identity, append-only
 registry revisions, JCS canonicalization, SHA-256 contracts, governed registry
-validation, and generic freeze manifests using synthetic tests only. Data,
-experiment-lifecycle, sealed-release, simulation, and trading behavior remain
-unimplemented. Batch 4A adds only the immutable exact-byte object store, generic
+validation, and generic freeze manifests using synthetic tests only. Batch 4A
+adds the immutable exact-byte object store, generic
 artifact sidecars, and byte-faithful synthetic raw-capture foundation. Batch 4B.1
 adds deterministic Parquet publication and separate physical, lineage, and
 logical-content identities for explicitly typed synthetic tables. Batch 4B.2
 adds explicit point-in-time selection for synthetic normalized/curated data with
 PUBLIC and OPERATIONAL availability policies. Independent review passed item 7
 at commit `952bd3a4a30518d51b6a9dbe679b00f9c28753fd`. Independent review passed Item
-8A at commit `79730f9ed54d6fcf9c8b33ad70af6181941c0b5e`. Item 8B extends that single
-experiment authority only through `FROZEN → RUNNING` and append-only,
-CAS-protected attempt evidence and counters. Experiment evaluation, result and
-decision behavior, sealed release, and later item-8 controls remain absent. The
-design must be modular, reproducible, testable, and difficult to misuse.
+8A at commit `79730f9ed54d6fcf9c8b33ad70af6181941c0b5e` and Item 8B at commit
+`747ae70b9b6d95179271d5770239347e24d6b2bd`. Independent review passed Item 8C
+and full Item 8 at PR head `c80ca6d2dffba316239880cf6b3ce33c20ee6b2c`.
+Item 8C extends the same experiment
+authority through `RUNNING → EVALUATED → DECIDED`, storing observed result and
+failure evidence in immutable registry revisions, verifying supplied result
+objects, and resolving deterministic rerun inputs from REGISTERED/FROZEN
+evidence. Actual experiment execution, Item 9 validation/simulation interfaces,
+Item 10 sealed-release infrastructure, backtesting, strategies, broker/live
+execution, and later-stage systems remain absent.
+The design must be modular, reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
 

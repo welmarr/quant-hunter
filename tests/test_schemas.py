@@ -192,6 +192,8 @@ def test_completed_experiment_metadata(status: str) -> None:
         instance[field] = "Fixed synthetic conformance definition."
     instance["baselines"] = ["Synthetic identity baseline"]
     if status in {"EVALUATED", "DECIDED"}:
+        instance["evaluated_at"] = "2026-09-05T06:07:00Z"
+        instance["evaluation_outcome"] = "POSITIVE"
         instance["sealed_data_release"] = {
             "status": "RELEASED",
             "event_digest": "sha256:" + "b" * 64,
@@ -215,6 +217,7 @@ def test_completed_experiment_metadata(status: str) -> None:
             for number in range(1, 4)
         ]
     if status == "DECIDED":
+        instance["decided_at"] = "2026-09-05T06:08:00Z"
         del instance["decision_pending_reason"]
         instance["decision"] = "INCONCLUSIVE"
         instance["reason_for_decision"] = (

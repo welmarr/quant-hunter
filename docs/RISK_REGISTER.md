@@ -4,7 +4,7 @@
 
 Review this register at each stage gate and whenever evidence, scope, cost, or controls change. Use permanent IDs; retain closed risks. Link mitigations to decisions, experiments, data sources, and tests. `OPEN` means the risk requires active control, not that work is authorized.
 
-Every operational risk record must include ID, cause and consequence, likelihood, impact/severity, owner, controls, early-warning indicators, linked decisions/experiments/sources/tests, target and next-review dates, residual risk, status, and closure evidence. The summary entries below are the planning baseline; their detailed fields must be assigned during Stage 1B and before its exit gate. Scientific governance owns RISK-001–009, RISK-014–016, and RISK-019; data governance co-owns RISK-004–005, RISK-012, RISK-014, and RISK-019; architecture/security owns RISK-010–011, RISK-015, RISK-017–020, RISK-022, and RISK-023; and project budget governance owns RISK-013 and RISK-021. All open risks are next reviewed at Stage 1B closeout.
+Every operational risk record must include ID, cause and consequence, likelihood, impact/severity, owner, controls, early-warning indicators, linked decisions/experiments/sources/tests, target and next-review dates, residual risk, status, and closure evidence. The summary entries below are the planning baseline; their detailed fields must be assigned during Stage 1B and before its exit gate. Scientific governance owns RISK-001–009, RISK-014–016, and RISK-019; data governance co-owns RISK-004–005, RISK-012, RISK-014, and RISK-019; architecture/security owns RISK-010–011, RISK-015, RISK-017–020, and RISK-022–024; and project budget governance owns RISK-013 and RISK-021. All open risks are next reviewed at Stage 1B closeout.
 
 | ID | Risk | Required controls | Status |
 |---|---|---|---|
@@ -18,19 +18,20 @@ Every operational risk record must include ID, cause and consequence, likelihood
 | RISK-008 | Complex models outperform through flexibility rather than information. | Require simpler baselines, ablations, search accounting, stability tests, and cost-adjusted incremental value. | OPEN |
 | RISK-009 | Closely related models or patterns receive duplicate ensemble votes. | Track lineage and dependence; cluster correlated evidence; give no extra votes for variants of the same structure. | OPEN |
 | RISK-010 | Research code or AI crosses into live execution. | Separate packages, processes, credentials, and approvals; no live trading or live broker credentials in initial stages; no self-promotion. | OPEN |
-| RISK-011 | Secrets or licensed data enter Git, logs, or fixtures. | Sanitized `.env.example`, secret scanning when implemented, least privilege, redacted logs, and license-aware storage. | OPEN |
+| RISK-011 | Secrets or licensed data enter Git, logs, fixtures, or dependencies. | Sanitized `.env.example`, secret and dependency scanning before real credentials or connectors, least privilege, redacted logs, and license-aware storage. | OPEN |
 | RISK-012 | Data licensing, latency, or indicative pricing makes a study unusable. | Complete source registry fields, prefer primary authoritative sources, record executable-versus-indicative status and limitations. | OPEN |
 | RISK-013 | Month-1 spending exceeds USD $400 or creates lock-in. | No purchase without explicit approval; maintain cost estimates; prefer open source and free authoritative data; use expensive AI selectively. | OPEN |
 | RISK-014 | Proprietary source data makes a claimed paper reproduction false. | State unavailable inputs and deviations explicitly; label the work an approximation, not a reproduction. | OPEN |
 | RISK-015 | Results execute but cannot be independently reconstructed. | Pin code, configuration, environment, seeds, data vintages, and artifacts; require rerun evidence before acceptance. | OPEN |
 | RISK-016 | Subjective chart labeling introduces hindsight and confirmation bias. | Require mathematical pattern definitions, registered search spaces, blind/OOS evaluation, and uncertainty estimates. | OPEN |
 | RISK-017 | A machine administrator, backup tool, search index, or sync service can bypass or copy the local sealed-data boundary. | Keep the vault outside ordinary roots on encrypted NTFS; use separate identities, allow-only DACLs and SACL audits; protect backups equivalently; test effective denial; invalidate on exposure; migrate to external IAM/WORM if the threat model grows. | OPEN |
-| RISK-018 | Concurrent writers collide, overwrite history, or fork a registry revision chain. | UUIDv7 IDs, exclusive-create allocation, append-only revisions, prior-digest compare-and-swap, global duplicate/chain checks, and stale-writer tests. | OPEN |
+| RISK-018 | Concurrent writers, filesystem redirection, or abandoned locks corrupt, fork, or block a registry revision chain. | UUIDv7 IDs, exclusive-create allocation, append-only revisions, prior-digest compare-and-swap, global duplicate/chain checks, stale-writer tests, later registry path/reparse hardening, and tested stale/crash lock recovery before Stage 1B closeout. | OPEN |
 | RISK-019 | Canonicalization, floating-point representation, Parquet versions, or row order causes misleading digest drift or false equivalence. | JCS conformance vectors; precision-sensitive strings; separate physical-object, provenance/lineage, and logical-content digests; explicit ordering; pinned environment; fail on mismatch rather than normalizing silently. | OPEN |
 | RISK-020 | Python/tool upgrades, unavailable wheels, mutable CI actions, or platform differences break reproducibility or security checks. | CPython 3.14 smoke tests, committed lock, pinned uv/action versions and checksums, Windows security acceptance tests, deliberate upgrade decisions, and retained environment manifests. | OPEN |
 | RISK-021 | Unknown pre-existing subscription or API usage makes the apparent Month-1 headroom too high. | Keep headroom `UNKNOWN` and block every paid action until actual invoice/service-period and project-usage values are entered under DEC-0010. | OPEN |
 | RISK-022 | The checkout owner differs from the current process identity, so ordinary Git commands block the repository as unsafe. | The verified workaround uses an ephemeral protected config trusting only `D:/quant-hunter`; reverify status/diff for each task. A persistent repository-specific ownership/trust correction requires owner approval. Never use wildcard or silent global trust. | OPEN |
 | RISK-023 | The public repository could expose future proprietary quantitative research, licensed data, private results, or operational details. | Stage 1 infrastructure and sanitized documentation may remain public; commit no secrets, private or licensed data, paid-source content, or proprietary research results. Require an explicit visibility and disclosure review before Stage 2, and reassess CI cost immediately if visibility changes. Do not change repository visibility implicitly. | OPEN |
+| RISK-024 | Unprotected main-branch changes bypass independent review or required quality gates. | Establish and verify main branch protection as a repository-governance action before Stage 2; retain review and CI evidence for governed changes. | OPEN |
 
 ## Escalation
 
@@ -129,6 +130,12 @@ budget ledger records it as spent under a permanent COST ID. RISK-013 and
 RISK-021 remain `OPEN` because the pre-existing subscription/API baseline and
 therefore remaining headroom are still unknown.
 
+The owner reported a separate ChatGPT Pro upgrade on 2026-09-07 for Quant
+Hunter ChatGPT/Codex development capacity. Its actual charge, tax,
+proration/Plus credit, invoice details, service period, and renewal terms remain
+unknown and are recorded under a separate permanent COST ID. RISK-013 and
+RISK-021 remain `OPEN`; no charge amount or remaining headroom is inferred.
+
 ## Item 7 Closure and Item 8A Evidence
 
 Independent review passed Stage 1B item 7 at commit
@@ -165,3 +172,23 @@ portions of RISK-001, RISK-002, RISK-003, RISK-008, and RISK-011. These risks
 remain `OPEN` pending evaluation/result controls, sealed-release integration,
 real research use, and the remaining Stage 1 gates. Item 8B adds USD 0 direct
 cost. Item 8C and Item 9 remain unstarted.
+
+### Item 8B closure and Item 8C retained evidence
+
+Independent review passed Item 8B at commit
+`747ae70b9b6d95179271d5770239347e24d6b2bd`. Item 8C adds synthetic hostile
+coverage for `RUNNING → EVALUATED → DECIDED`, full-precision timestamp order,
+immutable result-object verification, explicit failed/no-artifact outcomes,
+preservation of frozen and attempt evidence, release-reference retention, and
+deterministic rerun resolution from verified freeze inputs. These controls
+further reduce the current Stage 1B portions of RISK-001–003, RISK-005,
+RISK-008, RISK-011, and RISK-015. Independent review passed Item 8C and full
+Item 8 at PR head `c80ca6d2dffba316239880cf6b3ce33c20ee6b2c`. The listed risks remain
+`OPEN` pending Item 9 validation/simulation interfaces, Item 10 sealed-release
+infrastructure, real experiments, reproducibility closeout, and later research
+stages. Registry filesystem/reparse hardening and stale/crash lock recovery also
+remain Stage 1B audit work under RISK-018. Main branch protection remains a
+repository-governance action under RISK-024 before Stage 2; the public/private
+and licensing review remains required under RISK-023; and secret/dependency
+scanning remains required under RISK-011 before real credentials or connectors.
+Item 8C and this reconciliation add USD 0 direct cost. Item 9 remains unstarted.

@@ -12,7 +12,12 @@ from enum import StrEnum
 from typing import Final, cast
 from uuid import uuid7
 
-from quant_hunter.config import JsonRecord, JsonValue
+from quant_hunter.config import (
+    JsonRecord,
+    JsonValue,
+    canonicalize_json,
+    parse_json_document,
+)
 from quant_hunter.identity import (
     Allocation,
     IdentityError,
@@ -28,9 +33,14 @@ from quant_hunter.provenance import (
     FreezeManifest,
     build_freeze_manifest,
 )
-from quant_hunter.provenance.hashing import InvalidDigestError, require_sha256_digest
+from quant_hunter.provenance.hashing import (
+    InvalidDigestError,
+    require_sha256_digest,
+    sha256_bytes,
+    verify_sha256_bytes,
+)
 from quant_hunter.storage import ImmutableObjectStore, StoredObject
-from quant_hunter.storage.security import reject_secret_text
+from quant_hunter.storage.security import reject_credential_uri, reject_secret_text
 
 _TIMESTAMP_PATTERN: Final = re.compile(
     r"^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})"
@@ -49,6 +59,9 @@ _LIFECYCLE_MANAGED_FIELDS: Final = {
     "frozen_manifest_digest",
     "started_at",
     "attempt_records",
+    "evaluated_at",
+    "evaluation_outcome",
+    "decided_at",
     "lifecycle_status",
 }
 _FROZEN_TRANSITION_FIELDS: Final = {
@@ -62,6 +75,24 @@ _RUNTIME_FIELDS: Final = {
     "attempt_records",
     "variants_attempted",
     "variant_accounting",
+}
+_EVALUATION_FIELDS: Final = {
+    "lifecycle_status",
+    "evaluated_at",
+    "evaluation_outcome",
+    "results",
+    "result_artifact_locations",
+    "result_artifact_digests",
+    "failure_modes",
+    "decision_pending_reason",
+    "reason_for_decision",
+}
+_DECISION_FIELDS: Final = {
+    "lifecycle_status",
+    "decided_at",
+    "decision",
+    "decision_pending_reason",
+    "reason_for_decision",
 }
 _CONCRETE_PLAN_FIELDS: Final = (
     "academic_institutional_basis",
@@ -88,6 +119,28 @@ class ExperimentStatus(StrEnum):
     DECIDED = "DECIDED"
 
 
+class EvaluationOutcome(StrEnum):
+    """Typed observed-outcome vocabulary retained by EVALUATED revisions."""
+
+    POSITIVE = "POSITIVE"
+    NEGATIVE = "NEGATIVE"
+    NULL = "NULL"
+    FAILED = "FAILED"
+    INCONCLUSIVE = "INCONCLUSIVE"
+
+
+class ExperimentDecision(StrEnum):
+    """Governed research-decision vocabulary; it grants no deployment authority."""
+
+    CONTINUE_RESEARCH = "CONTINUE_RESEARCH"
+    REVISE_NEW_EXPERIMENT = "REVISE_NEW_EXPERIMENT"
+    REJECT = "REJECT"
+    INCONCLUSIVE = "INCONCLUSIVE"
+    DEFER = "DEFER"
+    INVALIDATED = "INVALIDATED"
+    SUPERSEDED = "SUPERSEDED"
+
+
 class ExperimentLifecycleError(RuntimeError):
     """Base class for lifecycle and scientific-integrity failures."""
 
@@ -108,6 +161,10 @@ class AttemptBudgetExceededError(ExperimentLifecycleError):
     """A runtime attempt would exceed the frozen multiple-testing budget."""
 
 
+class RerunResolutionError(ExperimentLifecycleError):
+    """Authoritative evidence cannot produce a complete rerun resolution."""
+
+
 @dataclass(frozen=True, slots=True)
 class FrozenExperiment:
     """The exact FROZEN revision and its immutable canonical freeze evidence."""
@@ -115,6 +172,32 @@ class FrozenExperiment:
     revision: Revision
     manifest: FreezeManifest
     manifest_object: StoredObject
+
+
+@dataclass(frozen=True, slots=True)
+class ResultArtifactReference:
+    """A result or failure artifact location paired with exact immutable bytes."""
+
+    location: str
+    digest: str
+
+
+@dataclass(frozen=True, slots=True)
+class RerunResolution:
+    """Canonical verified scientific inputs for a future separately run experiment."""
+
+    canonical_bytes: bytes
+    digest: str
+
+    @property
+    def document(self) -> JsonRecord:
+        value = parse_json_document(self.canonical_bytes)
+        if not isinstance(value, dict):
+            raise RerunResolutionError("Rerun resolution is not a JSON object")
+        return value
+
+    def verify(self) -> None:
+        verify_sha256_bytes(self.canonical_bytes, self.digest)
 
 
 type _ExactTimestamp = tuple[int, int, int, int, int, int, Decimal]
@@ -389,6 +472,32 @@ def _validate_runtime_revision(
     return attempts
 
 
+def _evaluation_outcome(record: Mapping[str, JsonValue]) -> EvaluationOutcome:
+    value = record.get("evaluation_outcome")
+    if not isinstance(value, str):
+        raise ExperimentIntegrityError("Evaluation outcome is malformed")
+    try:
+        return EvaluationOutcome(value)
+    except ValueError as error:
+        raise ExperimentIntegrityError("Evaluation outcome is malformed") from error
+
+
+def _decision(record: Mapping[str, JsonValue]) -> ExperimentDecision:
+    value = record.get("decision")
+    if not isinstance(value, str):
+        raise ExperimentIntegrityError("Experiment decision is malformed")
+    try:
+        return ExperimentDecision(value)
+    except ValueError as error:
+        raise ExperimentIntegrityError("Experiment decision is malformed") from error
+
+
+def _require_nonempty_text(value: object, field: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ExperimentIntegrityError(f"{field} must be a nonempty string")
+    reject_secret_text(value, field)
+
+
 class ExperimentLifecycleService:
     """Apply governed experiment transitions and runtime attempt accounting."""
 
@@ -622,6 +731,220 @@ class ExperimentLifecycleService:
         self._verify_running_history(self._revisions(experiment_id))
         return revision
 
+    def evaluate(
+        self,
+        experiment_id: str,
+        expected_previous_digest: str,
+        *,
+        evaluated_at: str,
+        outcome: EvaluationOutcome | str,
+        result_summary: str,
+        result_artifacts: Sequence[ResultArtifactReference] = (),
+        no_result_artifact_reason: str | None = None,
+        failure_modes: Sequence[str] = (),
+    ) -> Revision:
+        """Append permanent observed evidence after verifying all RUNNING history."""
+        revisions = self._revisions(experiment_id)
+        head = revisions[-1]
+        self._require_transition(
+            head, ExperimentStatus.RUNNING, ExperimentStatus.EVALUATED
+        )
+        running, attempts = self._verify_running_history(revisions)
+        if expected_previous_digest != running.digest:
+            raise StaleWriterError(
+                f"Expected {expected_previous_digest}, current head is {running.digest}"
+            )
+        latest_timestamp = running.record.get("started_at")
+        if attempts:
+            latest_timestamp = attempts[-1].get("recorded_at")
+        if not isinstance(latest_timestamp, str):
+            raise ExperimentIntegrityError("Latest runtime timestamp is malformed")
+        if _timestamp(evaluated_at, "evaluated_at") < _timestamp(
+            latest_timestamp, "latest runtime timestamp"
+        ):
+            raise ExperimentIntegrityError(
+                "evaluated_at precedes latest runtime timestamp"
+            )
+        try:
+            governed_outcome = EvaluationOutcome(outcome)
+        except ValueError as error:
+            raise ExperimentIntegrityError("Evaluation outcome is malformed") from error
+        _require_nonempty_text(result_summary, "evaluation result summary")
+        failure_values = list(failure_modes)
+        for failure in failure_values:
+            _require_nonempty_text(failure, "evaluation failure mode")
+        if governed_outcome is EvaluationOutcome.FAILED and not failure_values:
+            raise ExperimentIntegrityError(
+                "A failed evaluation must retain at least one failure mode"
+            )
+        artifact_digests: list[JsonValue] = []
+        artifact_locations: list[JsonValue] = []
+        if result_artifacts:
+            if no_result_artifact_reason is not None:
+                raise ExperimentIntegrityError(
+                    "Artifact absence reason cannot accompany result artifacts"
+                )
+            for artifact in result_artifacts:
+                if not isinstance(artifact, ResultArtifactReference):
+                    raise ExperimentIntegrityError(
+                        "Result artifact reference is malformed"
+                    )
+                require_sha256_digest(artifact.digest)
+                _require_nonempty_text(artifact.location, "result artifact location")
+                reject_credential_uri(artifact.location)
+                self.object_store.get(artifact.digest)
+                artifact_digests.append(artifact.digest)
+                artifact_locations.append(artifact.location)
+            locations: JsonValue = artifact_locations
+        else:
+            _require_nonempty_text(
+                no_result_artifact_reason, "result artifact absence reason"
+            )
+            locations = {
+                "status": "NOT_APPLICABLE",
+                "reason": cast(str, no_result_artifact_reason),
+            }
+
+        payload = _payload(running.record)
+        payload["lifecycle_status"] = ExperimentStatus.EVALUATED.value
+        payload["evaluated_at"] = evaluated_at
+        payload["evaluation_outcome"] = governed_outcome.value
+        payload["results"] = result_summary
+        payload["result_artifact_digests"] = artifact_digests
+        payload["result_artifact_locations"] = locations
+        payload["failure_modes"] = list(failure_values)
+        payload["decision_pending_reason"] = "Evaluation complete; decision pending."
+        payload["reason_for_decision"] = {
+            "status": "PENDING",
+            "reason": "A governed decision has not been recorded.",
+        }
+        revision = self.registry.append(
+            experiment_id, expected_previous_digest, payload
+        )
+        self._verify_evaluated_history(self._revisions(experiment_id))
+        return revision
+
+    def decide(
+        self,
+        experiment_id: str,
+        expected_previous_digest: str,
+        *,
+        decided_at: str,
+        decision: ExperimentDecision | str,
+        reason: str,
+    ) -> Revision:
+        """Append an explicit human-supplied research decision without automation."""
+        revisions = self._revisions(experiment_id)
+        head = revisions[-1]
+        self._require_transition(
+            head, ExperimentStatus.EVALUATED, ExperimentStatus.DECIDED
+        )
+        evaluated = self._verify_evaluated_history(revisions)
+        if expected_previous_digest != evaluated.digest:
+            raise StaleWriterError(
+                f"Expected {expected_previous_digest}, current head is "
+                f"{evaluated.digest}"
+            )
+        evaluated_at = evaluated.record.get("evaluated_at")
+        if not isinstance(evaluated_at, str):
+            raise ExperimentIntegrityError("Experiment evaluated_at is malformed")
+        if _timestamp(decided_at, "decided_at") < _timestamp(
+            evaluated_at, "evaluated_at"
+        ):
+            raise ExperimentIntegrityError("decided_at precedes evaluated_at")
+        try:
+            governed_decision = ExperimentDecision(decision)
+        except ValueError as error:
+            raise ExperimentIntegrityError(
+                "Experiment decision is malformed"
+            ) from error
+        _require_nonempty_text(reason, "decision reason")
+
+        payload = _payload(evaluated.record)
+        payload["lifecycle_status"] = ExperimentStatus.DECIDED.value
+        payload["decided_at"] = decided_at
+        payload["decision"] = governed_decision.value
+        payload["reason_for_decision"] = reason
+        payload.pop("decision_pending_reason", None)
+        revision = self.registry.append(
+            experiment_id, expected_previous_digest, payload
+        )
+        self._verify_decided_history(self._revisions(experiment_id))
+        return revision
+
+    def resolve_rerun(self, experiment_id: str) -> RerunResolution:
+        """Resolve verified frozen inputs without executing or creating an experiment."""
+        revisions = self._revisions(experiment_id)
+        status = _status(revisions[-1].record)
+        if status is ExperimentStatus.FROZEN:
+            frozen_index = len(revisions) - 1
+            frozen = self._frozen_from_history(revisions, frozen_index)
+        elif status is ExperimentStatus.RUNNING:
+            self._verify_running_history(revisions)
+            frozen_index = self._single_frozen_index(revisions)
+            frozen = self._frozen_from_history(revisions, frozen_index)
+        elif status is ExperimentStatus.EVALUATED:
+            self._verify_evaluated_history(revisions)
+            frozen_index = self._single_frozen_index(revisions)
+            frozen = self._frozen_from_history(revisions, frozen_index)
+        elif status is ExperimentStatus.DECIDED:
+            self._verify_decided_history(revisions)
+            frozen_index = self._single_frozen_index(revisions)
+            frozen = self._frozen_from_history(revisions, frozen_index)
+        else:
+            raise RerunResolutionError(
+                "Experiment must be FROZEN or later for rerun resolution"
+            )
+        registered = revisions[frozen_index - 1]
+        document = frozen.manifest.document
+        required_fields = {
+            "experiment_id",
+            "registered_revision_digest",
+            "code_revision",
+            "configuration_digest",
+            "environment_digest",
+            "data_manifests",
+            "seeds",
+            "search_budget",
+            "criteria",
+            "baselines",
+        }
+        if not required_fields.issubset(document):
+            raise RerunResolutionError("Freeze manifest lacks required rerun inputs")
+        seeds = document["seeds"]
+        if not isinstance(seeds, list):
+            raise RerunResolutionError("Freeze manifest seeds are malformed")
+        if seeds:
+            seed_evidence: JsonValue = {"seeds": deepcopy(seeds)}
+        else:
+            reason = registered.record.get("random_seed_not_applicable_reason")
+            if not isinstance(reason, str) or not reason.strip():
+                raise RerunResolutionError(
+                    "Rerun seed evidence lacks a governed not-applicable reason"
+                )
+            seed_evidence = {"not_applicable_reason": reason}
+        resolution_document: JsonRecord = {
+            "schema_version": "1.0.0",
+            "resolution_type": "EXPERIMENT_RERUN_INPUTS",
+            "experiment_id": experiment_id,
+            "registered_revision_digest": registered.digest,
+            "frozen_revision": frozen.revision.number,
+            "frozen_revision_digest": frozen.revision.digest,
+            "freeze_manifest_digest": frozen.manifest.digest,
+            "code_revision": deepcopy(document["code_revision"]),
+            "configuration_digest": deepcopy(document["configuration_digest"]),
+            "environment_digest": deepcopy(document["environment_digest"]),
+            "data_manifests": deepcopy(document["data_manifests"]),
+            "seed_evidence": seed_evidence,
+            "search_budget": deepcopy(document["search_budget"]),
+            "criteria": deepcopy(document["criteria"]),
+            "baselines": deepcopy(document["baselines"]),
+        }
+        canonical_bytes = canonicalize_json(resolution_document)
+        resolution = RerunResolution(canonical_bytes, sha256_bytes(canonical_bytes))
+        resolution.verify()
+        return resolution
+
     def _frozen_from_history(
         self, revisions: tuple[Revision, ...], frozen_index: int
     ) -> FrozenExperiment:
@@ -649,16 +972,7 @@ class ExperimentLifecycleService:
     def _verify_running_history(
         self, revisions: tuple[Revision, ...]
     ) -> tuple[Revision, list[JsonRecord]]:
-        frozen_indexes = [
-            index
-            for index, revision in enumerate(revisions)
-            if _status(revision.record) is ExperimentStatus.FROZEN
-        ]
-        if len(frozen_indexes) != 1:
-            raise ExperimentIntegrityError(
-                "RUNNING history must contain exactly one FROZEN revision"
-            )
-        frozen_index = frozen_indexes[0]
+        frozen_index = self._single_frozen_index(revisions)
         frozen = self._frozen_from_history(revisions, frozen_index)
         frozen_at = frozen.revision.record.get("frozen_at")
         if not isinstance(frozen_at, str):
@@ -702,6 +1016,126 @@ class ExperimentLifecycleService:
                 )
             previous_attempts = attempts
         return running_revisions[-1], previous_attempts or []
+
+    def _verify_evaluated_history(self, revisions: tuple[Revision, ...]) -> Revision:
+        evaluated = revisions[-1]
+        if _status(evaluated.record) is not ExperimentStatus.EVALUATED:
+            raise ExperimentIntegrityError("Experiment head is not EVALUATED")
+        running, attempts = self._verify_running_history(revisions[:-1])
+        if _without_fields(evaluated.record, _EVALUATION_FIELDS) != _without_fields(
+            running.record, _EVALUATION_FIELDS
+        ):
+            raise ExperimentIntegrityError(
+                "EVALUATED revision changed frozen or runtime evidence"
+            )
+        evaluated_at = evaluated.record.get("evaluated_at")
+        if not isinstance(evaluated_at, str):
+            raise ExperimentIntegrityError("Experiment evaluated_at is malformed")
+        latest_timestamp = running.record.get("started_at")
+        if attempts:
+            latest_timestamp = attempts[-1].get("recorded_at")
+        if not isinstance(latest_timestamp, str):
+            raise ExperimentIntegrityError("Latest runtime timestamp is malformed")
+        if _timestamp(evaluated_at, "evaluated_at") < _timestamp(
+            latest_timestamp, "latest runtime timestamp"
+        ):
+            raise ExperimentIntegrityError(
+                "evaluated_at precedes latest runtime timestamp"
+            )
+        outcome = _evaluation_outcome(evaluated.record)
+        summary = evaluated.record.get("results")
+        _require_nonempty_text(summary, "evaluation result summary")
+        failure_modes = evaluated.record.get("failure_modes")
+        if not isinstance(failure_modes, list):
+            raise ExperimentIntegrityError("Evaluation failure modes are malformed")
+        for failure in failure_modes:
+            _require_nonempty_text(failure, "evaluation failure mode")
+        if outcome is EvaluationOutcome.FAILED and not failure_modes:
+            raise ExperimentIntegrityError(
+                "A failed evaluation must retain at least one failure mode"
+            )
+        if "decision" in evaluated.record:
+            raise ExperimentIntegrityError(
+                "EVALUATED experiment already has a decision"
+            )
+        self._verify_result_artifacts(evaluated.record)
+        return evaluated
+
+    def _verify_decided_history(self, revisions: tuple[Revision, ...]) -> Revision:
+        decided = revisions[-1]
+        if _status(decided.record) is not ExperimentStatus.DECIDED:
+            raise ExperimentIntegrityError("Experiment head is not DECIDED")
+        evaluated = self._verify_evaluated_history(revisions[:-1])
+        if _without_fields(decided.record, _DECISION_FIELDS) != _without_fields(
+            evaluated.record, _DECISION_FIELDS
+        ):
+            raise ExperimentIntegrityError(
+                "DECIDED revision changed observed or frozen evidence"
+            )
+        evaluated_at = evaluated.record.get("evaluated_at")
+        decided_at = decided.record.get("decided_at")
+        if not isinstance(evaluated_at, str) or not isinstance(decided_at, str):
+            raise ExperimentIntegrityError("Decision timestamps are malformed")
+        if _timestamp(decided_at, "decided_at") < _timestamp(
+            evaluated_at, "evaluated_at"
+        ):
+            raise ExperimentIntegrityError("decided_at precedes evaluated_at")
+        _decision(decided.record)
+        _require_nonempty_text(
+            decided.record.get("reason_for_decision"), "decision reason"
+        )
+        if "decision_pending_reason" in decided.record:
+            raise ExperimentIntegrityError(
+                "DECIDED experiment remains decision-pending"
+            )
+        return decided
+
+    def _verify_result_artifacts(self, record: Mapping[str, JsonValue]) -> None:
+        digests = record.get("result_artifact_digests")
+        locations = record.get("result_artifact_locations")
+        if not isinstance(digests, list) or any(
+            not isinstance(digest, str) for digest in digests
+        ):
+            raise ExperimentIntegrityError("Result artifact digests are malformed")
+        digest_values = cast(list[str], digests)
+        if digest_values:
+            if not isinstance(locations, list) or len(locations) != len(digests):
+                raise ExperimentIntegrityError(
+                    "Result artifact locations must pair with every digest"
+                )
+            for digest, location in zip(digest_values, locations, strict=True):
+                if not isinstance(location, str):
+                    raise ExperimentIntegrityError(
+                        "Result artifact location is malformed"
+                    )
+                require_sha256_digest(digest)
+                _require_nonempty_text(location, "result artifact location")
+                reject_credential_uri(location)
+                self.object_store.get(digest)
+            return
+        if (
+            not isinstance(locations, dict)
+            or locations.get("status") != "NOT_APPLICABLE"
+        ):
+            raise ExperimentIntegrityError(
+                "Evaluation without artifacts requires an explicit absence reason"
+            )
+        _require_nonempty_text(
+            locations.get("reason"), "result artifact absence reason"
+        )
+
+    @staticmethod
+    def _single_frozen_index(revisions: tuple[Revision, ...]) -> int:
+        frozen_indexes = [
+            index
+            for index, revision in enumerate(revisions)
+            if _status(revision.record) is ExperimentStatus.FROZEN
+        ]
+        if len(frozen_indexes) != 1:
+            raise ExperimentIntegrityError(
+                "Experiment history must contain exactly one FROZEN revision"
+            )
+        return frozen_indexes[0]
 
     def _head(self, experiment_id: str) -> Revision:
         return self._revisions(experiment_id)[-1]

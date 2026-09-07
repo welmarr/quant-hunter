@@ -25,18 +25,20 @@ Rejected and cancelled entries remain visible. Approval of one item does not app
 
 | Window | Cap | Recorded baseline | Approved/committed | Spent | Remaining headroom |
 |---|---:|---:|---:|---:|---:|
-| 2026-09-04 00:00 EDT (inclusive) to 2026-10-04 00:00 EDT (exclusive) | USD 400 | UNKNOWN | USD 10 | USD 10 | UNKNOWN |
+| 2026-09-04 00:00 EDT (inclusive) to 2026-10-04 00:00 EDT (exclusive) | USD 400 | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN |
 
-The USD 10 approved/committed amount is the same purchase shown as spent, not an
-additional USD 10 liability. It does not assert that existing subscriptions or
-project API usage have zero cost. The owner must provide relevant invoice
-amount/service dates and project-attributable API usage. For each item, the
-ledger counts actual Month-1 spend when final, otherwise its approved or
-committed maximum; any unknown material amount keeps headroom `UNKNOWN`.
+The known USD 10 Codex-credit purchase is included once. The owner-reported
+ChatGPT Pro purchase has an unknown charged amount, so the aggregate
+approved/committed and spent values remain `UNKNOWN`; this does not assert that
+existing subscriptions or project API usage have zero cost. The owner must
+provide relevant invoice amounts, service dates, tax, proration/credit, renewal
+terms, and project-attributable API usage. For each item, the ledger counts
+actual Month-1 spend when final, otherwise its approved or committed maximum;
+any unknown material amount keeps headroom `UNKNOWN`.
 
 ## Entries
 
-One owner-reported purchase is recorded below. Stage 1B Batches 1–4A use
+Two owner-reported purchases are recorded below. Stage 1B Batches 1–4A use
 free/open-source CPython, uv, Hatchling, Ruff, mypy, pytest, pytest-cov,
 coverage.py, jsonschema, referencing, rfc3339-validator, and types-jsonschema at
 USD 0 direct cost. Batch 3B adds the Apache-2.0 `rfc8785` 0.1.4 package at USD 0
@@ -55,7 +57,7 @@ Apache-2.0 PyArrow 25.0.1 at USD 0 direct cost for deterministic local Parquet
 encoding. Batch 4B.2 uses the same locked dependencies for synthetic PIT
 selection. This final review-fix implementation adds no service, data, storage,
 subscription, usage commitment, or direct cost. The separate owner-reported
-purchase already made for project capacity is recorded below.
+purchases already made for project capacity are recorded below.
 Item 8A reuses the same locked local dependencies and prepaid capacity. Its
 incremental direct project cost is USD 0; consumption of the recorded prepaid
 credits is not counted again as separate spend.
@@ -64,6 +66,10 @@ and adds USD 0 incremental direct cost.
 Item 8B reuses the same locked dependencies, registry, canonicalization, and
 immutable-object foundations. It adds no service, data, infrastructure,
 subscription, or usage commitment and has USD 0 incremental direct cost.
+Item 8C reuses those same local foundations for evaluation evidence, decisions,
+immutable result-object verification, and deterministic rerun resolution. It
+adds no dependency, service, data, infrastructure, subscription, usage
+commitment, or incremental direct cost.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 
@@ -82,6 +88,26 @@ subscription, or usage commitment and has USD 0 incremental direct cost.
 The USD 10 is an already-made project purchase recorded against the Month-1 cap.
 The unresolved pre-existing subscription/API baseline keeps remaining headroom
 `UNKNOWN`; this ledger does not claim that USD 390 is available.
+
+### COST-01a07a57-9662-742d-a1ba-f9f6ab023815 — OpenAI ChatGPT Pro
+
+- **Category / provider / product:** implementation capacity / OpenAI / ChatGPT Pro.
+- **Purpose:** Quant Hunter ChatGPT/Codex development capacity.
+- **Cost class:** purchased subscription upgrade; recurring terms, renewal amount, and cancellation terms are `UNKNOWN` pending owner invoice/account evidence.
+- **Purchase/upgrade date / currency:** 2026-09-07 / `UNKNOWN` pending owner invoice or receipt.
+- **Status:** `SPENT` / amount pending reconciliation.
+- **Approval:** explicitly approved and reported by the project owner.
+- **Committed / actual charged amount:** `UNKNOWN` / `UNKNOWN` pending owner invoice or receipt.
+- **Tax, proration, and Plus credit:** `UNKNOWN`.
+- **Invoice, payment reference, and service period:** not provided.
+- **Alternative / deferral consequence:** use already available capacity; implementation may proceed more slowly.
+- **Owner / linked risks:** project owner / RISK-013 and RISK-021.
+
+This completed owner-reported purchase is permanent under its COST ID, but no
+USD amount is imputed. Month-1 recorded spend and remaining headroom stay
+`UNKNOWN` until the actual charge and allocation evidence are reconciled. No
+machine COST registry record exists because `RegistryKind.COST` has no governed
+schema mapping yet.
 
 Paid-source proposals must also satisfy `DATA_SOURCE_REGISTRY.md`; infrastructure, API, subscription, and tooling proposals use this ledger even when no data source is involved.
 
