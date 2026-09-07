@@ -47,6 +47,21 @@ remains `OPEN` until the wider Stage 1B reproducibility audit and cross-platform
 CI evidence are complete. Under DEC-0013, the current revision digest covers
 exact stored bytes only.
 
+On 2026-09-07, PR #5 (`Stage 1B Item 9 — cross-bind validation
+authorities`) at head `d6ff6b26fced3c7750f8a4c68b520b70c0567c77` recorded an
+intermittent Windows registry-lock contention incident in Quality run #30,
+GitHub Actions run `34143341935`. Attempt 1 passed the Ubuntu quality gate but
+failed Windows compatibility in
+`tests/test_registry.py::test_concurrent_allocation_is_unique_and_complete`:
+one of 12 concurrent allocation workers raised `RegistryLockTimeoutError` while
+contending for `.allocation.lock` under the configured five-second registry lock
+timeout. The Windows rerun passed all 630 tests and the overall workflow
+concluded successfully. That rerun is not closure evidence: the root cause has
+not been reproduced or proven resolved, and no registry or lock implementation
+change was made. Classify the observation as intermittent contention with an
+unresolved root cause and keep RISK-018 `OPEN`. Stage 1B reproducibility and
+closeout work must investigate and test this incident even if it never recurs.
+
 ## Batch 3B Evidence
 
 On 2026-09-05, RFC 8785 primary, UTF-16 property-order, and Appendix B binary64
