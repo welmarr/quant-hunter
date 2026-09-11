@@ -733,3 +733,21 @@ all 694 pytest cases with 90.18% combined statement/branch coverage. The
 governed offline build and import/archive checks also passed with no dependency
 drift. Item 10A remains `IMPLEMENTED / INDEPENDENT REVIEW PENDING` until Nova
 re-audits the corrective head; Item 10B remains `NOT STARTED`.
+
+### Item 10A closure and deferred-issue governance
+
+Independent review passed the corrected Item 10A branch head
+`0892bfdb9231053e8896867facb8fc3de47ebf8e`. PR #7 merged it on main at
+`20851f262041cda1fe26844032f298b2a1531ffd`. Post-merge Quality #36 succeeded
+on Ubuntu and Windows with 694 tests on each platform and 90.11% combined
+statement/branch coverage on Ubuntu. Item 10A is therefore `COMPLETE /
+INDEPENDENT REVIEW PASSED / MERGED / POST-MERGE CI GREEN`; this establishes no
+real Windows host boundary.
+
+DEC-0034 adds the detailed deferred-material-work standard, GitHub Issue Form,
+and agent resume/closure rules. GitHub CLI was unavailable on the local host, so
+no remote Issue was searched or created. Complete ready-to-post drafts for
+RISK-018, RISK-023, RISK-024, COST schema authority, and pre-ingestion data
+architecture are retained in `DEFERRED_ISSUE_DRAFTS.md` pending duplicate search
+and authorized remote creation. This governance work adds no dependency or
+incremental direct cost.

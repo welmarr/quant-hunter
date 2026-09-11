@@ -1,0 +1,122 @@
+name: Material deferred work
+description: Track evidenced work that is outside the current reviewed batch.
+title: "[DEFERRED] "
+body:
+  - type: checkboxes
+    id: duplicate_and_scope
+    attributes:
+      label: Duplicate and scope checks
+      options:
+        - label: I searched open and closed Issues for an equivalent record.
+          required: true
+        - label: This is not an unresolved correctness blocker for the current batch.
+          required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Give a short, unambiguous description.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the technical or scientific problem precisely.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Record only known dates, commits, PRs, runs, tests, errors, files, and reproduction conditions.
+    validations:
+      required: true
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Why this matters
+      multiple: true
+      options:
+        - Scientific validity
+        - Security
+        - Reproducibility
+        - Availability
+        - Performance
+        - Maintainability
+        - Cost
+        - Legal or licensing
+        - Operational reliability
+    validations:
+      required: true
+  - type: textarea
+    id: current_understanding
+    attributes:
+      label: Current understanding
+      description: Separate confirmed facts, observations, hypotheses, and unknowns.
+    validations:
+      required: true
+  - type: textarea
+    id: why_deferred
+    attributes:
+      label: Why deferred
+      description: Explain why the current authorized batch cannot resolve this work.
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Target
+      description: Name the exact Stage, Item, or gate; do not write only “later.”
+    validations:
+      required: true
+  - type: textarea
+    id: investigation
+    attributes:
+      label: Proposed investigation
+      description: List concrete steps that will test the unknowns.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe a candidate solution and label unvalidated parts as proposals.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: State exact evidence required before closure.
+    validations:
+      required: true
+  - type: textarea
+    id: regression
+    attributes:
+      label: Regression evidence required
+      description: Identify hostile tests, CI, host proof, or documentation required.
+    validations:
+      required: true
+  - type: textarea
+    id: relationships
+    attributes:
+      label: Relationships
+      description: Link applicable risks, decisions, regression guards, PRs, commits, roadmap items, and Issues.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Technical references
+      description: Prefer authoritative standards and official documentation.
+    validations:
+      required: false
+  - type: textarea
+    id: closure
+    attributes:
+      label: Closure evidence
+      description: Leave PENDING until resolving commits, review, tests, CI or host proof, governance updates, and residual limitations exist.
+      value: PENDING
+    validations:
+      required: true

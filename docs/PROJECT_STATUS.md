@@ -6,11 +6,10 @@
 |---|---|
 | PROJECT | Quant Hunter |
 | LAST VERIFIED DATE | 2026-09-11 |
-| LAST VERIFIED IMPLEMENTATION MAIN | `3d6f5f50e9f7b202498a6d3a2357fcccee2df409` |
+| LAST VERIFIED IMPLEMENTATION MAIN | `20851f262041cda1fe26844032f298b2a1531ffd` |
 | CURRENT STAGE | Stage 1B — Foundation Implementation |
 
-The stored SHA is the verified implementation checkpoint immediately before
-the current Item 10A feature branch. It is not a
+The stored SHA is the verified post-merge Item 10A checkpoint. It is not a
 substitute for checking current Git. Every resume must obtain the current
 branch and HEAD directly from Git, then reconcile this file against that state
 and the available review evidence. Do not update this field speculatively with
@@ -20,25 +19,22 @@ the future merge SHA of this file's own change.
 
 - Stage 0
 - Stage 1A
-- Stage 1B Items 1–9
+- Stage 1B Items 1–10A
 
 ## LAST COMPLETED ITEM
 
-Item 9 — Validation and Simulation Interfaces is `COMPLETE / INDEPENDENT
-REVIEW PASSED`. Its final cross-binding reviewed head is
-`d6ff6b26fced3c7750f8a4c68b520b70c0567c77`; it is merged on main at
-`6c9d5ae1eec58faeca53239d832748053387f1bc`. Post-merge Quality #32 passed on
-Ubuntu and Windows. Ubuntu ran 630 tests with 90.99% combined statement/branch
-coverage; Windows also succeeded.
+Item 10A — software release core and synthetic security contracts is `COMPLETE /
+INDEPENDENT REVIEW PASSED / MERGED / POST-MERGE CI GREEN`. Its reviewed branch
+head is `0892bfdb9231053e8896867facb8fc3de47ebf8e`; it is merged on main at
+`20851f262041cda1fe26844032f298b2a1531ffd`. Post-merge Quality #36 succeeded on
+Ubuntu and Windows with 694 tests on each platform and 90.11% combined
+statement/branch coverage on Ubuntu.
 
 ## CURRENT ITEM
 
-Item 10A — software release core and synthetic security contracts is
-`IMPLEMENTED / INDEPENDENT REVIEW PENDING` on
-`feature/stage1b-item10a-sealed-oos-core`. Nova's review of head
-`859233574d4d8ea9595e7985f3da82aba252c99a` found a competing public raw
-exposure-ledger writer. The corrective work makes `SealedReleaseService` the
-sole supported public exposure writer and requires independent re-audit.
+Item 10B — real Windows host-enforced sealed-OOS boundary is the current
+explicitly authorized item. Its read-only host preflight determines whether the
+batch can capture real host evidence or must remain blocked with tooling only.
 
 ## PLANNED DECOMPOSITION
 
@@ -47,10 +43,11 @@ Item 10 is planned as:
 - **10A — software release core and synthetic security contracts.**
 - **10B — real Windows host-enforced boundary.**
 
-Item 10A implements only software and synthetic evidence. Item 10B is `NOT
-STARTED` and remains separately gated; no real Windows host-security mutation is
-authorized. The next action is independent re-review of Item 10A, not Item 10B
-implementation.
+Item 10A implements only software and synthetic evidence. Item 10B is separately
+gated and may make only the bounded host changes explicitly authorized for this
+batch after every read-only preflight condition passes. Full Item 10 is not
+complete until Item 10B captures the required host evidence and passes
+independent review.
 
 ## AFTER ITEM 10
 
@@ -112,12 +109,14 @@ A future agent must:
 1. Read `AGENTS.md`.
 2. Read this file.
 3. Verify the current Git HEAD, branch, and worktree.
-4. Read `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/RISK_REGISTER.md`, and the
+4. Inspect open material GitHub Issues and reconcile them with the repository
+   authorities.
+5. Read `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/RISK_REGISTER.md`, and the
    governing documents for the next item.
-5. Reconcile this current-state summary against actual repository and review
+6. Reconcile this current-state summary against actual repository and review
    evidence.
-6. Stop and reconcile rather than guess if the evidence conflicts.
-7. Complete the required pre-step checkpoint before implementation.
+7. Stop and reconcile rather than guess if the evidence conflicts.
+8. Complete the required pre-step checkpoint before implementation.
 
 ## STATUS UPDATE RULE
 

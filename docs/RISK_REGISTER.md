@@ -360,3 +360,19 @@ Item 10A remains `IMPLEMENTED / INDEPENDENT REVIEW PENDING` until the corrective
 head is independently re-audited. Item 10B remains `NOT STARTED`. RISK-017,
 RISK-018, RISK-023, and RISK-024 remain `OPEN`; no risk is closed by this
 software-only correction.
+
+### Item 10A closure and deferred-work tracking
+
+Independent review passed corrected Item 10A head
+`0892bfdb9231053e8896867facb8fc3de47ebf8e`, PR #7 merged it on main at
+`20851f262041cda1fe26844032f298b2a1531ffd`, and post-merge Quality #36 passed
+on Ubuntu and Windows with 694 tests on each. The Ubuntu combined
+statement/branch coverage was 90.11%. This closes Item 10A's software-only
+review gate but does not close RISK-017 or establish real host isolation.
+
+DEC-0034 makes GitHub Issues the operational tracker for material deferred
+work while this register remains the durable risk authority. GitHub CLI was
+unavailable during the Item 10B batch, so no Issue number or URL exists yet.
+Ready-to-post drafts preserve the exact RISK-018 incident and future work for
+RISK-023 and RISK-024; remote creation still requires duplicate review. All
+three risks remain `OPEN`.

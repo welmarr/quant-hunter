@@ -54,6 +54,8 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | A future conversation, Codex session, or agent can recover the current reviewed resume point from repository evidence. | `AGENTS.md`; `PROJECT_STATUS.md`; DEC-0029 |
 | Every material batch preserves prior reviewed scientific, security, reproducibility, identity, and authority invariants through the full regression and review sequence. | `AGENTS.md`; `REGRESSION_GUARD.md`; DEC-0029 |
 | Current status may be updated without rewriting historical decisions, risks, development evidence, or Git history. | `PROJECT_STATUS.md`; `DECISIONS.md`; `RISK_REGISTER.md`; DEC-0029 |
+| Material deferred work is tracked operationally without replacing durable repository authority or bypassing a current-batch blocker. | `ISSUE_GOVERNANCE.md`; `.github/ISSUE_TEMPLATE/material-deferred-work.yml`; DEC-0034 |
+| Issue closure requires stated acceptance criteria, regression evidence, and reconciliation of affected durable authorities. | `ISSUE_GOVERNANCE.md`; `AGENTS.md`; DEC-0034 |
 
 ## Stage 1B Item 10A Sealed-OOS Software Mapping
 
@@ -68,9 +70,10 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | Retained release evidence remains verifiable through later Item 8 states against the exact historical FROZEN authority and retained event digest. | DEC-0032; `experiments/lifecycle.py`; FROZEN/RUNNING/EVALUATED/DECIDED verification tests |
 | Item 10A evidence is synthetic only and cannot claim the separately gated host boundary. | `ARCHITECTURE.md`; `REGRESSION_GUARD.md` REG-F01–REG-F03; synthetic-mode and poisoned-filesystem tests |
 
-Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING`; Item 10B is `NOT
-STARTED`. This mapping does not establish real Windows isolation or complete
-Roadmap Item 10.
+Item 10A is `COMPLETE / INDEPENDENT REVIEW PASSED / MERGED / POST-MERGE CI
+GREEN` at main `20851f262041cda1fe26844032f298b2a1531ffd`. Item 10B remains a
+separate host-evidence gate. This mapping does not establish real Windows
+isolation or complete Roadmap Item 10.
 
 ## Coverage Maintenance Rule
 
