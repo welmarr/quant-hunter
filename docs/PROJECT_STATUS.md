@@ -6,8 +6,15 @@
 |---|---|
 | PROJECT | Quant Hunter |
 | LAST VERIFIED DATE | 2026-09-10 |
-| AUTHORITATIVE MAIN | `6c9d5ae1eec58faeca53239d832748053387f1bc` |
+| LAST VERIFIED IMPLEMENTATION MAIN | `6c9d5ae1eec58faeca53239d832748053387f1bc` |
 | CURRENT STAGE | Stage 1B — Foundation Implementation |
+
+The stored SHA is the historical/current verified implementation checkpoint
+immediately before this documentation-only governance batch. It is not a
+substitute for checking current Git. Every resume must obtain the current
+branch and HEAD directly from Git, then reconcile this file against that state
+and the available review evidence. Do not update this field speculatively with
+the future merge SHA of this file's own change.
 
 ## COMPLETED
 
@@ -72,10 +79,23 @@ The complete authoritative risk inventory and evidence are in
 
 ## GIT WORKFLOW
 
-The project owner controls all Git writes. Codex must not pull, push, commit,
-merge, rebase, switch, checkout, create or delete branches or tags, reset,
-clean, add, or stash unless the owner explicitly changes this policy. Read-only
-Git inspection remains permitted.
+For an explicitly authorized Quant Hunter batch, Codex may run the normal
+non-destructive Git operations needed for that batch: status, diff, log, fetch,
+fast-forward-only pull when needed, branch switch or creation, add, commit,
+push, and upstream setup. Command-local author identity is permitted when
+needed. This bounded authority does not permit merging into `main` without
+owner authorization, force-pushing, hard reset, destructive clean, published
+history rewriting, rebasing published reviewed history, branch or tag deletion,
+or bypassing failed checks.
+
+The owner remains required for final merge authorization, stage transitions,
+host or security mutations, new spending, intentional scientific-invariant
+changes, and architecture changes arising from failed independent review.
+
+When a Codex task executes any Git command, its final response must contain
+`### Git Actions Executed` and report every successful or failed command on one
+line in this exact structure:
+`<number>. <exact command> | <READ-ONLY|LOCAL WRITE|REMOTE WRITE> | <purpose> | Result: <concise result>`.
 
 ## RESUME PROTOCOL
 

@@ -64,6 +64,27 @@ any material project-state change. Preserve historical decisions and risk
 evidence; never silently rewrite them to make current behavior appear
 inevitable.
 
+## Bounded Git Authority and Audit Trail
+
+For an explicitly authorized Quant Hunter batch, Codex may perform the normal
+non-destructive Git operations needed to complete that batch: status, diff,
+log, fetch, fast-forward-only pull when needed, branch switch or creation, add,
+commit, push, and upstream setup. Command-local Git author identity is permitted
+when needed.
+
+Codex must not merge into `main` without owner authorization, force-push, use
+`git reset --hard`, use `git clean -fd` or `git clean -fdx`, rewrite published
+history, rebase published reviewed history, delete branches or tags, or bypass
+failing checks. The project owner remains required for final merge
+authorization, stage transitions, host or security mutations, new spending,
+intentional scientific-invariant changes, and architecture changes arising
+from failed independent review.
+
+At the end of every Codex task in which Git commands were executed, report
+every command, including failed commands, under `### Git Actions Executed`.
+Each action must occupy exactly one line in this format:
+`<number>. <exact command> | <READ-ONLY|LOCAL WRITE|REMOTE WRITE> | <purpose> | Result: <concise result>`.
+
 ## Documentation Authority
 
 Detailed requirements live in:

@@ -442,3 +442,17 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** `AGENTS.md`, `docs/PROJECT_STATUS.md`, `docs/REGRESSION_GUARD.md`, `docs/ROADMAP.md`, `docs/RISK_REGISTER.md`, and `docs/DEVELOPMENT.md`.
 - **Supersedes / superseded by:** Adds continuity and regression governance without rewriting or superseding DEC-0028. The future sealed-OOS decision must use the next available decision number.
 - **Owner and approver:** Project owner through the explicit Quant Hunter durable project continuity and regression-governance authorization dated 2026-09-10.
+
+### DEC-0030 — Restore Bounded Codex Git Write Authority with Mandatory Audit Trail
+
+- **Date:** 2026-09-10
+- **Status:** ACCEPTED
+- **Scope:** governance / operations / reproducibility
+- **Context:** The project owner intentionally supersedes the temporary owner-only Git-write workflow recorded in the current `PROJECT_STATUS.md` draft. Codex needs bounded authority to complete the ordinary branch, commit, and publication steps of an explicitly authorized Quant Hunter batch while leaving final integration and higher-risk decisions with the owner.
+- **Decision:** For an explicitly authorized batch, Codex may use normal non-destructive Git operations: status, diff, log, fetch, fast-forward-only pull when needed, feature-branch creation and switching, add, commit, push, and upstream setup. Codex may use command-local Git author identity when needed. Codex may not merge into `main` without owner authorization, force-push, hard reset, destructive clean, rewrite published history, rebase published reviewed history, delete branches or tags, or bypass failing checks. Every executed Git command, including a failed command and any command-local identity override, must be reported under `### Git Actions Executed`. Each report occupies exactly one line using `<exact command> | <READ-ONLY|LOCAL WRITE|REMOTE WRITE> | <purpose> | Result: <concise result>`.
+- **Alternatives considered:** Keeping the owner-only workflow would leave routine authorized batches incomplete. Unbounded Git authority would weaken independent review and owner-controlled integration. Multi-line or success-only reporting would make the operational audit incomplete and harder to scan.
+- **Scientific/statistical consequences:** This decision changes workflow authority only. It does not alter scientific, security, validation, budget, architecture, or stage-gate invariants. Intentional scientific-invariant changes and architecture changes arising from failed independent review still require owner involvement.
+- **Reproducibility and cost consequences:** Exact successful and failed Git actions become durable handoff evidence in task reports. Final merge authorization, stage transitions, host or security mutations, and new spending remain with the owner. Incremental direct cost is USD 0.
+- **References:** `AGENTS.md`, `docs/PROJECT_STATUS.md`, and DEC-0029.
+- **Supersedes / superseded by:** Supersedes only the temporary owner-only Git-write restriction reflected in the `PROJECT_STATUS.md` draft. It does not modify or supersede the scientific or continuity content of DEC-0029.
+- **Owner and approver:** Project owner through the explicit Continuity Governance narrow independent-review fix authorization dated 2026-09-10.
