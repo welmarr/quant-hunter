@@ -584,6 +584,76 @@
     "source_partition_status": "EXPOSED",
     "enforcement_mode": "SYNTHETIC_TEST",
     "review_requirement": "INVALIDATION_RISK_DECISION_REVIEW"
+  },
+  "windows-host-boundary-evidence.schema.json": {
+    "schema_version": "1.0.0",
+    "evidence_type": "WINDOWS_HOST_BOUNDARY",
+    "evidence_mode": "HOST_ENFORCED",
+    "platform": "WINDOWS",
+    "verified_at": "2026-09-11T06:00:00Z",
+    "filesystem": "NTFS",
+    "fixed_local_volume": true,
+    "encryption": {
+      "technology": "BITLOCKER",
+      "protection_status": "ON",
+      "volume_status": "FULLY_ENCRYPTED"
+    },
+    "vault_location_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "release_location_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "custodian_role": "qh-oos-custodian",
+    "research_role": "qh-research",
+    "vault_dacl_checks": {
+      "inheritance_disabled": true,
+      "allow_list_verified": true,
+      "broad_principals_absent": true,
+      "research_data_rights_absent": true
+    },
+    "release_dacl_checks": {
+      "inheritance_disabled": true,
+      "allow_list_verified": true,
+      "broad_principals_absent": true,
+      "research_read_only": true
+    },
+    "audit_checks": {
+      "file_system_policy_enabled": true,
+      "sacl_verified": true,
+      "research_denial_observed": true,
+      "custodian_activity_observed": true
+    },
+    "research_denial_checks": {
+      "directory_list_denied": true,
+      "file_read_denied": true,
+      "file_create_denied": true,
+      "file_write_denied": true,
+      "file_delete_denied": true,
+      "acl_change_denied": true,
+      "owner_change_denied": true,
+      "read_attributes_denied": false,
+      "read_attributes_observation": "Attribute visibility depends on effective Windows traverse semantics."
+    },
+    "custodian_access_checks": {
+      "vault_list_succeeded": true,
+      "fixture_read_succeeded": true,
+      "release_publish_succeeded": true
+    },
+    "released_artifact_checks": {
+      "research_read_succeeded": true,
+      "research_modify_denied": true,
+      "research_delete_denied": true,
+      "research_acl_change_denied": true,
+      "research_owner_change_denied": true
+    },
+    "indexing_excluded": true,
+    "sync_overlap_detected": false,
+    "backup_status": "RESIDUAL_RISK_RETAINED",
+    "synthetic_fixture_only": true,
+    "identity_authentication_material_persisted": false,
+    "identities_disabled_after_verification": true,
+    "live_verification_passed": true,
+    "limitations": [
+      "Administrators and SYSTEM remain outside the Stage 1 threat model.",
+      "Synthetic fixture evidence does not establish real market-data confidentiality."
+    ],
+    "host_boundary_evidence_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
   }
 }
-

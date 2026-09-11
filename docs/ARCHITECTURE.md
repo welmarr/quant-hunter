@@ -50,14 +50,14 @@ from verified Item 9A and 9B objects. These interfaces cannot execute a strategy
 match an order, generate a fill, calculate performance or cost, verify a registry
 chain, assess V6, or access sealed contents. Item 10A now adds only the
 software release core and synthetic security contracts described under
-Isolation and Leakage Controls. Item 10B host enforcement, executable
-backtesting, strategies, broker/live execution, and later-stage systems remain
-absent.
+Isolation and Leakage Controls. Item 10B host tooling is implemented but live
+host evidence is blocked. Executable backtesting, strategies, broker/live
+execution, and later-stage systems remain absent.
 Full Item 9 is `COMPLETE / INDEPENDENT REVIEW PASSED` at reviewed head
 `d6ff6b26fced3c7750f8a4c68b520b70c0567c77`, merged on main at
 `6c9d5ae1eec58faeca53239d832748053387f1bc`; post-merge Quality #32 passed on
-Ubuntu and Windows. Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING`;
-Item 10B is `NOT STARTED`.
+Ubuntu and Windows. Item 10A is `COMPLETE / INDEPENDENT REVIEW PASSED / MERGED /
+POST-MERGE CI GREEN`; Item 10B is `IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED`.
 The design must be modular, reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
@@ -170,13 +170,31 @@ but its validated append hook is internal. A structurally valid ledger event is
 not sufficient scientific release authority: authorized release also requires
 the service's exact Item 8 FROZEN and immutable released-artifact verification.
 
-Item 10A produces and accepts only `SYNTHETIC_TEST` evidence. It cannot establish
-`HOST_ENFORCED` evidence, create operating-system identities, configure a vault,
-or prove effective Windows denial. Item 10B remains separately gated for those
-host changes and their two-identity security evidence. As with other local
-append-only files, the software ledger detects changes at verification time but
-does not claim protection against a machine administrator who can replace both
-data and trust anchors.
+Item 10A continues to produce and accept only `SYNTHETIC_TEST` evidence. Item
+10B adds a separate `WindowsHostBoundaryVerifier` and
+`WindowsHostReleaseService`. A host event requires a typed evidence object
+loaded from an exclusively published, schema-valid RFC 8785 record whose
+SHA-256 digest excludes only its own digest field. That record binds sanitized
+vault and release-location fingerprints, verified encryption, DACL, SACL/audit,
+identity-denial, custodian-release, release-read-only, index, sync, backup, and
+explicit limitation evidence. The host service rechecks the effective custodian
+identity, the configured release-object root, exact Item 8 FROZEN authority,
+immutable artifact, event digest, and global exposure history. Generic
+`SealedReleaseService` cannot create or verify host evidence.
+
+The Windows scripts are read-only at preflight and inert unless setup or
+rollback receives an explicit `-Apply`. They are designed to create only the
+two governed local test identities and a synthetic fixture after every hard
+gate passes, apply inheritance-disabled allow-list ACLs and narrow filesystem
+auditing, run effective-identity probes with in-memory authentication material,
+and disable the test logons afterward when no approved secret manager exists.
+The 2026-09-11 preflight did not have elevation and could not prove encryption,
+so none of those mutations ran and no `HOST_ENFORCED` evidence exists. Host
+paths reject existing symlink/reparse components before evidence reads and
+publication. Filesystem checks still have an unavoidable check/use window; the
+design does not claim resistance to an administrator who can replace paths,
+data, or trust anchors during that window. As with other local append-only
+files, the software ledger detects later changes at verification time.
 
 Research components must not import, invoke, or possess deployment capability. Paper-trading and future production execution are separate adapters, credentials, processes, and authorization boundaries. No live trading or broker credentials are allowed in initial research stages, and no research result may self-promote across a gate.
 

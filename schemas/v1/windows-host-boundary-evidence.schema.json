@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/windows-host-boundary-evidence.schema.json",
+  "title": "Quant Hunter Windows Host Boundary Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_type",
+    "evidence_mode",
+    "platform",
+    "verified_at",
+    "filesystem",
+    "fixed_local_volume",
+    "encryption",
+    "vault_location_fingerprint",
+    "release_location_fingerprint",
+    "custodian_role",
+    "research_role",
+    "vault_dacl_checks",
+    "release_dacl_checks",
+    "audit_checks",
+    "research_denial_checks",
+    "custodian_access_checks",
+    "released_artifact_checks",
+    "indexing_excluded",
+    "sync_overlap_detected",
+    "backup_status",
+    "synthetic_fixture_only",
+    "identity_authentication_material_persisted",
+    "identities_disabled_after_verification",
+    "live_verification_passed",
+    "limitations",
+    "host_boundary_evidence_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "evidence_type": {"const": "WINDOWS_HOST_BOUNDARY"},
+    "evidence_mode": {"const": "HOST_ENFORCED"},
+    "platform": {"const": "WINDOWS"},
+    "verified_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "filesystem": {"const": "NTFS"},
+    "fixed_local_volume": {"const": true},
+    "encryption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["technology", "protection_status", "volume_status"],
+      "properties": {
+        "technology": {"const": "BITLOCKER"},
+        "protection_status": {"const": "ON"},
+        "volume_status": {"const": "FULLY_ENCRYPTED"}
+      }
+    },
+    "vault_location_fingerprint": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "release_location_fingerprint": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "custodian_role": {"const": "qh-oos-custodian"},
+    "research_role": {"const": "qh-research"},
+    "vault_dacl_checks": {"$ref": "#/$defs/vault_dacl_checks"},
+    "release_dacl_checks": {"$ref": "#/$defs/release_dacl_checks"},
+    "audit_checks": {"$ref": "#/$defs/audit_checks"},
+    "research_denial_checks": {"$ref": "#/$defs/research_denial_checks"},
+    "custodian_access_checks": {"$ref": "#/$defs/custodian_access_checks"},
+    "released_artifact_checks": {
+      "$ref": "#/$defs/released_artifact_checks"
+    },
+    "indexing_excluded": {"const": true},
+    "sync_overlap_detected": {"const": false},
+    "backup_status": {
+      "enum": ["EQUIVALENT_PROTECTION_VERIFIED", "RESIDUAL_RISK_RETAINED"]
+    },
+    "synthetic_fixture_only": {"const": true},
+    "identity_authentication_material_persisted": {"const": false},
+    "identities_disabled_after_verification": {"type": "boolean"},
+    "live_verification_passed": {"const": true},
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "pattern": "\\S"},
+      "contains": {
+        "const": "Administrators and SYSTEM remain outside the Stage 1 threat model."
+      }
+    },
+    "host_boundary_evidence_digest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    }
+  },
+  "$defs": {
+    "vault_dacl_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inheritance_disabled",
+        "allow_list_verified",
+        "broad_principals_absent",
+        "research_data_rights_absent"
+      ],
+      "properties": {
+        "inheritance_disabled": {"const": true},
+        "allow_list_verified": {"const": true},
+        "broad_principals_absent": {"const": true},
+        "research_data_rights_absent": {"const": true}
+      }
+    },
+    "release_dacl_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inheritance_disabled",
+        "allow_list_verified",
+        "broad_principals_absent",
+        "research_read_only"
+      ],
+      "properties": {
+        "inheritance_disabled": {"const": true},
+        "allow_list_verified": {"const": true},
+        "broad_principals_absent": {"const": true},
+        "research_read_only": {"const": true}
+      }
+    },
+    "audit_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file_system_policy_enabled",
+        "sacl_verified",
+        "research_denial_observed",
+        "custodian_activity_observed"
+      ],
+      "properties": {
+        "file_system_policy_enabled": {"const": true},
+        "sacl_verified": {"const": true},
+        "research_denial_observed": {"const": true},
+        "custodian_activity_observed": {"const": true}
+      }
+    },
+    "research_denial_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory_list_denied",
+        "file_read_denied",
+        "file_create_denied",
+        "file_write_denied",
+        "file_delete_denied",
+        "acl_change_denied",
+        "owner_change_denied"
+      ],
+      "properties": {
+        "directory_list_denied": {"const": true},
+        "file_read_denied": {"const": true},
+        "file_create_denied": {"const": true},
+        "file_write_denied": {"const": true},
+        "file_delete_denied": {"const": true},
+        "acl_change_denied": {"const": true},
+        "owner_change_denied": {"const": true},
+        "read_attributes_denied": {"type": "boolean"},
+        "read_attributes_observation": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "dependentRequired": {
+        "read_attributes_denied": ["read_attributes_observation"]
+      }
+    },
+    "custodian_access_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vault_list_succeeded", "fixture_read_succeeded", "release_publish_succeeded"],
+      "properties": {
+        "vault_list_succeeded": {"const": true},
+        "fixture_read_succeeded": {"const": true},
+        "release_publish_succeeded": {"const": true}
+      }
+    },
+    "released_artifact_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "research_read_succeeded",
+        "research_modify_denied",
+        "research_delete_denied",
+        "research_acl_change_denied",
+        "research_owner_change_denied"
+      ],
+      "properties": {
+        "research_read_succeeded": {"const": true},
+        "research_modify_denied": {"const": true},
+        "research_delete_denied": {"const": true},
+        "research_acl_change_denied": {"const": true},
+        "research_owner_change_denied": {"const": true}
+      }
+    }
+  }
+}

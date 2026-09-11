@@ -937,7 +937,7 @@ def test_internal_event_storage_rejects_float_host_mode_and_credential_reference
         harness.ledger._append_validated_event(floated, expected_previous_digest=None)
     hosted = deepcopy(event_body)
     hosted["enforcement_mode"] = "HOST_ENFORCED"
-    with pytest.raises(UnsupportedEnforcementModeError):
+    with pytest.raises(ExposureLedgerIntegrityError, match="governed validation"):
         harness.ledger._append_validated_event(hosted, expected_previous_digest=None)
     credential = deepcopy(event_body)
     credential["released_artifact_reference"] = (

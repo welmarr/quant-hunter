@@ -71,9 +71,20 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | Item 10A evidence is synthetic only and cannot claim the separately gated host boundary. | `ARCHITECTURE.md`; `REGRESSION_GUARD.md` REG-F01–REG-F03; synthetic-mode and poisoned-filesystem tests |
 
 Item 10A is `COMPLETE / INDEPENDENT REVIEW PASSED / MERGED / POST-MERGE CI
-GREEN` at main `20851f262041cda1fe26844032f298b2a1531ffd`. Item 10B remains a
-separate host-evidence gate. This mapping does not establish real Windows
-isolation or complete Roadmap Item 10.
+GREEN` at main `20851f262041cda1fe26844032f298b2a1531ffd`.
+
+## Stage 1B Item 10B Windows Host Mapping
+
+| Requirement | Governing and implementation evidence |
+|---|---|
+| `HOST_ENFORCED` cannot be claimed by a raw mapping or Item 10A service. | DEC-0035; `windows_host.py`; typed-construction, platform, schema, and service rejection tests |
+| Host evidence binds only complete successful checks, sanitized location fingerprints, explicit limitations, and its canonical digest. | `windows-host-boundary-evidence.schema.json`; `WindowsHostBoundaryVerifier`; tamper, wrong-profile, failed-check, secret-text, and append-only tests |
+| Host release retains exact Item 8 FROZEN, dataset/partition, code/config/environment, artifact, ledger CAS, history, overlap, and search-termination authority. | `WindowsHostReleaseService`; conditional release-event schema; Item 10A/10B hostile tests |
+| Host setup is bounded to an already protected fixed NTFS volume and performs no BitLocker mutation. | `item10b_preflight.ps1`; inert `item10b_setup.ps1`; static safety tests; DEC-0035 |
+| Dedicated identity, allow-list DACL, audit/SACL, index, sync, backup, denial, release, and account-disable assertions require live evidence. | Windows host scripts; REG-F03; RISK-017; sanitized 2026-09-11 blocker evidence |
+
+Item 10B is `IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED`. The code and tests do
+not establish real Windows isolation or complete Roadmap Item 10.
 
 ## Coverage Maintenance Rule
 

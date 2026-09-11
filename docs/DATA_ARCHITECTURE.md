@@ -225,6 +225,14 @@ Only a custodian-run release command may expose data. Before release it verifies
 
 Tests use synthetic fixtures and two effective identities. A same-account path convention, configuration toggle, hidden folder, or shared archive password does not satisfy this boundary. Administrators remain outside the Stage 1 accidental/workflow-access threat model, so privileged-account use must be minimized and audited.
 
+Item 10B tooling represents successful live checks only through
+`windows-host-boundary-evidence.schema.json`. The canonical record stores
+root-independent location fingerprints and non-secret results; machine paths,
+hostnames, authentication material, real data, and raw Security Event Log
+exports remain outside Git. `HOST_ENFORCED` release events require the exact
+evidence digest. The 2026-09-11 local preflight did not prove BitLocker status
+and authorized no host mutation, so this design remains unproven on the host.
+
 ## Stage 1 Data-Domain Prerequisites
 
 The data domain is ready for the Stage 1 gate only when the project has documented schemas for the four timestamps, provenance and dataset manifests; an immutable raw-data convention; deterministic normalized/curated build conventions; quality and quarantine rules; vintage-aware macro handling; source-registry linkage; and a sealed-holdout access design. These are necessary, not sufficient, conditions; `ROADMAP.md` owns the complete Stage 1 gate. Stage 1 may use small authoritative free samples, but must not purchase data or start live trading.

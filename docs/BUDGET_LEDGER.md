@@ -151,6 +151,11 @@ schema mapping yet.
 
 Paid-source proposals must also satisfy `DATA_SOURCE_REGISTRY.md`; infrastructure, API, subscription, and tooling proposals use this ledger even when no data source is involved.
 
+Item 10B reuses Windows, PowerShell, the locked Python environment, and local
+synthetic bytes. The failed read-only preflight, host tooling, schema, tests,
+and documentation add USD 0 incremental direct dependency, service, data, or
+infrastructure cost. No purchase or paid commitment was made.
+
 ## Review
 
 Recalculate totals before every approval, commitment, usage increase, renewal, and stage gate. Record expected cost before recommending a paid dependency. Prefer open-source libraries and authoritative free datasets, avoid GPU infrastructure unless quantitatively justified, and use expensive AI models selectively.

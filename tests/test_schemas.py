@@ -91,6 +91,7 @@ def test_schema_catalog_is_complete_and_meta_valid() -> None:
         "sealed-exposure-incident.schema.json",
         "sealed-release-event.schema.json",
         "source.schema.json",
+        "windows-host-boundary-evidence.schema.json",
     }
     assert set(SCHEMAS) == expected_instance_schemas | {"common.schema.json"}
     assert set(VALID_OBJECTS) == expected_instance_schemas
@@ -257,6 +258,52 @@ def test_sealed_release_schema_requires_complete_one_way_binding(
     mutation(instance)
     errors = list(
         validator_for("sealed-release-event.schema.json").iter_errors(instance)
+    )
+    assert validator in {error.validator for error in errors}
+
+
+def test_host_release_schema_requires_exact_host_evidence_digest() -> None:
+    """HOST_ENFORCED requires its digest while synthetic events forbid one."""
+    hosted = deepcopy(VALID_OBJECTS["sealed-release-event.schema.json"])
+    hosted["enforcement_mode"] = "HOST_ENFORCED"
+    errors = list(validator_for("sealed-release-event.schema.json").iter_errors(hosted))
+    assert "required" in {error.validator for error in errors}
+
+    synthetic = deepcopy(VALID_OBJECTS["sealed-release-event.schema.json"])
+    synthetic["host_boundary_evidence_digest"] = "sha256:" + "4" * 64
+    errors = list(
+        validator_for("sealed-release-event.schema.json").iter_errors(synthetic)
+    )
+    assert "not" in {error.validator for error in errors}
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "validator"),
+    [
+        (("encryption", "protection_status"), "OFF", "const"),
+        (("vault_dacl_checks", "inheritance_disabled"), False, "const"),
+        (("audit_checks", "research_denial_observed"), False, "const"),
+        (("research_denial_checks", "file_read_denied"), False, "const"),
+        (("released_artifact_checks", "research_modify_denied"), False, "const"),
+        (("indexing_excluded",), False, "const"),
+        (("sync_overlap_detected",), True, "const"),
+        (("synthetic_fixture_only",), False, "const"),
+        (("live_verification_passed",), False, "const"),
+    ],
+)
+def test_host_evidence_schema_fails_closed(
+    path: tuple[str, ...], value: object, validator: str
+) -> None:
+    """A failed host assertion cannot satisfy the governed evidence record."""
+    instance = deepcopy(VALID_OBJECTS["windows-host-boundary-evidence.schema.json"])
+    target = instance
+    for key in path[:-1]:
+        target = cast(JsonObject, target[key])
+    target[path[-1]] = value
+    errors = list(
+        validator_for("windows-host-boundary-evidence.schema.json").iter_errors(
+            instance
+        )
     )
     assert validator in {error.validator for error in errors}
 

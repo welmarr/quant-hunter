@@ -376,3 +376,29 @@ unavailable during the Item 10B batch, so no Issue number or URL exists yet.
 Ready-to-post drafts preserve the exact RISK-018 incident and future work for
 RISK-023 and RISK-024; remote creation still requires duplicate review. All
 three risks remain `OPEN`.
+
+## Item 10B Windows Host Preflight and Tooling Evidence
+
+On 2026-09-11, the authorized Item 10B preflight was performed read-only. The
+host was Windows 10.0.26200.0 with two fixed NTFS volumes, but the process was
+not elevated. BitLocker status returned access denied, so no already encrypted
+and fully protected eligible volume was proven. File System audit-policy and
+backup queries also lacked the necessary privilege. The governed
+`qh-oos-custodian` and `qh-research` accounts and the proposed vault/release
+roots were absent. Windows Search was running and a consumer-sync root was
+detected. No host mutation followed: no identity, path, DACL, SACL, audit,
+indexing, filesystem, backup, or BitLocker setting changed, and no credential or
+real sealed data was created or accessed.
+
+DEC-0035 and the Item 10B tooling now make the missing evidence fail closed.
+Only an elevated live harness on an already protected fixed NTFS volume can
+produce the typed canonical evidence required by a `HOST_ENFORCED` release.
+Synthetic tests validate the schema, digest, profile binding, service authority,
+Item 8 binding, artifact binding, ledger history, one-way exposure, and script
+safety. These controls materially define the intended mitigation but do not
+prove it on this host. RISK-017 remains `OPEN`. Required closure evidence still
+includes the effective research denials, custodian access and release,
+research-readable immutable release, observed SACL/audit events, index
+exclusion, sync non-overlap, backup assessment, residual privileged-access
+limitations, and independent review. RISK-018, RISK-023, and RISK-024 also
+remain `OPEN`; `identity/registry.py` is unchanged.

@@ -751,3 +751,62 @@ RISK-018, RISK-023, RISK-024, COST schema authority, and pre-ingestion data
 architecture are retained in `DEFERRED_ISSUE_DRAFTS.md` pending duplicate search
 and authorized remote creation. This governance work adds no dependency or
 incremental direct cost.
+
+### Item 10B Windows host tooling and blocked evidence
+
+The 2026-09-11 read-only preflight ran on the local Windows host before any
+mutation. It confirmed Windows 10.0.26200.0 and two fixed NTFS volumes, but the
+process was not elevated. BitLocker queries returned access denied, File System
+audit-policy evidence could not be obtained, and backup status could not be
+read. The governed local accounts and proposed roots were absent. Windows
+Search was running and a consumer-sync root was detected. These facts fail the
+encryption and evidence gates. No setup, verification, rollback, user, ACL,
+SACL, audit-policy, index-attribute, filesystem, or BitLocker mutation ran.
+
+Item 10B therefore adds tooling without claiming host evidence:
+
+- `windows_host.py` loads only protected canonical evidence into a typed object,
+  binds sanitized location fingerprints, and authorizes host releases only
+  through the effective custodian identity and exact Item 8/10A authorities.
+- `windows-host-boundary-evidence.schema.json` requires every successful host
+  assertion and the explicit administrator/SYSTEM limitation.
+- the release-event schema requires an exact evidence digest for
+  `HOST_ENFORCED` and forbids it for `SYNTHETIC_TEST`;
+- `item10b_preflight.ps1` is read-only; setup and rollback require explicit
+  `-Apply`; identity authentication material remains in memory; and normal CI
+  never executes host mutation scripts.
+
+From Windows CMD, an owner-selected already encrypted fixed NTFS target is
+checked with:
+
+```bat
+set QH_OOS_ROOT=<existing-encrypted-volume>:\QuantHunterOOS
+pwsh.exe -NoLogo -NoProfile -File scripts\windows\item10b_preflight.ps1 -RepositoryRoot "%CD%" -CandidateRoot "%QH_OOS_ROOT%"
+```
+
+Only after that command returns `Pass: true` in an elevated owner-controlled
+session may the authorized setup be invoked:
+
+```bat
+pwsh.exe -NoLogo -NoProfile -File scripts\windows\item10b_setup.ps1 -RepositoryRoot "%CD%" -CandidateRoot "%QH_OOS_ROOT%" -Apply -Confirm
+```
+
+The resulting host-local live report remains outside Git. The elevated session
+finalizes it into canonical evidence with:
+
+```bat
+uv run --locked python scripts\windows\item10b_finalize.py --vault-root "%QH_OOS_ROOT%\vault" --release-root "%QH_OOS_ROOT%\releases" --evidence-root "%QH_OOS_ROOT%\host-evidence" --live-report "%QH_OOS_ROOT%\host-evidence\item10b-live-report.json" --canonical-evidence "%QH_OOS_ROOT%\host-evidence\evidence-000001.json"
+```
+
+The tooling must then run the locked quality gate and receive independent review.
+Do not change BitLocker, use real OOS bytes, or advance to Item 11.
+
+Local software validation passed `uv lock --check`, Ruff format and lint, strict
+mypy over 48 source files, and all 743 pytest cases with 90.55% combined
+statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
+204 cases, and the host module reached 96.62% coverage. The offline build
+produced both distributions; package, PyArrow, Item 10A, and Item 10B imports
+passed; archive inspection found 144 combined members, included
+`isolation/windows_host.py` in both artifacts, and excluded `.tools/` and
+`.venv/`. All PowerShell host files passed parser validation. These are
+software/tooling results only and do not change the blocked live-host status.

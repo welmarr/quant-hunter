@@ -49,8 +49,10 @@ sealed-release authority, canonical
 hash-chained exposure ledger, exact Item 8 FROZEN binding, irreversible
 `EXPOSED` evidence, and post-release search termination. The release service is
 the sole supported public exposure writer; the ledger remains the structural
-read/verification primitive. Item 10B real Windows host enforcement is the
-current explicitly authorized item and remains separately evidence-gated.
+read/verification primitive. Item 10B real Windows host enforcement is
+`IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED`: the fail-closed software and
+host scripts exist, but the 2026-09-11 read-only preflight could not prove an
+eligible encrypted volume or obtain the required elevated host evidence.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 order matcher, fill simulator, transaction-cost calculator, portfolio logic, or

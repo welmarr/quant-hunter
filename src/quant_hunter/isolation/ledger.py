@@ -1,4 +1,4 @@
-"""Append-only canonical ledger for synthetic sealed-OOS exposure evidence."""
+"""Append-only canonical ledger for governed sealed-OOS exposure evidence."""
 
 from __future__ import annotations
 
@@ -537,9 +537,10 @@ class ExposureLedger:
         event_type = record.get("event_type")
         if not isinstance(event_type, str) or event_type not in SCHEMA_BY_EVENT_TYPE:
             raise ExposureLedgerIntegrityError("Exposure event type is unsupported")
-        if record.get("enforcement_mode") != "SYNTHETIC_TEST":
+        enforcement_mode = record.get("enforcement_mode")
+        if enforcement_mode not in {"SYNTHETIC_TEST", "HOST_ENFORCED"}:
             raise UnsupportedEnforcementModeError(
-                "Item 10A cannot create or accept HOST_ENFORCED evidence"
+                "Exposure event enforcement mode is unsupported"
             )
         _reject_floats(record)
         try:

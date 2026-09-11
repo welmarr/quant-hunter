@@ -109,6 +109,125 @@ RISK-018; REG-002; REG-003; DEC-0009; PR #5; Quality run #30; Stage 1B Item 12.
 
 PENDING.
 
+## `[RISK-017] Complete Item 10B live Windows host-boundary evidence`
+
+### Summary
+
+Run the bounded Item 10B harness from an elevated owner-controlled session on
+an already protected fixed NTFS volume and retain independently reviewed host
+evidence.
+
+### Problem
+
+Item 10B software and scripts are implemented, but the local read-only
+preflight could not prove encryption or the privileges required for host
+configuration and effective-identity evidence. Full Item 10 remains blocked.
+
+### Evidence
+
+- Date: 2026-09-11.
+- Authoritative base: main
+  `20851f262041cda1fe26844032f298b2a1531ffd`.
+- Platform: Windows NT 10.0.26200.0.
+- Two local fixed volumes reported NTFS.
+- The process was not elevated.
+- BitLocker status failed with access denied; no eligible encrypted volume was
+  proven.
+- File System audit-policy and backup status could not be read with the
+  available privilege.
+- `qh-oos-custodian`, `qh-research`, and the proposed roots were absent.
+- Windows Search was running and a consumer-sync root was detected.
+- The hard gate stopped every host write. BitLocker was not changed.
+- Sanitized evidence: `docs/host-evidence/item10b-preflight-2026-09-11.md`.
+
+### Why This Matters
+
+Scientific validity, security, reproducibility, and operational reliability.
+Software tests cannot establish that a research identity was unable to access
+sealed OOS bytes.
+
+### Current Understanding
+
+- Confirmed: the tooling fails closed and no host-enforced evidence exists.
+- Confirmed: NTFS alone does not prove encryption or protection status.
+- Confirmed: no real data or credential was used.
+- Unknown: whether an owner-selected local volume currently satisfies the
+  BitLocker hard gate under an elevated query.
+- Unknown: whether the effective identity, ACL, SACL/audit, index, sync, backup,
+  and controlled release checks all pass on the chosen target.
+
+### Why Deferred
+
+The authorized unattended session lacked elevation and could not prove the
+already-encrypted-volume prerequisite. Enabling or changing BitLocker was
+explicitly forbidden. The owner authorized this exact blocked-tooling result.
+
+### Target
+
+Stage 1B Item 10B — before Item 10 or Stage 1B can close.
+
+### Proposed Investigation
+
+1. In an elevated owner-controlled Windows session, run the read-only preflight
+   against an owner-selected candidate outside repository, worktree, profile,
+   cache, temp, and consumer-sync roots.
+2. Prove fixed local NTFS, BitLocker protection on, and complete encryption
+   without changing encryption configuration.
+3. Run the bounded synthetic setup only after every preflight condition passes.
+4. Inspect the exact allow-list DACL and SACL/audit policy.
+5. Run effective `qh-research` denial and `qh-oos-custodian` access/publication
+   probes, then verify the released artifact is readable but immutable for
+   research.
+6. Verify index exclusion, sync non-overlap, and backup status or retain the
+   exact backup residual risk.
+7. Finalize canonical non-secret evidence, run the locked gate, and obtain
+   independent review.
+
+### Proposed Solution
+
+Use the committed Item 10B preflight, setup, identity-probe, verification,
+rollback, and evidence-finalization tools. This proposal remains unvalidated
+until live evidence passes. Do not enable BitLocker or substitute an
+unencrypted folder.
+
+### Acceptance Criteria
+
+- An already protected fully encrypted fixed NTFS target is proven.
+- Both governed non-administrator identities have the intended group state.
+- Vault and release allow-list DACLs and SACLs are verified.
+- Effective research denial, custodian access/publication, and research
+  read-only release checks pass with synthetic bytes.
+- Expected sanitized audit events are observed.
+- Index exclusion and consumer-sync non-overlap are proven.
+- Backup protection is proven or the exact residual risk remains explicit.
+- Canonical host evidence and exact `HOST_ENFORCED` release evidence verify.
+- The complete locked gate and independent review pass.
+
+### Regression Evidence Required
+
+Hostile schema, digest, typed-authority, binding, artifact, exposure, lifecycle,
+platform-import, and script-safety tests; actual sanitized Windows host
+evidence; the full Ubuntu/Windows locked gate; and reconciled DEC-0035,
+RISK-017, REG-F03, roadmap, status, and development records.
+
+### Relationships
+
+RISK-017; DEC-0006; DEC-0031–DEC-0035; REG-F01–REG-F03; Roadmap Item 10B;
+Item 10A merged main `20851f262041cda1fe26844032f298b2a1531ffd`.
+
+### Technical References
+
+- Microsoft BitLocker PowerShell reference:
+  https://learn.microsoft.com/powershell/module/bitlocker/get-bitlockervolume
+- Microsoft file-system access rules:
+  https://learn.microsoft.com/dotnet/api/system.security.accesscontrol.filesystemaccessrule
+- Microsoft advanced audit policy:
+  https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations
+
+### Closure Evidence
+
+PENDING.
+
 ## `[RISK-023] Decide repository visibility, IP and licensed-data policy before Stage 2`
 
 ### Summary
