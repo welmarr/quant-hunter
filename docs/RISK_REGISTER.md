@@ -417,3 +417,26 @@ and object-bound 4656 Audit Failure for denied `qh-research` access and a
 separately bound 4663 Audit Success for performed `qh-oos-custodian` activity.
 This is software evidence only. No live event, host mutation, or host authority
 was created, and RISK-017 remains `OPEN`.
+
+After PR #8 merged at `cf26f4a3c8abd2387649a0baf90d398679ea8ca5`
+and post-merge Quality #39 passed 768 tests on both platforms, the owner ran an
+elevated preflight against a separate fixed NTFS target. It passed with
+BitLocker On/FullyEncrypted, no path or governed-identity conflict, and no sync
+overlap; unreadable backup configuration remains residual risk. The authorized
+setup then failed closed. Security events showed 4720, 4722, and 4738 for both
+governed users and 4726 deletion during rollback, but no 4719 audit-policy
+change and no governed 4656/4663 evidence. This places the failure after account
+creation and before audit-policy mutation or effective-identity verification.
+
+Independent inspection confirmed that rollback removed both users and the
+batch-created root, marker, state, and evidence paths; restored File System
+auditing to No Auditing; and left BitLocker On/FullyEncrypted. No canonical
+`HOST_ENFORCED` authority was created. A separate read-only translation probe
+showed that `.\qh-*` account strings are not a sufficient portable ACL authority
+on the tested host. The corrective implementation binds DACL and SACL rules and
+their verification to each created local user's actual SID, uses well-known
+SIDs for SYSTEM and Administrators, and confines the runtime machine-qualified
+account name to in-memory effective-login credentials. It also preserves only
+bounded, sanitized failure phase diagnostics. This software correction does not
+close RISK-017. Independent review and a successful owner-controlled live rerun
+with complete host evidence remain mandatory.

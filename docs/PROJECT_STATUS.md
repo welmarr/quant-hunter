@@ -6,11 +6,11 @@
 |---|---|
 | PROJECT | Quant Hunter |
 | LAST VERIFIED DATE | 2026-09-11 |
-| LAST VERIFIED IMPLEMENTATION MAIN | `20851f262041cda1fe26844032f298b2a1531ffd` |
+| LAST VERIFIED IMPLEMENTATION MAIN | `cf26f4a3c8abd2387649a0baf90d398679ea8ca5` |
 | CURRENT STAGE | Stage 1B — Foundation Implementation |
 
-The stored SHA is the verified post-merge Item 10A checkpoint. It is not a
-substitute for checking current Git. Every resume must obtain the current
+The stored SHA is the verified PR #8 post-merge implementation checkpoint. It is
+not a substitute for checking current Git. Every resume must obtain the current
 branch and HEAD directly from Git, then reconcile this file against that state
 and the available review evidence. Do not update this field speculatively with
 the future merge SHA of this file's own change.
@@ -32,12 +32,11 @@ statement/branch coverage on Ubuntu.
 
 ## CURRENT ITEM
 
-Item 10B — real Windows host-enforced sealed-OOS boundary is `IMPLEMENTED
-TOOLING / HOST EVIDENCE BLOCKED` on
-`feature/stage1b-item10b-host-boundary`. The 2026-09-11 read-only Windows
-preflight confirmed two local fixed NTFS volumes but ran without elevation and
-could not read BitLocker, audit-policy, or backup evidence. It therefore did
-not prove an already encrypted eligible volume. Independent review failed head
+Item 10B — real Windows host-enforced sealed-OOS boundary is `TOOLING MERGED /
+LIVE HOST EVIDENCE BLOCKED`. PR #8 is merged on main at
+`cf26f4a3c8abd2387649a0baf90d398679ea8ca5`; post-merge Quality #39 passed 768
+tests on Ubuntu and Windows with 90.20% combined statement/branch coverage on
+Ubuntu. Independent review previously failed head
 `238a1538888a34635b7f274b451fbd57c980cb0e` because its public report finalizer
 could promote caller assertions. DEC-0036 removes that path and binds authority
 creation to one executed preflight/setup/verification flow. Independent
@@ -46,9 +45,25 @@ re-review confirmed that bypass fixed at
 evidence semantics: denied research access must use 4656 Audit Failure, while
 4663 Audit Success remains the performed-access evidence for the custodian.
 Quality #37 passed Windows but failed Ubuntu because the pure classifier used
-`Join-Path` on a synthetic Windows `D:` ObjectName. The provider-independent
-string correction is pending new PR checks and independent review. No host
-mutation or live evidence was produced.
+`Join-Path` on a synthetic Windows `D:` ObjectName. PR #8 corrected that
+provider dependency and passed independent review.
+
+The owner then ran an elevated preflight against a separate fixed NTFS target.
+It passed with BitLocker On/FullyEncrypted, no path or identity conflict, and no
+sync overlap; unreadable backup configuration remains residual risk. The
+authorized setup failed closed after creating both governed accounts and before
+the audit-policy or effective-identity phases. Security events showed account
+creation, enablement, change, and rollback deletion (4720/4722/4738/4726), with
+no 4719 audit-policy change and no governed 4656/4663 evidence. Rollback removed
+the users and batch-created root, restored File System auditing to No Auditing,
+and left BitLocker unchanged. No canonical `HOST_ENFORCED` evidence exists.
+
+A read-only translation probe showed that local `.\qh-*` names are not a
+portable ACL authority on the tested host. Branch
+`fix/item10b-windows-local-identity` binds DACL/SACL creation and verification to
+the actual local-user SIDs, uses well-known SYSTEM/Administrators SIDs, and uses
+the runtime machine name only for in-memory effective-login credentials. The
+correction awaits independent review and a later owner-controlled live rerun.
 
 ## PLANNED DECOMPOSITION
 
@@ -134,12 +149,12 @@ A future agent must:
 6. Reconcile this current-state summary against actual repository and review
    evidence.
 7. Stop and reconcile rather than guess if the evidence conflicts.
-8. Verify the new PR checks and independently review the provider-independent
-   ObjectName correction while preserving the corrected 4656 Failure / 4663
-   Success semantics and DEC-0036 authority path. Then resume Item 10B from the
-   retained read-only blocker in a separately authorized elevated Windows
-   session, using the governed capture workflow against an owner-selected,
-   already encrypted fixed NTFS volume. Do not change BitLocker.
+8. Independently review the SID-authority and safe-diagnostic correction on
+   `fix/item10b-windows-local-identity`, preserving the 4656 Failure / 4663
+   Success semantics and DEC-0036 authority path. After merge and green CI,
+   resume Item 10B only in a separately authorized elevated owner session and
+   rerun the governed capture workflow against the already protected fixed NTFS
+   target. Do not change BitLocker.
 9. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE

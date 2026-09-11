@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Mapping, Sequence
@@ -51,6 +52,38 @@ RESEARCH_ROLE: Final = "qh-research"
 REPARSE_POINT_ATTRIBUTE: Final = 0x400
 _EVIDENCE_TOKEN: Final = object()
 _RELEASE_TOKEN: Final = object()
+_SETUP_FAILURE_MARKER: Final = "ITEM10B_SETUP_FAILED"
+_SETUP_DIAGNOSTIC_MAX_CHARS: Final = 384
+_SETUP_REASON_MAX_CHARS: Final = 240
+_SETUP_PHASES: Final = frozenset(
+    {
+        "PREFLIGHT",
+        "ROOT_CREATE",
+        "CUSTODIAN_CREATE",
+        "RESEARCH_CREATE",
+        "PRIVILEGE_CHECK",
+        "VAULT_DACL",
+        "RELEASE_DACL",
+        "EVIDENCE_DACL",
+        "INDEX_EXCLUSION",
+        "AUDIT_POLICY",
+        "VAULT_SACL",
+        "RELEASE_SACL",
+        "SYNTHETIC_FIXTURE",
+        "EFFECTIVE_VERIFY",
+        "DISABLE_IDENTITIES",
+        "ROLLBACK",
+    }
+)
+_ANSI_ESCAPE_RE: Final = re.compile(
+    r"(?:\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~])"
+)
+_RECOVERY_MATERIAL_RE: Final = re.compile(
+    r"((?:bitlocker\s+)?recovery(?:[-_ ]?(?:key|password))"
+    r"\s*(?:=|:|\s)\s*)\S+",
+    re.IGNORECASE,
+)
+_SAFE_EXCEPTION_TYPE_RE: Final = re.compile(r"[A-Za-z0-9_.+]{1,120}")
 _EXECUTION_RESULT_FIELDS: Final = {
     "schema_version",
     "verified_at",
@@ -186,6 +219,52 @@ def _current_windows_account() -> str:
 
 def _account_leaf(account: str) -> str:
     return account.rsplit("\\", maxsplit=1)[-1].casefold()
+
+
+def _governed_setup_failure_message(stderr: object) -> str:
+    """Return only the bounded, structured diagnostic emitted by setup."""
+    if isinstance(stderr, bytes):
+        text = stderr[-8192:].decode("utf-8", errors="replace")
+    elif isinstance(stderr, str):
+        text = stderr[-8192:]
+    else:
+        text = ""
+    text = _ANSI_ESCAPE_RE.sub("", text)
+    lines = text.splitlines()
+    try:
+        marker_index = max(
+            index
+            for index, line in enumerate(lines)
+            if line.strip() == _SETUP_FAILURE_MARKER
+        )
+    except ValueError:
+        return "Governed Item 10B execution failed without creating authority"
+
+    fields: dict[str, str] = {}
+    for line in lines[marker_index + 1 : marker_index + 4]:
+        key, separator, value = line.partition("=")
+        if separator and key in {"phase", "exception_type", "reason"}:
+            fields[key] = value.strip()
+    phase = fields.get("phase", "UNKNOWN")
+    if phase not in _SETUP_PHASES:
+        phase = "UNKNOWN"
+    exception_type = fields.get("exception_type", "System.Exception")
+    if _SAFE_EXCEPTION_TYPE_RE.fullmatch(exception_type) is None:
+        exception_type = "System.Exception"
+    reason = " ".join(fields.get("reason", "").split())
+    reason = "".join(character for character in reason if character.isprintable())
+    if not reason:
+        reason = "No safe reason was available."
+    reason = _RECOVERY_MATERIAL_RE.sub(r"\1[REDACTED]", reason)
+    try:
+        reject_secret_text_values(reason, "governed setup diagnostic")
+    except SensitiveMetadataError:
+        reason = "[REDACTED]"
+    reason = reason[:_SETUP_REASON_MAX_CHARS]
+    message = (
+        f"Governed Item 10B execution failed at {phase} ({exception_type}): {reason}"
+    )
+    return message[:_SETUP_DIAGNOSTIC_MAX_CHARS]
 
 
 def _is_link_like(path: Path) -> bool:
@@ -444,7 +523,7 @@ class WindowsHostBoundaryVerifier:
             ) from error
         if completed.returncode != 0:
             raise HostBoundaryEvidenceError(
-                "Governed Item 10B execution failed without creating authority"
+                _governed_setup_failure_message(completed.stderr)
             )
         try:
             parsed = parse_json_document(completed.stdout)

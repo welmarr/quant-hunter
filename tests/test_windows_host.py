@@ -530,11 +530,13 @@ def test_governed_runner_invokes_only_bundled_setup_and_parses_stdout(
     assert observed["kwargs"]["capture_output"] is True
 
 
-def test_governed_runner_rejects_failure_and_returns_no_error_text(
+def test_governed_runner_propagates_only_safe_bounded_failure_diagnostic(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A failed preflight/setup process cannot produce evidence or echo secrets."""
-    verifier, repository, candidate, _ = _capture_verifier(tmp_path, monkeypatch)
+    """A failed setup exposes its safe phase without creating host authority."""
+    verifier, repository, candidate, evidence_path = _capture_verifier(
+        tmp_path, monkeypatch
+    )
     script = repository / "scripts" / "windows" / "item10b_setup.ps1"
     script.parent.mkdir(parents=True)
     script.write_text("# synthetic inert test file", encoding="utf-8")
@@ -547,12 +549,76 @@ def test_governed_runner_rejects_failure_and_returns_no_error_text(
         lambda *args, **kwargs: SimpleNamespace(
             returncode=2,
             stdout=b'{"untrusted":true}',
-            stderr=b"Authorization: Bearer synthetic-hidden-value",
+            stderr=(
+                b"ITEM10B_SETUP_FAILED\n"
+                b"phase=VAULT_DACL\n"
+                b"exception_type=System.Security.Principal.IdentityNotMappedException\n"
+                b"reason=Some or all identity references could not be translated.\n"
+            ),
         ),
     )
-    with pytest.raises(HostBoundaryEvidenceError, match="failed") as captured:
-        verifier._run_governed_setup(repository, candidate)
-    assert "synthetic-hidden-value" not in str(captured.value)
+    with pytest.raises(HostBoundaryEvidenceError, match="VAULT_DACL") as captured:
+        verifier.capture_live_evidence(
+            repository, candidate, evidence_path, authorize_setup=True
+        )
+    message = str(captured.value)
+    assert "IdentityNotMappedException" in message
+    assert "could not be translated" in message
+    assert len(message) <= 384
+    assert not evidence_path.exists()
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "Authorization: Bearer synthetic-hidden-value",
+        "Cookie: synthetic-hidden-value",
+        "--password=synthetic-hidden-value",
+        "--token synthetic-hidden-value",
+        "BitLocker recovery key: 111111-222222-333333-444444-555555-666666-777777-888888",
+        "Bearer synthetic-hidden-value",
+    ],
+)
+def test_setup_diagnostic_rejects_secret_like_reason(reason: str) -> None:
+    """The Python boundary never propagates labelled credential material."""
+    stderr = (
+        "ITEM10B_SETUP_FAILED\n"
+        "phase=EFFECTIVE_VERIFY\n"
+        "exception_type=System.Exception\n"
+        f"reason={reason}\n"
+    ).encode()
+    message = cast(Any, windows_host)._governed_setup_failure_message(stderr)
+    assert "synthetic-hidden-value" not in message
+    assert "[REDACTED]" in message
+    assert len(message) <= 384
+
+
+def test_setup_diagnostic_strips_terminal_controls_and_unstructured_stderr() -> None:
+    """Only the structured marker block can enter a bounded error message."""
+    module = cast(Any, windows_host)
+    safe = module._governed_setup_failure_message(
+        b"\x1b[31mITEM10B_SETUP_FAILED\x1b[0m\n"
+        b"phase=VAULT_SACL\n"
+        b"exception_type=System.UnauthorizedAccessException\n"
+        b"reason=Access was denied.\n"
+    )
+    assert "\x1b" not in safe
+    assert "VAULT_SACL" in safe
+    unstructured = module._governed_setup_failure_message(
+        b"Authorization: Bearer synthetic-hidden-value"
+    )
+    assert unstructured == (
+        "Governed Item 10B execution failed without creating authority"
+    )
+    bounded = module._governed_setup_failure_message(
+        (
+            "ITEM10B_SETUP_FAILED\n"
+            "phase=EFFECTIVE_VERIFY\n"
+            "exception_type=System.Exception\n"
+            f"reason={'x' * 2000}\n"
+        ).encode()
+    )
+    assert len(bounded) <= 384
 
 
 def test_host_release_binds_typed_evidence_and_exact_artifact(

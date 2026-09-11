@@ -22,6 +22,7 @@ SCRIPTS = {
 def test_item10b_script_set_is_complete_and_has_no_personal_paths() -> None:
     """The bounded workflow ships every reviewed step without machine paths."""
     assert set(SCRIPTS) == {
+        "item10b_acl_evidence.ps1",
         "item10b_identity_probe.ps1",
         "item10b_audit_evidence.ps1",
         "item10b_preflight.ps1",
@@ -112,8 +113,8 @@ def test_setup_uses_allow_list_acls_auditing_and_disables_test_logons() -> None:
     setup = SCRIPTS["item10b_setup.ps1"]
     verify = SCRIPTS["item10b_verify.ps1"]
     assert "SetAccessRuleProtection($true, $false)" in setup
-    assert "NT AUTHORITY\\SYSTEM" in setup
-    assert "BUILTIN\\Administrators" in setup
+    assert "S-1-5-18" in setup
+    assert "S-1-5-32-544" in setup
     assert "qh-oos-custodian" in setup
     assert "qh-research" in setup
     assert "ReadAndExecute" in setup
@@ -126,6 +127,90 @@ def test_setup_uses_allow_list_acls_auditing_and_disables_test_logons() -> None:
     assert "research_denial_observed" in verify
     assert "[Security.AccessControl.AuditFlags]::Failure" in setup
     assert "[Security.AccessControl.AuditFlags]::Success" in setup
+
+
+def test_acl_authority_uses_actual_local_sids_and_exact_sid_verification() -> None:
+    """ACL construction and verification never depend on local-name translation."""
+    setup = SCRIPTS["item10b_setup.ps1"]
+    verify = SCRIPTS["item10b_verify.ps1"]
+    assert "$custodianUser = Get-GovernedLocalUser 'qh-oos-custodian'" in setup
+    assert "$researchUser = Get-GovernedLocalUser 'qh-research'" in setup
+    assert "$custodianSid = $custodianUser.SID" in setup
+    assert "$researchSid = $researchUser.SID" in setup
+    assert "New-AllowRule $CustodianSid" in setup
+    assert "New-AllowRule $ResearchSid" in setup
+    assert "$ResearchSid, $failureRights" in setup
+    assert "$CustodianSid," in setup
+    assert "[Security.Principal.SecurityIdentifier]$CustodianSid" in verify
+    assert "[Security.Principal.SecurityIdentifier]$ResearchSid" in verify
+    assert "GetAccessRules(" in verify
+    assert "GetAuditRules(" in verify
+    assert "item10b_acl_evidence.ps1" in verify
+    assert ".Value.Equals(" in SCRIPTS["item10b_acl_evidence.ps1"]
+    assert "-match '\\\\qh-research$'" not in verify
+    assert "'.\\qh-oos-custodian'" not in setup + verify
+    assert "'.\\qh-research'" not in setup + verify
+
+
+def test_local_login_identity_is_machine_qualified_but_not_persisted() -> None:
+    """Effective logon uses the runtime machine authority only inside the probe."""
+    verify = SCRIPTS["item10b_verify.ps1"]
+    assert "$machineName = [Environment]::MachineName" in verify
+    assert '"$machineName\\qh-oos-custodian"' in verify
+    assert '"$machineName\\qh-research"' in verify
+    assert "$machineName" not in verify.split("$result = [ordered]@", maxsplit=1)[1]
+    assert all("50UL" not in source for source in SCRIPTS.values())
+
+
+def test_elevated_verifier_captures_probe_output_without_evidence_write_grant() -> None:
+    """The research child reports through stdout, which the verifier redirects."""
+    probe = SCRIPTS["item10b_identity_probe.ps1"]
+    verify = SCRIPTS["item10b_verify.ps1"]
+    setup = SCRIPTS["item10b_setup.ps1"]
+    assert "[Console]::Out.WriteLine" in probe
+    assert "[string]$OutputPath" not in probe
+    assert "-RedirectStandardOutput $OutputPath" in verify
+    assert "-OutputPath', $OutputPath" not in verify
+    assert "Set-GovernedDacl $evidence $custodianSid $researchSid $false" in setup
+
+
+def test_setup_failure_phases_are_bounded_and_rollback_remains_exact() -> None:
+    """Safe diagnostics do not weaken the proven marker-bound rollback."""
+    setup = SCRIPTS["item10b_setup.ps1"]
+    rollback = SCRIPTS["item10b_rollback.ps1"]
+    for phase in (
+        "PREFLIGHT",
+        "ROOT_CREATE",
+        "CUSTODIAN_CREATE",
+        "RESEARCH_CREATE",
+        "PRIVILEGE_CHECK",
+        "VAULT_DACL",
+        "RELEASE_DACL",
+        "EVIDENCE_DACL",
+        "INDEX_EXCLUSION",
+        "AUDIT_POLICY",
+        "VAULT_SACL",
+        "RELEASE_SACL",
+        "SYNTHETIC_FIXTURE",
+        "EFFECTIVE_VERIFY",
+        "DISABLE_IDENTITIES",
+    ):
+        assert f"$phase = '{phase}'" in setup
+    assert "ITEM10B_SETUP_FAILED" in setup
+    assert "ConvertTo-SafeSetupDiagnostic" in setup
+    execution_try = setup.index("$researchPassword = $null\ntry {")
+    assert execution_try < setup.index("$preflight = & $preflightScript")
+    assert "recovery(?:[-_ ]?(?:key|password))" in setup
+    assert "Write-SafeSetupFailure $failurePhase $failureRecord" in setup
+    assert setup.index("& $rollbackScript -StatePath $statePath -Apply") < setup.index(
+        "Write-SafeSetupFailure $failurePhase $failureRecord"
+    )
+    assert "QUANT_HUNTER_ITEM10B_SYNTHETIC_BOUNDARY" in rollback
+    assert "audit_success_before" in rollback
+    assert "audit_failure_before" in rollback
+    assert "Remove-LocalUser -Name $name" in rollback
+    assert "Remove-Item -LiteralPath $root -Recurse -Force" in rollback
+    assert "Enable-BitLocker" not in rollback
 
 
 def test_verifier_uses_failure_4656_and_success_4663_metadata() -> None:
@@ -190,6 +275,8 @@ def test_preflight_observations_flow_into_the_same_verification_result() -> None
 
 
 PWSH = shutil.which("pwsh.exe") or shutil.which("pwsh")
+ACL_LOGIC = SCRIPT_DIRECTORY / "item10b_acl_evidence.ps1"
+ACL_HARNESS = ROOT / "tests" / "helpers" / "item10b_acl_logic_harness.ps1"
 AUDIT_LOGIC = SCRIPT_DIRECTORY / "item10b_audit_evidence.ps1"
 AUDIT_HARNESS = ROOT / "tests" / "helpers" / "item10b_audit_logic_harness.ps1"
 WINDOW_START = "2026-09-11T06:00:00Z"
@@ -200,6 +287,43 @@ SEALED_FIXTURE = VAULT + r"\synthetic-sealed-fixture.txt"
 RELEASED_FIXTURE = r"D:\QuantHunterOOS\releases\synthetic-released-fixture.txt"
 AUDIT_FAILURE = "0x8010000000000000"
 AUDIT_SUCCESS = "0x8020000000000000"
+
+
+def test_acl_logic_rejects_same_name_with_different_sid(tmp_path: Path) -> None:
+    """A display-name collision cannot satisfy exact SID authority."""
+    if PWSH is None:
+        pytest.skip("PowerShell 7 is unavailable")
+    output = tmp_path / "acl-result.json"
+    error = tmp_path / "acl-error.txt"
+    with (
+        output.open("w", encoding="utf-8") as stdout,
+        error.open("w", encoding="utf-8") as stderr,
+    ):
+        completed = subprocess.run(  # noqa: S603 - resolved local PowerShell binary
+            [
+                PWSH,
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-File",
+                str(ACL_HARNESS),
+                "-AclScriptPath",
+                str(ACL_LOGIC),
+            ],
+            check=False,
+            stdout=stdout,
+            stderr=stderr,
+            text=True,
+            timeout=30,
+        )
+    assert completed.returncode == 0, error.read_text(encoding="utf-8")
+    result = json.loads(output.read_text(encoding="utf-8"))
+    assert result == {
+        "expected_sid_accepted": True,
+        "same_name_wrong_sid_rejected": True,
+        "wrong_rights_rejected": True,
+        "wrong_audit_outcome_rejected": True,
+    }
 
 
 def _audit_event(

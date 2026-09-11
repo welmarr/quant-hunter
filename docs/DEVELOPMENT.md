@@ -886,3 +886,59 @@ suite passed 229 cases. Local WSL enumeration was unavailable to the process,
 so no local Linux result is claimed. Item 10B remains `IMPLEMENTED TOOLING /
 HOST EVIDENCE BLOCKED` pending the new PR checks, independent review, and later
 separately authorized live evidence.
+
+### Item 10B owner-host failure and SID-authority correction
+
+PR #8 merged the provider-independent audit correction on main at
+`cf26f4a3c8abd2387649a0baf90d398679ea8ca5`. Post-merge Quality #39 passed 768
+tests on Ubuntu and Windows; Ubuntu combined statement/branch coverage was
+90.20%.
+
+The owner then ran the governed workflow from an elevated session against a
+separate fixed NTFS target. Preflight passed with BitLocker On/FullyEncrypted,
+repository/profile/cache/temp exclusion, absent governed identities and target,
+and no sync overlap. Backup configuration was unreadable and remains residual
+risk. Setup failed closed after the two governed accounts were created and
+before audit-policy or effective-identity work. Security events showed
+4720/4722/4738 for both accounts and 4726 deletion during rollback; no 4719
+audit-policy change and no governed 4656/4663 evidence occurred. Independent
+inspection confirmed the batch root, marker, state, evidence, and users absent,
+File System auditing restored to No Auditing, and BitLocker unchanged. No
+canonical `HOST_ENFORCED` authority was created.
+
+A separate owner-controlled read-only probe showed that `.\` local-account name
+translation is not portable on the tested host. The correction obtains each
+new local user's actual `SecurityIdentifier`, verifies that the account is
+local, enabled, and outside the prohibited privileged local groups, and uses
+those SIDs for every governed DACL and SACL rule. SYSTEM and Administrators use
+well-known SIDs. Verification translates access and audit rules to SIDs and
+requires the exact SID set, rights, allow type, and audit outcome. A same named
+account with another SID cannot satisfy the checks. Effective probes use the
+runtime machine-qualified account name only inside `PSCredential`; neither the
+machine name nor passwords enter canonical evidence. The elevated verifier
+redirects each child probe's stdout into its evidence file; the research account
+does not receive write authority to the protected evidence directory.
+
+Setup failures now carry a non-secret phase through a bounded structured stderr
+block. PowerShell strips terminal controls, redacts explicit credential labels,
+and limits the reason; Python accepts only the marker plus a known phase, safe
+exception type, and sanitized reason, with a 384-character final bound.
+Unstructured stderr remains hidden, and failed execution cannot publish
+canonical evidence. The existing marker/state-bound rollback still restores the
+original audit Success/Failure state and removes only batch-created users and
+the batch-created root. The correction performs no live host or BitLocker
+mutation and leaves Item 10B at `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED`.
+
+Corrective local validation passed the lock check, Ruff format and lint, strict
+mypy over 48 source files, and all 780 pytest cases with 90.15% combined
+statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
+241 cases. All seven production Item 10B PowerShell files plus the synthetic
+ACL and audit harnesses passed parser validation. The documented exact pytest
+command initially encountered access denial while enumerating a pre-existing
+user temp directory before fixture setup; no product test failed. Repeating the
+same locked coverage gate with a workspace-local `--basetemp` completed all 780
+tests. The offline build produced both distributions; package, PyArrow, Item
+10A, and Item 10B imports passed; archive inspection found 148 combined members,
+included `isolation/windows_host.py` in both artifacts and the new ACL helper in
+the source distribution, and excluded `.tools/` and `.venv/`. No dependency or
+lockfile change was made.
