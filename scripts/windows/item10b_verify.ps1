@@ -142,7 +142,9 @@ $eventRecords = @(Get-WinEvent -FilterHashtable @{
 $normalizedEvents = @($eventRecords | ConvertTo-Item10bNormalizedAuditEvent)
 $auditEvidence = Test-Item10bAuditEvidence -Events $normalizedEvents `
     -WindowStart $startedAt -WindowEnd $endedAt -VaultPath $VaultPath `
-    -FixturePath $fixturePath -ReleasedPath $releasedPath
+    -FixturePath $fixturePath -ReleasedPath $releasedPath `
+    -ExpectedResearchSid $ResearchSid.Value `
+    -ExpectedCustodianSid $CustodianSid.Value
 $researchAudit = [bool]$auditEvidence.research_denial_observed
 $custodianAudit = [bool]$auditEvidence.custodian_activity_observed
 

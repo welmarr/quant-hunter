@@ -62,8 +62,12 @@ A read-only translation probe showed that local `.\qh-*` names are not a
 portable ACL authority on the tested host. Branch
 `fix/item10b-windows-local-identity` binds DACL/SACL creation and verification to
 the actual local-user SIDs, uses well-known SYSTEM/Administrators SIDs, and uses
-the runtime machine name only for in-memory effective-login credentials. The
-correction awaits independent review and a later owner-controlled live rerun.
+the runtime machine name only for in-memory effective-login credentials.
+Independent review of head `6fe7ce1b097d68418cae22920725c85f00ad7729`
+returned `PASS WITH CHANGES`: the ACL/SACL correction was accepted, but 4656 and
+4663 event classification still used leaf account names. The follow-up binds
+those events to the same resolved research and custodian SIDs. It awaits
+independent review and a later owner-controlled live rerun.
 
 ## PLANNED DECOMPOSITION
 
@@ -149,12 +153,12 @@ A future agent must:
 6. Reconcile this current-state summary against actual repository and review
    evidence.
 7. Stop and reconcile rather than guess if the evidence conflicts.
-8. Independently review the SID-authority and safe-diagnostic correction on
-   `fix/item10b-windows-local-identity`, preserving the 4656 Failure / 4663
-   Success semantics and DEC-0036 authority path. After merge and green CI,
-   resume Item 10B only in a separately authorized elevated owner session and
-   rerun the governed capture workflow against the already protected fixed NTFS
-   target. Do not change BitLocker.
+8. Independently review the audit-event SID-binding follow-up on
+   `fix/item10b-windows-local-identity`, preserving the exact-SID DACL/SACL
+   authority, 4656 Failure / 4663 Success semantics, and DEC-0036 authority
+   path. After merge and green CI, resume Item 10B only in a separately
+   authorized elevated owner session and rerun the governed capture workflow
+   against the already protected fixed NTFS target. Do not change BitLocker.
 9. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE

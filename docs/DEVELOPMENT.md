@@ -844,13 +844,15 @@ Audit Failure keyword, while 4663 records a right actually exercised and uses
 Audit Success for the permitted custodian activity.
 
 The verifier now queries events 4656 and 4663 over the exact probe window and
-normalizes identity, object name, timestamp, and standard audit keywords from
-event metadata. Research denial requires a 4656 Audit Failure for
-`qh-research` and the exact synthetic vault/fixture probe target. Custodian
-activity requires a 4663 Audit Success for `qh-oos-custodian` and the exact
-synthetic fixture or released object. Event ID alone, success-classified 4656,
-failure-classified 4663, another identity, another object, and stale events do
-not satisfy either gate. Message text is not used to infer success or failure.
+normalizes `SubjectUserSid`, diagnostic account name, object name, timestamp,
+and standard audit keywords from event metadata. Research denial requires a
+4656 Audit Failure from the exact already-resolved research SID and the exact
+synthetic vault/fixture probe target. Custodian activity requires a 4663 Audit
+Success from the exact already-resolved custodian SID and the exact synthetic
+fixture or released object. Event ID alone, success-classified 4656,
+failure-classified 4663, a same-named account with another SID, another object,
+and stale events do not satisfy either gate. Display names and message text are
+not authority and are not used to infer success or failure.
 
 This correction changes no SACL, host identity, BitLocker setting, dependency,
 or authority architecture. No live host workflow ran and no host evidence was
@@ -929,6 +931,15 @@ original audit Success/Failure state and removes only batch-created users and
 the batch-created root. The correction performs no live host or BitLocker
 mutation and leaves Item 10B at `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED`.
 
+Independent review of head `6fe7ce1b097d68418cae22920725c85f00ad7729`
+accepted the DACL/SACL SID correction with changes and found that live event
+classification still compared only the account-name leaf. The follow-up
+normalizes `SubjectUserSid` and passes the same resolved research and custodian
+SIDs through DACL verification, SACL verification, 4656 denial evidence, and
+4663 performed-access evidence. Machine/account display text remains transient
+diagnostic metadata; no SID was added to canonical scientific evidence. This
+follow-up has no live-host success claim and RISK-017 remains `OPEN`.
+
 Corrective local validation passed the lock check, Ruff format and lint, strict
 mypy over 48 source files, and all 780 pytest cases with 90.15% combined
 statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
@@ -942,3 +953,12 @@ tests. The offline build produced both distributions; package, PyArrow, Item
 included `isolation/windows_host.py` in both artifacts and the new ACL helper in
 the source distribution, and excluded `.tools/` and `.venv/`. No dependency or
 lockfile change was made.
+
+The audit-event SID-binding follow-up passed `uv lock --check`, Ruff format and
+lint, and strict mypy over 48 source files. The focused Item 10A/10B host,
+script, schema, and sealed-release suite passed 243 tests. The exact full pytest
+command first encountered the known Windows user-temp ACL problem: 425 tests
+passed and 357 fixtures could not be created. Its workspace-local `--basetemp`
+rerun passed all 782 tests with 90.15% combined statement/branch coverage. No
+dependency, lockfile, canonical-evidence schema, host, or BitLocker change was
+made.

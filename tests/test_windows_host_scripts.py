@@ -226,6 +226,11 @@ def test_verifier_uses_failure_4656_and_success_4663_metadata() -> None:
     assert "$isFailure" in audit_logic
     assert "event_id -eq 4663" in audit_logic
     assert "$isSuccess" in audit_logic
+    assert "subject_user_sid = [string]$fields['SubjectUserSid']" in audit_logic
+    assert "Test-Item10bAuditSid" in audit_logic
+    assert "Test-Item10bAuditIdentity" not in audit_logic
+    assert "-ExpectedResearchSid $ResearchSid.Value" in verify
+    assert "-ExpectedCustodianSid $CustodianSid.Value" in verify
 
 
 def test_audit_target_matching_uses_no_filesystem_provider() -> None:
@@ -287,6 +292,9 @@ SEALED_FIXTURE = VAULT + r"\synthetic-sealed-fixture.txt"
 RELEASED_FIXTURE = r"D:\QuantHunterOOS\releases\synthetic-released-fixture.txt"
 AUDIT_FAILURE = "0x8010000000000000"
 AUDIT_SUCCESS = "0x8020000000000000"
+RESEARCH_SID = "S-1-5-21-111111111-222222222-333333333-1001"
+CUSTODIAN_SID = "S-1-5-21-111111111-222222222-333333333-1002"
+OTHER_SID = "S-1-5-21-999999999-888888888-777777777-1001"
 
 
 def test_acl_logic_rejects_same_name_with_different_sid(tmp_path: Path) -> None:
@@ -330,6 +338,7 @@ def _audit_event(
     event_id: int,
     keywords: str,
     account_name: str,
+    subject_user_sid: str,
     object_name: str,
     *,
     occurred_at: str = EVENT_TIME,
@@ -338,6 +347,7 @@ def _audit_event(
         "event_id": event_id,
         "occurred_at": occurred_at,
         "account_name": account_name,
+        "subject_user_sid": subject_user_sid,
         "object_name": object_name,
         "keywords": keywords,
     }
@@ -345,42 +355,87 @@ def _audit_event(
 
 AUDIT_SCENARIOS = {
     "valid": [
-        _audit_event(4656, AUDIT_FAILURE, "HOST\\qh-research", SEALED_FIXTURE),
+        _audit_event(
+            4656,
+            AUDIT_FAILURE,
+            "HOST\\qh-research",
+            RESEARCH_SID,
+            SEALED_FIXTURE,
+        ),
         _audit_event(
             4663,
             AUDIT_SUCCESS,
             "HOST\\qh-oos-custodian",
+            CUSTODIAN_SID,
             RELEASED_FIXTURE,
         ),
     ],
     "research_4663_failure": [
-        _audit_event(4663, AUDIT_FAILURE, "qh-research", SEALED_FIXTURE)
+        _audit_event(4663, AUDIT_FAILURE, "qh-research", RESEARCH_SID, SEALED_FIXTURE)
     ],
     "research_4656_success": [
-        _audit_event(4656, AUDIT_SUCCESS, "qh-research", SEALED_FIXTURE)
+        _audit_event(4656, AUDIT_SUCCESS, "qh-research", RESEARCH_SID, SEALED_FIXTURE)
     ],
-    "research_wrong_identity": [
-        _audit_event(4656, AUDIT_FAILURE, "other-identity", SEALED_FIXTURE)
+    "research_same_name_wrong_sid": [
+        _audit_event(
+            4656,
+            AUDIT_FAILURE,
+            "OTHERDOMAIN\\qh-research",
+            OTHER_SID,
+            SEALED_FIXTURE,
+        )
+    ],
+    "research_wrong_display_name_correct_sid": [
+        _audit_event(
+            4656,
+            AUDIT_FAILURE,
+            "OTHERDOMAIN\\renamed-research",
+            RESEARCH_SID,
+            SEALED_FIXTURE,
+        )
     ],
     "research_wrong_object": [
         _audit_event(
             4656,
             AUDIT_FAILURE,
             "qh-research",
+            RESEARCH_SID,
             r"D:\unrelated\object.txt",
         )
     ],
     "custodian_4663_failure": [
-        _audit_event(4663, AUDIT_FAILURE, "qh-oos-custodian", RELEASED_FIXTURE)
+        _audit_event(
+            4663,
+            AUDIT_FAILURE,
+            "qh-oos-custodian",
+            CUSTODIAN_SID,
+            RELEASED_FIXTURE,
+        )
     ],
     "custodian_4656_success": [
-        _audit_event(4656, AUDIT_SUCCESS, "qh-oos-custodian", RELEASED_FIXTURE)
+        _audit_event(
+            4656,
+            AUDIT_SUCCESS,
+            "qh-oos-custodian",
+            CUSTODIAN_SID,
+            RELEASED_FIXTURE,
+        )
+    ],
+    "custodian_same_name_wrong_sid": [
+        _audit_event(
+            4663,
+            AUDIT_SUCCESS,
+            "OTHERDOMAIN\\qh-oos-custodian",
+            OTHER_SID,
+            RELEASED_FIXTURE,
+        )
     ],
     "custodian_wrong_object": [
         _audit_event(
             4663,
             AUDIT_SUCCESS,
             "qh-oos-custodian",
+            CUSTODIAN_SID,
             r"D:\unrelated\object.txt",
         )
     ],
@@ -389,6 +444,7 @@ AUDIT_SCENARIOS = {
             4656,
             AUDIT_FAILURE,
             "qh-research",
+            RESEARCH_SID,
             SEALED_FIXTURE,
             occurred_at="2026-09-11T05:59:59Z",
         ),
@@ -396,6 +452,7 @@ AUDIT_SCENARIOS = {
             4663,
             AUDIT_SUCCESS,
             "qh-oos-custodian",
+            CUSTODIAN_SID,
             RELEASED_FIXTURE,
             occurred_at="2026-09-11T06:01:01Z",
         ),
@@ -440,6 +497,10 @@ def audit_scenario_results(
                 SEALED_FIXTURE,
                 "-ReleasedPath",
                 RELEASED_FIXTURE,
+                "-ExpectedResearchSid",
+                RESEARCH_SID,
+                "-ExpectedCustodianSid",
+                CUSTODIAN_SID,
             ],
             check=False,
             stdout=stdout,
@@ -469,7 +530,7 @@ def test_audit_logic_accepts_bound_denial_and_custodian_success(
     [
         "research_4663_failure",
         "research_4656_success",
-        "research_wrong_identity",
+        "research_same_name_wrong_sid",
         "research_wrong_object",
     ],
 )
@@ -486,6 +547,7 @@ def test_research_denial_rejects_wrong_id_outcome_identity_or_object(
     [
         "custodian_4663_failure",
         "custodian_4656_success",
+        "custodian_same_name_wrong_sid",
         "custodian_wrong_object",
     ],
 )
@@ -495,6 +557,14 @@ def test_custodian_activity_requires_bound_successful_4663(
     """Custodian authority requires successful performed-object activity."""
     result = audit_scenario_results[scenario]
     assert result["custodian_activity_observed"] is False
+
+
+def test_audit_identity_uses_sid_not_display_name(
+    audit_scenario_results: dict[str, dict[str, bool]],
+) -> None:
+    """Diagnostic account text cannot replace or override exact SID authority."""
+    result = audit_scenario_results["research_wrong_display_name_correct_sid"]
+    assert result["research_denial_observed"] is True
 
 
 def test_audit_evidence_rejects_events_outside_verification_window(

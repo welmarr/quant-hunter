@@ -440,3 +440,12 @@ account name to in-memory effective-login credentials. It also preserves only
 bounded, sanitized failure phase diagnostics. This software correction does not
 close RISK-017. Independent review and a successful owner-controlled live rerun
 with complete host evidence remain mandatory.
+
+Independent review of head `6fe7ce1b097d68418cae22920725c85f00ad7729`
+returned `PASS WITH CHANGES`: the DACL/SACL SID authority was accepted, but the
+live event classifier still compared only the leaf account name. The follow-up
+normalizes `SubjectUserSid` and requires exact equality with the same resolved
+research SID for 4656 Failure evidence and custodian SID for 4663 Success
+evidence. A same-named account with another SID cannot satisfy either gate.
+This is synthetic software evidence only; no live `HOST_ENFORCED` authority was
+created, and RISK-017 remains `OPEN`.
