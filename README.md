@@ -50,9 +50,12 @@ hash-chained exposure ledger, exact Item 8 FROZEN binding, irreversible
 `EXPOSED` evidence, and post-release search termination. The release service is
 the sole supported public exposure writer; the ledger remains the structural
 read/verification primitive. Item 10B real Windows host enforcement is
-`IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED`: the fail-closed software and
-host scripts exist, but the 2026-09-11 read-only preflight could not prove an
-eligible encrypted volume or obtain the required elevated host evidence.
+`TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED`: PR #9's exact-SID and
+provider-independent classifier correction is merged with green pre-merge and
+post-merge Ubuntu/Windows CI. A fresh elevated read-only preflight passed
+for `D:\QuantHunterOOS` on the already encrypted fixed NTFS volume, but that
+preflight is not `HOST_ENFORCED` authority; the governed live capture and
+independent review remain required.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 order matcher, fill simulator, transaction-cost calculator, portfolio logic, or

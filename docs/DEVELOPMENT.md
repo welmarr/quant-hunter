@@ -996,3 +996,26 @@ claimed. The offline build produced both distributions; package, PyArrow, and
 Item 10B imports passed, and archive inspection found 148 combined members with
 the governed Windows host module and ACL helper present and `.tools/` and
 `.venv/` absent.
+
+### PR #9 closure and live-rerun preflight checkpoint
+
+The provider-independent ACL follow-up passed final pre-merge Quality #41 with
+783 tests on Ubuntu and Windows and 90.09% combined Ubuntu statement/branch
+coverage. PR #9 final head `8efa0f5d874c3306ea1cd1c5078ddf35c508c305`
+merged on main at `27a81e9374e97566789f1a61000312d64b91a563`.
+Post-merge Quality #42 ran on that exact merge commit and passed the lock check,
+Ruff format, Ruff lint, strict mypy, package import/version check, and all 783
+tests on both platforms; Ubuntu coverage was 90.09%. This closes PR #9's
+software/security correction while leaving Item 10B at `TOOLING MERGED / LIVE
+HOST EVIDENCE BLOCKED`.
+
+A fresh elevated owner-host read-only preflight against
+`D:\QuantHunterOOS` reported zero blockers. It observed an elevated
+administrator, fixed local NTFS, BitLocker On/FullyEncrypted,
+repository/worktree and profile/cache/temp exclusion, no consumer-sync overlap,
+absent governed identities, an absent candidate path, original File System
+auditing set to No Auditing, and Windows Search running. Backup configuration
+remained unreadable residual risk. This checkpoint did not run setup, change
+BitLocker, or create `HOST_ENFORCED` authority. The next technical action is the
+separately authorized elevated owner-host governed capture rerun through the
+single DEC-0036 preflight/setup/verification authority path.

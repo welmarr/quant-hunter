@@ -449,3 +449,18 @@ research SID for 4656 Failure evidence and custodian SID for 4663 Success
 evidence. A same-named account with another SID cannot satisfy either gate.
 This is synthetic software evidence only; no live `HOST_ENFORCED` authority was
 created, and RISK-017 remains `OPEN`.
+
+PR #9 closed that software/security correction at final head
+`8efa0f5d874c3306ea1cd1c5078ddf35c508c305`, merged on main at
+`27a81e9374e97566789f1a61000312d64b91a563`. Final Quality #41 and post-merge
+Quality #42 passed all 783 tests on Ubuntu and Windows with 90.09% combined
+Ubuntu statement/branch coverage. A fresh elevated owner-host read-only
+preflight against `D:\QuantHunterOOS` then passed with zero blockers: its
+candidate volume was fixed local NTFS with BitLocker On/FullyEncrypted; repository/worktree,
+profile/cache/temp, and consumer-sync overlap checks passed; governed identities
+and the candidate path were absent; original File System auditing was No
+Auditing; and Windows Search was running. Backup configuration remained
+unreadable residual risk. This preflight created no live authority and does not
+close RISK-017. A successful separately authorized governed capture and
+independent review of its complete `HOST_ENFORCED` evidence remain required.
+RISK-018 remains `OPEN` for Item 12 and is unaffected by this checkpoint.
