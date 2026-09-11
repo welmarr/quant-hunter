@@ -23,16 +23,38 @@ function Test-Item10bAuditIdentity {
     return $leaf.Equals($Expected, [StringComparison]::OrdinalIgnoreCase)
 }
 
+function ConvertTo-Item10bAuditTarget {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $normalized = $Value.Replace('/', '\')
+    if ($normalized -eq '\' -or $normalized -match '^[A-Za-z]:\\$') {
+        return $normalized
+    }
+    return $normalized.TrimEnd('\')
+}
+
+function Join-Item10bAuditTarget {
+    param(
+        [Parameter(Mandatory = $true)][string]$Base,
+        [Parameter(Mandatory = $true)][string]$Leaf
+    )
+
+    $normalizedBase = ConvertTo-Item10bAuditTarget $Base
+    $normalizedLeaf = $Leaf.Replace('/', '\').TrimStart('\')
+    $separator = if ($normalizedBase.EndsWith('\')) { '' } else { '\' }
+    return $normalizedBase + $separator + $normalizedLeaf
+}
+
 function Test-Item10bAuditTarget {
     param(
         [Parameter(Mandatory = $true)][string]$Observed,
         [Parameter(Mandatory = $true)][string[]]$Expected
     )
 
-    $normalized = $Observed.Replace('/', '\').TrimEnd('\')
+    $normalized = ConvertTo-Item10bAuditTarget $Observed
     foreach ($target in $Expected) {
         if ($normalized.Equals(
-            $target.Replace('/', '\').TrimEnd('\'),
+            (ConvertTo-Item10bAuditTarget $target),
             [StringComparison]::OrdinalIgnoreCase
         )) {
             return $true
@@ -76,7 +98,7 @@ function Test-Item10bAuditEvidence {
     $researchTargets = @(
         $VaultPath,
         $FixturePath,
-        (Join-Path $VaultPath 'forbidden-create.txt')
+        (Join-Item10bAuditTarget $VaultPath 'forbidden-create.txt')
     )
     $custodianTargets = @($FixturePath, $ReleasedPath)
     $researchDenial = $false

@@ -866,3 +866,23 @@ distributions; package, PyArrow, Item 10A, and Item 10B imports passed; archive
 inspection found 146 combined members, retained `isolation/windows_host.py` in
 both artifacts, and excluded `.tools/` and `.venv/`. These results contain no
 live Windows host-boundary evidence.
+
+### PR #8 audit-target provider-independence correction
+
+Quality #37 passed all 767 tests on Windows. Ubuntu reported 758 passed and
+nine setup errors because the pure audit classifier called
+`Join-Path` with the synthetic Windows ObjectName base
+`D:\QuantHunterOOS\vault`; Linux PowerShell tried to resolve `D:` as a local
+provider drive. The security and scientific semantics were unchanged.
+
+The classifier now normalizes and joins Windows ObjectName evidence using only
+ordinal, case-insensitive string operations. Its pure target-building path does
+not call `Join-Path`, `Resolve-Path`, `Test-Path`, `Get-Item`, or filesystem
+APIs. Tests retain the Windows-style `D:` evidence strings and the full 4656
+Failure / 4663 Success hostile scenario set. Local Windows validation passed
+the locked dependency, Ruff, and strict mypy checks; all 768 tests passed with
+90.26% combined statement/branch coverage, and the focused Item 10A/10B/schema
+suite passed 229 cases. Local WSL enumeration was unavailable to the process,
+so no local Linux result is claimed. Item 10B remains `IMPLEMENTED TOOLING /
+HOST EVIDENCE BLOCKED` pending the new PR checks, independent review, and later
+separately authorized live evidence.

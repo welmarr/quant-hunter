@@ -143,6 +143,15 @@ def test_verifier_uses_failure_4656_and_success_4663_metadata() -> None:
     assert "$isSuccess" in audit_logic
 
 
+def test_audit_target_matching_uses_no_filesystem_provider() -> None:
+    """Windows ObjectName evidence stays independent of the executing host."""
+    audit_logic = SCRIPTS["item10b_audit_evidence.ps1"]
+    for provider_command in ("Join-Path", "Resolve-Path", "Test-Path", "Get-Item"):
+        assert provider_command not in audit_logic
+    assert "Join-Item10bAuditTarget" in audit_logic
+    assert r"D:\QuantHunterOOS\vault" == VAULT
+
+
 def test_cli_cannot_promote_an_arbitrary_json_report() -> None:
     """The only CLI path delegates to the governed live capture operation."""
     finalizer = (SCRIPT_DIRECTORY / "item10b_finalize.py").read_text(encoding="utf-8")
@@ -276,37 +285,48 @@ def audit_scenario_results(
 ) -> dict[str, dict[str, bool]]:
     if PWSH is None:
         pytest.skip("PowerShell 7 is unavailable")
-    fixture = tmp_path_factory.mktemp("item10b-audit") / "scenarios.json"
+    audit_directory = tmp_path_factory.mktemp("item10b-audit")
+    fixture = audit_directory / "scenarios.json"
+    output = audit_directory / "result.json"
+    error = audit_directory / "error.txt"
     fixture.write_text(json.dumps(AUDIT_SCENARIOS), encoding="utf-8")
-    completed = subprocess.run(  # noqa: S603 - resolved local PowerShell binary
-        [
-            PWSH,
-            "-NoLogo",
-            "-NoProfile",
-            "-NonInteractive",
-            "-File",
-            str(AUDIT_HARNESS),
-            "-AuditScriptPath",
-            str(AUDIT_LOGIC),
-            "-FixturePath",
-            str(fixture),
-            "-WindowStart",
-            WINDOW_START,
-            "-WindowEnd",
-            WINDOW_END,
-            "-VaultPath",
-            VAULT,
-            "-SealedFixturePath",
-            SEALED_FIXTURE,
-            "-ReleasedPath",
-            RELEASED_FIXTURE,
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=30,
+    with (
+        output.open("w", encoding="utf-8") as stdout,
+        error.open("w", encoding="utf-8") as stderr,
+    ):
+        completed = subprocess.run(  # noqa: S603 - resolved local PowerShell binary
+            [
+                PWSH,
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-File",
+                str(AUDIT_HARNESS),
+                "-AuditScriptPath",
+                str(AUDIT_LOGIC),
+                "-FixturePath",
+                str(fixture),
+                "-WindowStart",
+                WINDOW_START,
+                "-WindowEnd",
+                WINDOW_END,
+                "-VaultPath",
+                VAULT,
+                "-SealedFixturePath",
+                SEALED_FIXTURE,
+                "-ReleasedPath",
+                RELEASED_FIXTURE,
+            ],
+            check=False,
+            stdout=stdout,
+            stderr=stderr,
+            text=True,
+            timeout=30,
+        )
+    assert completed.returncode == 0, error.read_text(encoding="utf-8")
+    return cast(
+        dict[str, dict[str, bool]], json.loads(output.read_text(encoding="utf-8"))
     )
-    return cast(dict[str, dict[str, bool]], json.loads(completed.stdout))
 
 
 def test_audit_logic_accepts_bound_denial_and_custodian_success(

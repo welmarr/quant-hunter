@@ -45,8 +45,10 @@ re-review confirmed that bypass fixed at
 `45611b771951839c96f4f19111ae4d8e7fb6898e`, then failed the Windows audit
 evidence semantics: denied research access must use 4656 Audit Failure, while
 4663 Audit Success remains the performed-access evidence for the custodian.
-That narrow correction is pending independent review. No host mutation or live
-evidence was produced.
+Quality #37 passed Windows but failed Ubuntu because the pure classifier used
+`Join-Path` on a synthetic Windows `D:` ObjectName. The provider-independent
+string correction is pending new PR checks and independent review. No host
+mutation or live evidence was produced.
 
 ## PLANNED DECOMPOSITION
 
@@ -132,11 +134,12 @@ A future agent must:
 6. Reconcile this current-state summary against actual repository and review
    evidence.
 7. Stop and reconcile rather than guess if the evidence conflicts.
-8. Independently review the corrected 4656 Failure / 4663 Success audit
-   semantics while preserving the DEC-0036 authority path. Then resume Item 10B
-   from the retained read-only blocker in a separately authorized elevated
-   Windows session, using the governed capture workflow against an
-   owner-selected, already encrypted fixed NTFS volume. Do not change BitLocker.
+8. Verify the new PR checks and independently review the provider-independent
+   ObjectName correction while preserving the corrected 4656 Failure / 4663
+   Success semantics and DEC-0036 authority path. Then resume Item 10B from the
+   retained read-only blocker in a separately authorized elevated Windows
+   session, using the governed capture workflow against an owner-selected,
+   already encrypted fixed NTFS volume. Do not change BitLocker.
 9. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE
