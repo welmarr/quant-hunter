@@ -832,3 +832,37 @@ found 144 combined members, retained `isolation/windows_host.py` in both
 artifacts, and excluded `.tools/` and `.venv/`. All five PowerShell host scripts
 passed parser validation. These are software results only and do not constitute
 live Windows host-boundary evidence.
+
+### Item 10B Windows audit-event semantics correction
+
+The raw-report authority bypass was corrected at
+`45611b771951839c96f4f19111ae4d8e7fb6898e`. Independent re-review then found
+that the live verifier queried Security event 4663 for both denied research
+access and successful custodian activity. That does not match the configured
+SACLs: a declined handle request is evidenced by event 4656 with the standard
+Audit Failure keyword, while 4663 records a right actually exercised and uses
+Audit Success for the permitted custodian activity.
+
+The verifier now queries events 4656 and 4663 over the exact probe window and
+normalizes identity, object name, timestamp, and standard audit keywords from
+event metadata. Research denial requires a 4656 Audit Failure for
+`qh-research` and the exact synthetic vault/fixture probe target. Custodian
+activity requires a 4663 Audit Success for `qh-oos-custodian` and the exact
+synthetic fixture or released object. Event ID alone, success-classified 4656,
+failure-classified 4663, another identity, another object, and stale events do
+not satisfy either gate. Message text is not used to infer success or failure.
+
+This correction changes no SACL, host identity, BitLocker setting, dependency,
+or authority architecture. No live host workflow ran and no host evidence was
+captured. Item 10B remains `IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED` pending
+independent review and a later separately authorized live execution.
+
+Corrective local validation passed `uv lock --check`, Ruff format and lint,
+strict mypy over 48 source files, and all 767 pytest cases with 90.26% combined
+statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
+228 cases. All six production Item 10B PowerShell files and the synthetic audit
+harness passed parser validation. The offline build produced both
+distributions; package, PyArrow, Item 10A, and Item 10B imports passed; archive
+inspection found 146 combined members, retained `isolation/windows_host.py` in
+both artifacts, and excluded `.tools/` and `.venv/`. These results contain no
+live Windows host-boundary evidence.

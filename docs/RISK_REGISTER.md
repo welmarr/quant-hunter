@@ -407,3 +407,13 @@ research-readable immutable release, observed SACL/audit events, index
 exclusion, sync non-overlap, backup assessment, residual privileged-access
 limitations, and independent review. RISK-018, RISK-023, and RISK-024 also
 remain `OPEN`; `identity/registry.py` is unchanged.
+
+The raw-report authority bypass was corrected at
+`45611b771951839c96f4f19111ae4d8e7fb6898e`. Independent re-review found a
+separate audit-evidence mismatch: the verifier treated 4663 as both denial and
+success evidence even though the SACL requests research Failure auditing and
+custodian Success auditing. The corrected tooling requires a time-, identity-,
+and object-bound 4656 Audit Failure for denied `qh-research` access and a
+separately bound 4663 Audit Success for performed `qh-oos-custodian` activity.
+This is software evidence only. No live event, host mutation, or host authority
+was created, and RISK-017 remains `OPEN`.

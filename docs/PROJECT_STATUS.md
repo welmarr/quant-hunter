@@ -40,8 +40,13 @@ could not read BitLocker, audit-policy, or backup evidence. It therefore did
 not prove an already encrypted eligible volume. Independent review failed head
 `238a1538888a34635b7f274b451fbd57c980cb0e` because its public report finalizer
 could promote caller assertions. DEC-0036 removes that path and binds authority
-creation to one executed preflight/setup/verification flow. The correction is
-pending independent review. No host mutation or live evidence was produced.
+creation to one executed preflight/setup/verification flow. Independent
+re-review confirmed that bypass fixed at
+`45611b771951839c96f4f19111ae4d8e7fb6898e`, then failed the Windows audit
+evidence semantics: denied research access must use 4656 Audit Failure, while
+4663 Audit Success remains the performed-access evidence for the custodian.
+That narrow correction is pending independent review. No host mutation or live
+evidence was produced.
 
 ## PLANNED DECOMPOSITION
 
@@ -127,10 +132,11 @@ A future agent must:
 6. Reconcile this current-state summary against actual repository and review
    evidence.
 7. Stop and reconcile rather than guess if the evidence conflicts.
-8. Independently review the DEC-0036 corrective authority path. Then resume Item
-   10B from the retained read-only blocker in a separately authorized elevated
-   Windows session, using the governed capture workflow against an owner-selected,
-   already encrypted fixed NTFS volume. Do not change BitLocker.
+8. Independently review the corrected 4656 Failure / 4663 Success audit
+   semantics while preserving the DEC-0036 authority path. Then resume Item 10B
+   from the retained read-only blocker in a separately authorized elevated
+   Windows session, using the governed capture workflow against an
+   owner-selected, already encrypted fixed NTFS volume. Do not change BitLocker.
 9. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE

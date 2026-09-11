@@ -18,6 +18,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $probeScript = Join-Path $PSScriptRoot 'item10b_identity_probe.ps1'
+$auditEvidenceScript = Join-Path $PSScriptRoot 'item10b_audit_evidence.ps1'
+. $auditEvidenceScript
 $fixturePath = Join-Path $VaultPath 'synthetic-sealed-fixture.txt'
 $releasedPath = Join-Path $ReleasePath 'synthetic-released-fixture.txt'
 $custodianResult = Join-Path $EvidencePath 'custodian-probe.json'
@@ -75,9 +77,19 @@ $releaseResearch = @($releaseRules | Where-Object { $_.IdentityReference.Value -
 
 $auditPolicy = & "$env:SystemRoot\System32\auditpol.exe" /get /subcategory:'File System' /r
 $auditEnabled = ($LASTEXITCODE -eq 0) -and (($auditPolicy -join ' ') -match 'Success') -and (($auditPolicy -join ' ') -match 'Failure')
-$events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Security'; Id = 4663; StartTime = $startedAt } -ErrorAction SilentlyContinue)
-$researchAudit = @($events | Where-Object { $_.Message -match 'qh-research' -and $_.Message -match 'synthetic-sealed-fixture' }).Count -gt 0
-$custodianAudit = @($events | Where-Object { $_.Message -match 'qh-oos-custodian' -and $_.Message -match 'synthetic' }).Count -gt 0
+$endedAt = Get-Date
+$eventRecords = @(Get-WinEvent -FilterHashtable @{
+    LogName = 'Security'
+    Id = @(4656, 4663)
+    StartTime = $startedAt
+    EndTime = $endedAt
+} -ErrorAction SilentlyContinue)
+$normalizedEvents = @($eventRecords | ConvertTo-Item10bNormalizedAuditEvent)
+$auditEvidence = Test-Item10bAuditEvidence -Events $normalizedEvents `
+    -WindowStart $startedAt -WindowEnd $endedAt -VaultPath $VaultPath `
+    -FixturePath $fixturePath -ReleasedPath $releasedPath
+$researchAudit = [bool]$auditEvidence.research_denial_observed
+$custodianAudit = [bool]$auditEvidence.custodian_activity_observed
 
 $result = [ordered]@{
     schema_version = '1.0.0'

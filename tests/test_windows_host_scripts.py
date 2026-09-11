@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -19,6 +23,7 @@ def test_item10b_script_set_is_complete_and_has_no_personal_paths() -> None:
     """The bounded workflow ships every reviewed step without machine paths."""
     assert set(SCRIPTS) == {
         "item10b_identity_probe.ps1",
+        "item10b_audit_evidence.ps1",
         "item10b_preflight.ps1",
         "item10b_rollback.ps1",
         "item10b_setup.ps1",
@@ -119,6 +124,23 @@ def test_setup_uses_allow_list_acls_auditing_and_disables_test_logons() -> None:
     assert "Disable-LocalUser -Name 'qh-research'" in setup
     assert "Get-WinEvent" in verify
     assert "research_denial_observed" in verify
+    assert "[Security.AccessControl.AuditFlags]::Failure" in setup
+    assert "[Security.AccessControl.AuditFlags]::Success" in setup
+
+
+def test_verifier_uses_failure_4656_and_success_4663_metadata() -> None:
+    """The live query and the configured SACLs use matching audit semantics."""
+    verify = SCRIPTS["item10b_verify.ps1"]
+    audit_logic = SCRIPTS["item10b_audit_evidence.ps1"]
+    assert "Id = @(4656, 4663)" in verify
+    assert "StartTime = $startedAt" in verify
+    assert "EndTime = $endedAt" in verify
+    assert "ConvertTo-Item10bNormalizedAuditEvent" in verify
+    assert ".Message" not in verify
+    assert "event_id -eq 4656" in audit_logic
+    assert "$isFailure" in audit_logic
+    assert "event_id -eq 4663" in audit_logic
+    assert "$isSuccess" in audit_logic
 
 
 def test_cli_cannot_promote_an_arbitrary_json_report() -> None:
@@ -156,3 +178,187 @@ def test_preflight_observations_flow_into_the_same_verification_result() -> None
     assert "sync_overlap_detected = $false" not in verify
     assert "backup_status = 'RESIDUAL_RISK_RETAINED'" not in verify
     assert "item10b-live-report.json" not in setup
+
+
+PWSH = shutil.which("pwsh.exe") or shutil.which("pwsh")
+AUDIT_LOGIC = SCRIPT_DIRECTORY / "item10b_audit_evidence.ps1"
+AUDIT_HARNESS = ROOT / "tests" / "helpers" / "item10b_audit_logic_harness.ps1"
+WINDOW_START = "2026-09-11T06:00:00Z"
+WINDOW_END = "2026-09-11T06:01:00Z"
+EVENT_TIME = "2026-09-11T06:00:30Z"
+VAULT = r"D:\QuantHunterOOS\vault"
+SEALED_FIXTURE = VAULT + r"\synthetic-sealed-fixture.txt"
+RELEASED_FIXTURE = r"D:\QuantHunterOOS\releases\synthetic-released-fixture.txt"
+AUDIT_FAILURE = "0x8010000000000000"
+AUDIT_SUCCESS = "0x8020000000000000"
+
+
+def _audit_event(
+    event_id: int,
+    keywords: str,
+    account_name: str,
+    object_name: str,
+    *,
+    occurred_at: str = EVENT_TIME,
+) -> dict[str, object]:
+    return {
+        "event_id": event_id,
+        "occurred_at": occurred_at,
+        "account_name": account_name,
+        "object_name": object_name,
+        "keywords": keywords,
+    }
+
+
+AUDIT_SCENARIOS = {
+    "valid": [
+        _audit_event(4656, AUDIT_FAILURE, "HOST\\qh-research", SEALED_FIXTURE),
+        _audit_event(
+            4663,
+            AUDIT_SUCCESS,
+            "HOST\\qh-oos-custodian",
+            RELEASED_FIXTURE,
+        ),
+    ],
+    "research_4663_failure": [
+        _audit_event(4663, AUDIT_FAILURE, "qh-research", SEALED_FIXTURE)
+    ],
+    "research_4656_success": [
+        _audit_event(4656, AUDIT_SUCCESS, "qh-research", SEALED_FIXTURE)
+    ],
+    "research_wrong_identity": [
+        _audit_event(4656, AUDIT_FAILURE, "other-identity", SEALED_FIXTURE)
+    ],
+    "research_wrong_object": [
+        _audit_event(
+            4656,
+            AUDIT_FAILURE,
+            "qh-research",
+            r"D:\unrelated\object.txt",
+        )
+    ],
+    "custodian_4663_failure": [
+        _audit_event(4663, AUDIT_FAILURE, "qh-oos-custodian", RELEASED_FIXTURE)
+    ],
+    "custodian_4656_success": [
+        _audit_event(4656, AUDIT_SUCCESS, "qh-oos-custodian", RELEASED_FIXTURE)
+    ],
+    "custodian_wrong_object": [
+        _audit_event(
+            4663,
+            AUDIT_SUCCESS,
+            "qh-oos-custodian",
+            r"D:\unrelated\object.txt",
+        )
+    ],
+    "stale": [
+        _audit_event(
+            4656,
+            AUDIT_FAILURE,
+            "qh-research",
+            SEALED_FIXTURE,
+            occurred_at="2026-09-11T05:59:59Z",
+        ),
+        _audit_event(
+            4663,
+            AUDIT_SUCCESS,
+            "qh-oos-custodian",
+            RELEASED_FIXTURE,
+            occurred_at="2026-09-11T06:01:01Z",
+        ),
+    ],
+}
+
+
+@pytest.fixture(scope="module")
+def audit_scenario_results(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> dict[str, dict[str, bool]]:
+    if PWSH is None:
+        pytest.skip("PowerShell 7 is unavailable")
+    fixture = tmp_path_factory.mktemp("item10b-audit") / "scenarios.json"
+    fixture.write_text(json.dumps(AUDIT_SCENARIOS), encoding="utf-8")
+    completed = subprocess.run(  # noqa: S603 - resolved local PowerShell binary
+        [
+            PWSH,
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-File",
+            str(AUDIT_HARNESS),
+            "-AuditScriptPath",
+            str(AUDIT_LOGIC),
+            "-FixturePath",
+            str(fixture),
+            "-WindowStart",
+            WINDOW_START,
+            "-WindowEnd",
+            WINDOW_END,
+            "-VaultPath",
+            VAULT,
+            "-SealedFixturePath",
+            SEALED_FIXTURE,
+            "-ReleasedPath",
+            RELEASED_FIXTURE,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return cast(dict[str, dict[str, bool]], json.loads(completed.stdout))
+
+
+def test_audit_logic_accepts_bound_denial_and_custodian_success(
+    audit_scenario_results: dict[str, dict[str, bool]],
+) -> None:
+    """The two roles require their distinct, correctly classified audit events."""
+    result = audit_scenario_results["valid"]
+    assert result == {
+        "research_denial_observed": True,
+        "custodian_activity_observed": True,
+    }
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "research_4663_failure",
+        "research_4656_success",
+        "research_wrong_identity",
+        "research_wrong_object",
+    ],
+)
+def test_research_denial_rejects_wrong_id_outcome_identity_or_object(
+    audit_scenario_results: dict[str, dict[str, bool]], scenario: str
+) -> None:
+    """An event's existence does not establish a denied research access."""
+    result = audit_scenario_results[scenario]
+    assert result["research_denial_observed"] is False
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "custodian_4663_failure",
+        "custodian_4656_success",
+        "custodian_wrong_object",
+    ],
+)
+def test_custodian_activity_requires_bound_successful_4663(
+    audit_scenario_results: dict[str, dict[str, bool]], scenario: str
+) -> None:
+    """Custodian authority requires successful performed-object activity."""
+    result = audit_scenario_results[scenario]
+    assert result["custodian_activity_observed"] is False
+
+
+def test_audit_evidence_rejects_events_outside_verification_window(
+    audit_scenario_results: dict[str, dict[str, bool]],
+) -> None:
+    """Stale otherwise-matching events cannot satisfy either evidence gate."""
+    result = audit_scenario_results["stale"]
+    assert result == {
+        "research_denial_observed": False,
+        "custodian_activity_observed": False,
+    }
