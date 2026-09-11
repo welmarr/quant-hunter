@@ -844,13 +844,15 @@ Audit Failure keyword, while 4663 records a right actually exercised and uses
 Audit Success for the permitted custodian activity.
 
 The verifier now queries events 4656 and 4663 over the exact probe window and
-normalizes identity, object name, timestamp, and standard audit keywords from
-event metadata. Research denial requires a 4656 Audit Failure for
-`qh-research` and the exact synthetic vault/fixture probe target. Custodian
-activity requires a 4663 Audit Success for `qh-oos-custodian` and the exact
-synthetic fixture or released object. Event ID alone, success-classified 4656,
-failure-classified 4663, another identity, another object, and stale events do
-not satisfy either gate. Message text is not used to infer success or failure.
+normalizes `SubjectUserSid`, diagnostic account name, object name, timestamp,
+and standard audit keywords from event metadata. Research denial requires a
+4656 Audit Failure from the exact already-resolved research SID and the exact
+synthetic vault/fixture probe target. Custodian activity requires a 4663 Audit
+Success from the exact already-resolved custodian SID and the exact synthetic
+fixture or released object. Event ID alone, success-classified 4656,
+failure-classified 4663, a same-named account with another SID, another object,
+and stale events do not satisfy either gate. Display names and message text are
+not authority and are not used to infer success or failure.
 
 This correction changes no SACL, host identity, BitLocker setting, dependency,
 or authority architecture. No live host workflow ran and no host evidence was
@@ -886,3 +888,111 @@ suite passed 229 cases. Local WSL enumeration was unavailable to the process,
 so no local Linux result is claimed. Item 10B remains `IMPLEMENTED TOOLING /
 HOST EVIDENCE BLOCKED` pending the new PR checks, independent review, and later
 separately authorized live evidence.
+
+### Item 10B owner-host failure and SID-authority correction
+
+PR #8 merged the provider-independent audit correction on main at
+`cf26f4a3c8abd2387649a0baf90d398679ea8ca5`. Post-merge Quality #39 passed 768
+tests on Ubuntu and Windows; Ubuntu combined statement/branch coverage was
+90.20%.
+
+The owner then ran the governed workflow from an elevated session against a
+separate fixed NTFS target. Preflight passed with BitLocker On/FullyEncrypted,
+repository/profile/cache/temp exclusion, absent governed identities and target,
+and no sync overlap. Backup configuration was unreadable and remains residual
+risk. Setup failed closed after the two governed accounts were created and
+before audit-policy or effective-identity work. Security events showed
+4720/4722/4738 for both accounts and 4726 deletion during rollback; no 4719
+audit-policy change and no governed 4656/4663 evidence occurred. Independent
+inspection confirmed the batch root, marker, state, evidence, and users absent,
+File System auditing restored to No Auditing, and BitLocker unchanged. No
+canonical `HOST_ENFORCED` authority was created.
+
+A separate owner-controlled read-only probe showed that `.\` local-account name
+translation is not portable on the tested host. The correction obtains each
+new local user's actual `SecurityIdentifier`, verifies that the account is
+local, enabled, and outside the prohibited privileged local groups, and uses
+those SIDs for every governed DACL and SACL rule. SYSTEM and Administrators use
+well-known SIDs. Verification translates access and audit rules to SIDs and
+requires the exact SID set, rights, allow type, and audit outcome. A same named
+account with another SID cannot satisfy the checks. Effective probes use the
+runtime machine-qualified account name only inside `PSCredential`; neither the
+machine name nor passwords enter canonical evidence. The elevated verifier
+redirects each child probe's stdout into its evidence file; the research account
+does not receive write authority to the protected evidence directory.
+
+Setup failures now carry a non-secret phase through a bounded structured stderr
+block. PowerShell strips terminal controls, redacts explicit credential labels,
+and limits the reason; Python accepts only the marker plus a known phase, safe
+exception type, and sanitized reason, with a 384-character final bound.
+Unstructured stderr remains hidden, and failed execution cannot publish
+canonical evidence. The existing marker/state-bound rollback still restores the
+original audit Success/Failure state and removes only batch-created users and
+the batch-created root. The correction performs no live host or BitLocker
+mutation and leaves Item 10B at `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED`.
+
+Independent review of head `6fe7ce1b097d68418cae22920725c85f00ad7729`
+accepted the DACL/SACL SID correction with changes and found that live event
+classification still compared only the account-name leaf. The follow-up
+normalizes `SubjectUserSid` and passes the same resolved research and custodian
+SIDs through DACL verification, SACL verification, 4656 denial evidence, and
+4663 performed-access evidence. Machine/account display text remains transient
+diagnostic metadata; no SID was added to canonical scientific evidence. This
+follow-up has no live-host success claim and RISK-017 remains `OPEN`.
+
+Corrective local validation passed the lock check, Ruff format and lint, strict
+mypy over 48 source files, and all 780 pytest cases with 90.15% combined
+statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
+241 cases. All seven production Item 10B PowerShell files plus the synthetic
+ACL and audit harnesses passed parser validation. The documented exact pytest
+command initially encountered access denial while enumerating a pre-existing
+user temp directory before fixture setup; no product test failed. Repeating the
+same locked coverage gate with a workspace-local `--basetemp` completed all 780
+tests. The offline build produced both distributions; package, PyArrow, Item
+10A, and Item 10B imports passed; archive inspection found 148 combined members,
+included `isolation/windows_host.py` in both artifacts and the new ACL helper in
+the source distribution, and excluded `.tools/` and `.venv/`. No dependency or
+lockfile change was made.
+
+The audit-event SID-binding follow-up passed `uv lock --check`, Ruff format and
+lint, and strict mypy over 48 source files. The focused Item 10A/10B host,
+script, schema, and sealed-release suite passed 243 tests. The exact full pytest
+command first encountered the known Windows user-temp ACL problem: 425 tests
+passed and 357 fixtures could not be created. Its workspace-local `--basetemp`
+rerun passed all 782 tests with 90.15% combined statement/branch coverage. No
+dependency, lockfile, canonical-evidence schema, host, or BitLocker change was
+made.
+
+### PR #9 provider-independent ACL evidence classification
+
+Independent review passed the exact-SID authority correction at
+`2fe04559e9d61b51e7f4b937234a72b1f88c4fe8`. PR #9 Quality #40 then passed all
+782 tests on Windows but failed on Ubuntu with 781 passing tests and one failed
+ACL-classifier test. The synthetic harness constructed a Windows
+`SecurityIdentifier`, which PowerShell 7 cannot instantiate on Linux. This was
+a test-boundary provider dependency; the exact-SID security semantics remain
+unchanged.
+
+The pure ACL evidence helper now accepts canonical SID strings plus numeric or
+string rule metadata and has no Windows Principal, Access Control, or filesystem
+provider dependency. The Windows verifier still obtains real access and audit
+rules through `GetAccessRules` and `GetAuditRules` with
+`SecurityIdentifier`, then passes each governed SID's `.Value` and exact rule
+metadata into the helper. The portable synthetic harness preserves the
+same-name/different-SID, wrong-rights, wrong access type, wrong audit outcome,
+and exact-set missing/extra/wrong-SID hostile cases. No Linux skip or xfail was
+added. A new hosted Quality run must pass before PR #9 can merge; no CI success
+is claimed here. No host or BitLocker mutation occurred, no `HOST_ENFORCED`
+evidence was created, and RISK-017 remains `OPEN`.
+
+Local Windows validation passed the lock check, Ruff format and lint, strict
+mypy over 48 source files, and all 783 tests with 90.15% combined
+statement/branch coverage. The exact pytest command first encountered the known
+user-temp ACL denial after 426 passing tests and before 357 fixture setups; the
+same locked gate with a workspace-local `--basetemp` passed. The ACL harness
+also passed directly under Windows PowerShell. WSL distro enumeration was
+denied to this process, so no local Ubuntu or Linux PowerShell result is
+claimed. The offline build produced both distributions; package, PyArrow, and
+Item 10B imports passed, and archive inspection found 148 combined members with
+the governed Windows host module and ACL helper present and `.tools/` and
+`.venv/` absent.

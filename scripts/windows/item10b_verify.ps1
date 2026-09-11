@@ -11,6 +11,10 @@ param(
     [Parameter(Mandatory = $true)]
     [Security.SecureString]$ResearchPassword,
     [Parameter(Mandatory = $true)]
+    [Security.Principal.SecurityIdentifier]$CustodianSid,
+    [Parameter(Mandatory = $true)]
+    [Security.Principal.SecurityIdentifier]$ResearchSid,
+    [Parameter(Mandatory = $true)]
     [psobject]$PreflightResult,
     [switch]$AsObject
 )
@@ -19,7 +23,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $probeScript = Join-Path $PSScriptRoot 'item10b_identity_probe.ps1'
 $auditEvidenceScript = Join-Path $PSScriptRoot 'item10b_audit_evidence.ps1'
+$aclEvidenceScript = Join-Path $PSScriptRoot 'item10b_acl_evidence.ps1'
 . $auditEvidenceScript
+. $aclEvidenceScript
 $fixturePath = Join-Path $VaultPath 'synthetic-sealed-fixture.txt'
 $releasedPath = Join-Path $ReleasePath 'synthetic-released-fixture.txt'
 $custodianResult = Join-Path $EvidencePath 'custodian-probe.json'
@@ -44,11 +50,11 @@ function Invoke-IdentityProbe {
         '-Role', $Role,
         '-VaultPath', $VaultPath,
         '-FixturePath', $fixturePath,
-        '-ReleasedPath', $releasedPath,
-        '-OutputPath', $OutputPath
+        '-ReleasedPath', $releasedPath
     )
     $process = Start-Process -FilePath $shell -ArgumentList $arguments `
         -Credential $Credential -Wait -PassThru -WindowStyle Hidden `
+        -RedirectStandardOutput $OutputPath `
         -RedirectStandardError $emptyError
     if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $OutputPath)) {
         throw "$Role effective-identity probe failed."
@@ -56,24 +62,78 @@ function Invoke-IdentityProbe {
     return Get-Content -LiteralPath $OutputPath -Raw | ConvertFrom-Json
 }
 
+function Assert-GovernedLocalSid {
+    param(
+        [string]$Name,
+        [Security.Principal.SecurityIdentifier]$ExpectedSid
+    )
+
+    $user = Get-LocalUser -Name $Name -ErrorAction Stop
+    if ($null -eq $user -or
+        $null -eq $user.SID -or
+        -not ($user.SID -is [Security.Principal.SecurityIdentifier]) -or
+        -not $user.SID.Value.Equals(
+            $ExpectedSid.Value,
+            [StringComparison]::OrdinalIgnoreCase
+        ) -or
+        -not $user.Enabled) {
+        throw 'The governed local identity does not match its expected SID authority.'
+    }
+}
+
+$machineName = [Environment]::MachineName
+if ([string]::IsNullOrWhiteSpace($machineName)) {
+    throw 'The local machine name is unavailable for effective identity probes.'
+}
+Assert-GovernedLocalSid 'qh-oos-custodian' $CustodianSid
+Assert-GovernedLocalSid 'qh-research' $ResearchSid
 $custodianCredential = [Management.Automation.PSCredential]::new(
-    '.\qh-oos-custodian', $CustodianPassword
+    "$machineName\qh-oos-custodian", $CustodianPassword
 )
 $researchCredential = [Management.Automation.PSCredential]::new(
-    '.\qh-research', $ResearchPassword
+    "$machineName\qh-research", $ResearchPassword
 )
 $custodian = Invoke-IdentityProbe 'Custodian' $custodianCredential $custodianResult
 $research = Invoke-IdentityProbe 'Research' $researchCredential $researchResult
 
 $vaultAcl = Get-Acl -LiteralPath $VaultPath -Audit
 $releaseAcl = Get-Acl -LiteralPath $ReleasePath -Audit
-$broadPrincipals = @('Everyone', 'BUILTIN\Users', 'NT AUTHORITY\Authenticated Users')
-$vaultRules = @($vaultAcl.Access)
-$releaseRules = @($releaseAcl.Access)
-$vaultBroad = @($vaultRules | Where-Object { $_.IdentityReference.Value -in $broadPrincipals })
-$releaseBroad = @($releaseRules | Where-Object { $_.IdentityReference.Value -in $broadPrincipals })
-$vaultResearch = @($vaultRules | Where-Object { $_.IdentityReference.Value -match '\\qh-research$' })
-$releaseResearch = @($releaseRules | Where-Object { $_.IdentityReference.Value -match '\\qh-research$' })
+$systemSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+$administratorsSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
+$broadSidValues = @('S-1-1-0', 'S-1-5-11', 'S-1-5-32-545')
+$vaultRules = @($vaultAcl.GetAccessRules(
+    $true, $true, [Security.Principal.SecurityIdentifier]
+))
+$releaseRules = @($releaseAcl.GetAccessRules(
+    $true, $true, [Security.Principal.SecurityIdentifier]
+))
+$vaultAuditRules = @($vaultAcl.GetAuditRules(
+    $true, $true, [Security.Principal.SecurityIdentifier]
+))
+$releaseAuditRules = @($releaseAcl.GetAuditRules(
+    $true, $true, [Security.Principal.SecurityIdentifier]
+))
+$vaultBroad = @($vaultRules | Where-Object { $_.IdentityReference.Value -in $broadSidValues })
+$releaseBroad = @($releaseRules | Where-Object { $_.IdentityReference.Value -in $broadSidValues })
+$vaultResearch = @($vaultRules | Where-Object {
+    $_.IdentityReference.Value.Equals($ResearchSid.Value, [StringComparison]::OrdinalIgnoreCase)
+})
+$releaseResearch = @($releaseRules | Where-Object {
+    $_.IdentityReference.Value.Equals($ResearchSid.Value, [StringComparison]::OrdinalIgnoreCase)
+})
+$failureRights = [Security.AccessControl.FileSystemRights]'ListDirectory, ReadData, WriteData, AppendData, Delete, ChangePermissions, TakeOwnership'
+$custodianAuditRights = [Security.AccessControl.FileSystemRights]'ReadAndExecute, WriteData, AppendData'
+$fullControlRightsValue = [long][Security.AccessControl.FileSystemRights]::FullControl
+$modifyRightsValue = [long][Security.AccessControl.FileSystemRights]::Modify
+$readAndExecuteRightsValue = [long][Security.AccessControl.FileSystemRights]::ReadAndExecute
+$failureRightsValue = [long]$failureRights
+$custodianAuditRightsValue = [long]$custodianAuditRights
+$saclVerified = $vaultAuditRules.Count -eq 2 -and
+    $releaseAuditRules.Count -eq 2 -and
+    (Test-Item10bExactAuditRule $vaultAuditRules $ResearchSid.Value $failureRightsValue 'Failure') -and
+    (Test-Item10bExactAuditRule $vaultAuditRules $CustodianSid.Value $custodianAuditRightsValue 'Success') -and
+    (Test-Item10bExactAuditRule $releaseAuditRules $ResearchSid.Value $failureRightsValue 'Failure') -and
+    (Test-Item10bExactAuditRule $releaseAuditRules $CustodianSid.Value $custodianAuditRightsValue 'Success')
 
 $auditPolicy = & "$env:SystemRoot\System32\auditpol.exe" /get /subcategory:'File System' /r
 $auditEnabled = ($LASTEXITCODE -eq 0) -and (($auditPolicy -join ' ') -match 'Success') -and (($auditPolicy -join ' ') -match 'Failure')
@@ -87,7 +147,9 @@ $eventRecords = @(Get-WinEvent -FilterHashtable @{
 $normalizedEvents = @($eventRecords | ConvertTo-Item10bNormalizedAuditEvent)
 $auditEvidence = Test-Item10bAuditEvidence -Events $normalizedEvents `
     -WindowStart $startedAt -WindowEnd $endedAt -VaultPath $VaultPath `
-    -FixturePath $fixturePath -ReleasedPath $releasedPath
+    -FixturePath $fixturePath -ReleasedPath $releasedPath `
+    -ExpectedResearchSid $ResearchSid.Value `
+    -ExpectedCustodianSid $CustodianSid.Value
 $researchAudit = [bool]$auditEvidence.research_denial_observed
 $custodianAudit = [bool]$auditEvidence.custodian_activity_observed
 
@@ -124,19 +186,31 @@ $result = [ordered]@{
     research_identity = 'qh-research'
     vault_dacl_checks = [ordered]@{
         inheritance_disabled = $vaultAcl.AreAccessRulesProtected
-        allow_list_verified = $vaultRules.Count -eq 3
+        allow_list_verified = (Test-Item10bExactSidSet $vaultRules @(
+            $systemSid.Value, $administratorsSid.Value, $CustodianSid.Value
+        )) -and
+            (Test-Item10bExactAccessRule $vaultRules $systemSid.Value $fullControlRightsValue) -and
+            (Test-Item10bExactAccessRule $vaultRules $administratorsSid.Value $fullControlRightsValue) -and
+            (Test-Item10bExactAccessRule $vaultRules $CustodianSid.Value $modifyRightsValue)
         broad_principals_absent = $vaultBroad.Count -eq 0
         research_data_rights_absent = $vaultResearch.Count -eq 0
     }
     release_dacl_checks = [ordered]@{
         inheritance_disabled = $releaseAcl.AreAccessRulesProtected
-        allow_list_verified = $releaseRules.Count -eq 4
+        allow_list_verified = (Test-Item10bExactSidSet $releaseRules @(
+            $systemSid.Value, $administratorsSid.Value,
+            $CustodianSid.Value, $ResearchSid.Value
+        )) -and
+            (Test-Item10bExactAccessRule $releaseRules $systemSid.Value $fullControlRightsValue) -and
+            (Test-Item10bExactAccessRule $releaseRules $administratorsSid.Value $fullControlRightsValue) -and
+            (Test-Item10bExactAccessRule $releaseRules $CustodianSid.Value $modifyRightsValue)
         broad_principals_absent = $releaseBroad.Count -eq 0
-        research_read_only = $releaseResearch.Count -eq 1 -and [string]$releaseResearch[0].FileSystemRights -match 'ReadAndExecute'
+        research_read_only = $releaseResearch.Count -eq 1 -and
+            (Test-Item10bExactAccessRule $releaseRules $ResearchSid.Value $readAndExecuteRightsValue)
     }
     audit_checks = [ordered]@{
         file_system_policy_enabled = $auditEnabled
-        sacl_verified = @($vaultAcl.Audit).Count -gt 0 -and @($releaseAcl.Audit).Count -gt 0
+        sacl_verified = $saclVerified
         research_denial_observed = $researchAudit
         custodian_activity_observed = $custodianAudit
     }

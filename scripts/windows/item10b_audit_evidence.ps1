@@ -13,14 +13,13 @@ function ConvertTo-Item10bAuditKeyword {
     return [Convert]::ToUInt64($text, [Globalization.CultureInfo]::InvariantCulture)
 }
 
-function Test-Item10bAuditIdentity {
+function Test-Item10bAuditSid {
     param(
         [Parameter(Mandatory = $true)][string]$Observed,
         [Parameter(Mandatory = $true)][string]$Expected
     )
 
-    $leaf = $Observed.Split('\')[-1]
-    return $leaf.Equals($Expected, [StringComparison]::OrdinalIgnoreCase)
+    return $Observed.Equals($Expected, [StringComparison]::OrdinalIgnoreCase)
 }
 
 function ConvertTo-Item10bAuditTarget {
@@ -76,6 +75,7 @@ function ConvertTo-Item10bNormalizedAuditEvent {
             event_id = [int]$EventRecord.Id
             occurred_at = ([datetime]$EventRecord.TimeCreated).ToUniversalTime().ToString('o')
             account_name = [string]$fields['SubjectUserName']
+            subject_user_sid = [string]$fields['SubjectUserSid']
             object_name = [string]$fields['ObjectName']
             keywords = [string]$document.Event.System.Keywords
         }
@@ -89,7 +89,9 @@ function Test-Item10bAuditEvidence {
         [Parameter(Mandatory = $true)][datetimeoffset]$WindowEnd,
         [Parameter(Mandatory = $true)][string]$VaultPath,
         [Parameter(Mandatory = $true)][string]$FixturePath,
-        [Parameter(Mandatory = $true)][string]$ReleasedPath
+        [Parameter(Mandatory = $true)][string]$ReleasedPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedResearchSid,
+        [Parameter(Mandatory = $true)][string]$ExpectedCustodianSid
     )
 
     if ($WindowStart -gt $WindowEnd) {
@@ -125,7 +127,7 @@ function Test-Item10bAuditEvidence {
             [int]$event.event_id -eq 4656 -and
             $isFailure -and
             -not $isSuccess -and
-            (Test-Item10bAuditIdentity ([string]$event.account_name) 'qh-research') -and
+            (Test-Item10bAuditSid ([string]$event.subject_user_sid) $ExpectedResearchSid) -and
             (Test-Item10bAuditTarget ([string]$event.object_name) $researchTargets)
         ) {
             $researchDenial = $true
@@ -134,7 +136,7 @@ function Test-Item10bAuditEvidence {
             [int]$event.event_id -eq 4663 -and
             $isSuccess -and
             -not $isFailure -and
-            (Test-Item10bAuditIdentity ([string]$event.account_name) 'qh-oos-custodian') -and
+            (Test-Item10bAuditSid ([string]$event.subject_user_sid) $ExpectedCustodianSid) -and
             (Test-Item10bAuditTarget ([string]$event.object_name) $custodianTargets)
         ) {
             $custodianActivity = $true

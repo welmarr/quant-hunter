@@ -8,9 +8,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$FixturePath,
     [Parameter(Mandatory = $true)]
-    [string]$ReleasedPath,
-    [Parameter(Mandatory = $true)]
-    [string]$OutputPath
+    [string]$ReleasedPath
 )
 
 Set-StrictMode -Version Latest
@@ -61,8 +59,4 @@ if ($Role -eq 'Research') {
     }
 }
 
-[IO.File]::WriteAllText(
-    [IO.Path]::GetFullPath($OutputPath),
-    ($result | ConvertTo-Json -Depth 6 -Compress),
-    [Text.UTF8Encoding]::new($false)
-)
+[Console]::Out.WriteLine(($result | ConvertTo-Json -Depth 6 -Compress))

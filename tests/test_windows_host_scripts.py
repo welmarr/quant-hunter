@@ -22,6 +22,7 @@ SCRIPTS = {
 def test_item10b_script_set_is_complete_and_has_no_personal_paths() -> None:
     """The bounded workflow ships every reviewed step without machine paths."""
     assert set(SCRIPTS) == {
+        "item10b_acl_evidence.ps1",
         "item10b_identity_probe.ps1",
         "item10b_audit_evidence.ps1",
         "item10b_preflight.ps1",
@@ -112,8 +113,8 @@ def test_setup_uses_allow_list_acls_auditing_and_disables_test_logons() -> None:
     setup = SCRIPTS["item10b_setup.ps1"]
     verify = SCRIPTS["item10b_verify.ps1"]
     assert "SetAccessRuleProtection($true, $false)" in setup
-    assert "NT AUTHORITY\\SYSTEM" in setup
-    assert "BUILTIN\\Administrators" in setup
+    assert "S-1-5-18" in setup
+    assert "S-1-5-32-544" in setup
     assert "qh-oos-custodian" in setup
     assert "qh-research" in setup
     assert "ReadAndExecute" in setup
@@ -126,6 +127,92 @@ def test_setup_uses_allow_list_acls_auditing_and_disables_test_logons() -> None:
     assert "research_denial_observed" in verify
     assert "[Security.AccessControl.AuditFlags]::Failure" in setup
     assert "[Security.AccessControl.AuditFlags]::Success" in setup
+
+
+def test_acl_authority_uses_actual_local_sids_and_exact_sid_verification() -> None:
+    """ACL construction and verification never depend on local-name translation."""
+    setup = SCRIPTS["item10b_setup.ps1"]
+    verify = SCRIPTS["item10b_verify.ps1"]
+    assert "$custodianUser = Get-GovernedLocalUser 'qh-oos-custodian'" in setup
+    assert "$researchUser = Get-GovernedLocalUser 'qh-research'" in setup
+    assert "$custodianSid = $custodianUser.SID" in setup
+    assert "$researchSid = $researchUser.SID" in setup
+    assert "New-AllowRule $CustodianSid" in setup
+    assert "New-AllowRule $ResearchSid" in setup
+    assert "$ResearchSid, $failureRights" in setup
+    assert "$CustodianSid," in setup
+    assert "[Security.Principal.SecurityIdentifier]$CustodianSid" in verify
+    assert "[Security.Principal.SecurityIdentifier]$ResearchSid" in verify
+    assert "GetAccessRules(" in verify
+    assert "GetAuditRules(" in verify
+    assert "item10b_acl_evidence.ps1" in verify
+    assert "Get-Item10bSidValue" in SCRIPTS["item10b_acl_evidence.ps1"]
+    assert "$ResearchSid.Value" in verify
+    assert "$CustodianSid.Value" in verify
+    assert "-match '\\\\qh-research$'" not in verify
+    assert "'.\\qh-oos-custodian'" not in setup + verify
+    assert "'.\\qh-research'" not in setup + verify
+
+
+def test_local_login_identity_is_machine_qualified_but_not_persisted() -> None:
+    """Effective logon uses the runtime machine authority only inside the probe."""
+    verify = SCRIPTS["item10b_verify.ps1"]
+    assert "$machineName = [Environment]::MachineName" in verify
+    assert '"$machineName\\qh-oos-custodian"' in verify
+    assert '"$machineName\\qh-research"' in verify
+    assert "$machineName" not in verify.split("$result = [ordered]@", maxsplit=1)[1]
+    assert all("50UL" not in source for source in SCRIPTS.values())
+
+
+def test_elevated_verifier_captures_probe_output_without_evidence_write_grant() -> None:
+    """The research child reports through stdout, which the verifier redirects."""
+    probe = SCRIPTS["item10b_identity_probe.ps1"]
+    verify = SCRIPTS["item10b_verify.ps1"]
+    setup = SCRIPTS["item10b_setup.ps1"]
+    assert "[Console]::Out.WriteLine" in probe
+    assert "[string]$OutputPath" not in probe
+    assert "-RedirectStandardOutput $OutputPath" in verify
+    assert "-OutputPath', $OutputPath" not in verify
+    assert "Set-GovernedDacl $evidence $custodianSid $researchSid $false" in setup
+
+
+def test_setup_failure_phases_are_bounded_and_rollback_remains_exact() -> None:
+    """Safe diagnostics do not weaken the proven marker-bound rollback."""
+    setup = SCRIPTS["item10b_setup.ps1"]
+    rollback = SCRIPTS["item10b_rollback.ps1"]
+    for phase in (
+        "PREFLIGHT",
+        "ROOT_CREATE",
+        "CUSTODIAN_CREATE",
+        "RESEARCH_CREATE",
+        "PRIVILEGE_CHECK",
+        "VAULT_DACL",
+        "RELEASE_DACL",
+        "EVIDENCE_DACL",
+        "INDEX_EXCLUSION",
+        "AUDIT_POLICY",
+        "VAULT_SACL",
+        "RELEASE_SACL",
+        "SYNTHETIC_FIXTURE",
+        "EFFECTIVE_VERIFY",
+        "DISABLE_IDENTITIES",
+    ):
+        assert f"$phase = '{phase}'" in setup
+    assert "ITEM10B_SETUP_FAILED" in setup
+    assert "ConvertTo-SafeSetupDiagnostic" in setup
+    execution_try = setup.index("$researchPassword = $null\ntry {")
+    assert execution_try < setup.index("$preflight = & $preflightScript")
+    assert "recovery(?:[-_ ]?(?:key|password))" in setup
+    assert "Write-SafeSetupFailure $failurePhase $failureRecord" in setup
+    assert setup.index("& $rollbackScript -StatePath $statePath -Apply") < setup.index(
+        "Write-SafeSetupFailure $failurePhase $failureRecord"
+    )
+    assert "QUANT_HUNTER_ITEM10B_SYNTHETIC_BOUNDARY" in rollback
+    assert "audit_success_before" in rollback
+    assert "audit_failure_before" in rollback
+    assert "Remove-LocalUser -Name $name" in rollback
+    assert "Remove-Item -LiteralPath $root -Recurse -Force" in rollback
+    assert "Enable-BitLocker" not in rollback
 
 
 def test_verifier_uses_failure_4656_and_success_4663_metadata() -> None:
@@ -141,6 +228,11 @@ def test_verifier_uses_failure_4656_and_success_4663_metadata() -> None:
     assert "$isFailure" in audit_logic
     assert "event_id -eq 4663" in audit_logic
     assert "$isSuccess" in audit_logic
+    assert "subject_user_sid = [string]$fields['SubjectUserSid']" in audit_logic
+    assert "Test-Item10bAuditSid" in audit_logic
+    assert "Test-Item10bAuditIdentity" not in audit_logic
+    assert "-ExpectedResearchSid $ResearchSid.Value" in verify
+    assert "-ExpectedCustodianSid $CustodianSid.Value" in verify
 
 
 def test_audit_target_matching_uses_no_filesystem_provider() -> None:
@@ -190,6 +282,8 @@ def test_preflight_observations_flow_into_the_same_verification_result() -> None
 
 
 PWSH = shutil.which("pwsh.exe") or shutil.which("pwsh")
+ACL_LOGIC = SCRIPT_DIRECTORY / "item10b_acl_evidence.ps1"
+ACL_HARNESS = ROOT / "tests" / "helpers" / "item10b_acl_logic_harness.ps1"
 AUDIT_LOGIC = SCRIPT_DIRECTORY / "item10b_audit_evidence.ps1"
 AUDIT_HARNESS = ROOT / "tests" / "helpers" / "item10b_audit_logic_harness.ps1"
 WINDOW_START = "2026-09-11T06:00:00Z"
@@ -200,12 +294,73 @@ SEALED_FIXTURE = VAULT + r"\synthetic-sealed-fixture.txt"
 RELEASED_FIXTURE = r"D:\QuantHunterOOS\releases\synthetic-released-fixture.txt"
 AUDIT_FAILURE = "0x8010000000000000"
 AUDIT_SUCCESS = "0x8020000000000000"
+RESEARCH_SID = "S-1-5-21-111111111-222222222-333333333-1001"
+CUSTODIAN_SID = "S-1-5-21-111111111-222222222-333333333-1002"
+OTHER_SID = "S-1-5-21-999999999-888888888-777777777-1001"
+
+
+def test_acl_logic_rejects_same_name_with_different_sid(tmp_path: Path) -> None:
+    """A display-name collision cannot satisfy exact SID authority."""
+    assert PWSH is not None, "PowerShell 7 is required for the ACL classifier test"
+    output = tmp_path / "acl-result.json"
+    error = tmp_path / "acl-error.txt"
+    with (
+        output.open("w", encoding="utf-8") as stdout,
+        error.open("w", encoding="utf-8") as stderr,
+    ):
+        completed = subprocess.run(  # noqa: S603 - resolved local PowerShell binary
+            [
+                PWSH,
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-File",
+                str(ACL_HARNESS),
+                "-AclScriptPath",
+                str(ACL_LOGIC),
+            ],
+            check=False,
+            stdout=stdout,
+            stderr=stderr,
+            text=True,
+            timeout=30,
+        )
+    assert completed.returncode == 0, error.read_text(encoding="utf-8")
+    result = json.loads(output.read_text(encoding="utf-8"))
+    assert result == {
+        "expected_sid_accepted": True,
+        "same_name_wrong_sid_rejected": True,
+        "wrong_rights_rejected": True,
+        "wrong_access_control_type_rejected": True,
+        "wrong_audit_outcome_rejected": True,
+        "exact_sid_set_accepted": True,
+        "missing_sid_rejected": True,
+        "extra_sid_rejected": True,
+        "wrong_sid_set_rejected": True,
+    }
+
+
+def test_acl_logic_is_provider_independent() -> None:
+    """Pure ACL classification uses only supplied SID and rule metadata."""
+    acl_logic = ACL_LOGIC.read_text(encoding="utf-8")
+    forbidden_runtime_tokens = (
+        "Security.Principal",
+        "Security.AccessControl",
+        "qh-research",
+        "qh-oos-custodian",
+        "Environment]::MachineName",
+    )
+    for token in forbidden_runtime_tokens:
+        assert token not in acl_logic
+    for command in ("Get-Acl", "Get-Item", "Resolve-Path", "Test-Path", "Join-Path"):
+        assert re.search(rf"(?im)^\s*{re.escape(command)}(?:\s|$)", acl_logic) is None
 
 
 def _audit_event(
     event_id: int,
     keywords: str,
     account_name: str,
+    subject_user_sid: str,
     object_name: str,
     *,
     occurred_at: str = EVENT_TIME,
@@ -214,6 +369,7 @@ def _audit_event(
         "event_id": event_id,
         "occurred_at": occurred_at,
         "account_name": account_name,
+        "subject_user_sid": subject_user_sid,
         "object_name": object_name,
         "keywords": keywords,
     }
@@ -221,42 +377,87 @@ def _audit_event(
 
 AUDIT_SCENARIOS = {
     "valid": [
-        _audit_event(4656, AUDIT_FAILURE, "HOST\\qh-research", SEALED_FIXTURE),
+        _audit_event(
+            4656,
+            AUDIT_FAILURE,
+            "HOST\\qh-research",
+            RESEARCH_SID,
+            SEALED_FIXTURE,
+        ),
         _audit_event(
             4663,
             AUDIT_SUCCESS,
             "HOST\\qh-oos-custodian",
+            CUSTODIAN_SID,
             RELEASED_FIXTURE,
         ),
     ],
     "research_4663_failure": [
-        _audit_event(4663, AUDIT_FAILURE, "qh-research", SEALED_FIXTURE)
+        _audit_event(4663, AUDIT_FAILURE, "qh-research", RESEARCH_SID, SEALED_FIXTURE)
     ],
     "research_4656_success": [
-        _audit_event(4656, AUDIT_SUCCESS, "qh-research", SEALED_FIXTURE)
+        _audit_event(4656, AUDIT_SUCCESS, "qh-research", RESEARCH_SID, SEALED_FIXTURE)
     ],
-    "research_wrong_identity": [
-        _audit_event(4656, AUDIT_FAILURE, "other-identity", SEALED_FIXTURE)
+    "research_same_name_wrong_sid": [
+        _audit_event(
+            4656,
+            AUDIT_FAILURE,
+            "OTHERDOMAIN\\qh-research",
+            OTHER_SID,
+            SEALED_FIXTURE,
+        )
+    ],
+    "research_wrong_display_name_correct_sid": [
+        _audit_event(
+            4656,
+            AUDIT_FAILURE,
+            "OTHERDOMAIN\\renamed-research",
+            RESEARCH_SID,
+            SEALED_FIXTURE,
+        )
     ],
     "research_wrong_object": [
         _audit_event(
             4656,
             AUDIT_FAILURE,
             "qh-research",
+            RESEARCH_SID,
             r"D:\unrelated\object.txt",
         )
     ],
     "custodian_4663_failure": [
-        _audit_event(4663, AUDIT_FAILURE, "qh-oos-custodian", RELEASED_FIXTURE)
+        _audit_event(
+            4663,
+            AUDIT_FAILURE,
+            "qh-oos-custodian",
+            CUSTODIAN_SID,
+            RELEASED_FIXTURE,
+        )
     ],
     "custodian_4656_success": [
-        _audit_event(4656, AUDIT_SUCCESS, "qh-oos-custodian", RELEASED_FIXTURE)
+        _audit_event(
+            4656,
+            AUDIT_SUCCESS,
+            "qh-oos-custodian",
+            CUSTODIAN_SID,
+            RELEASED_FIXTURE,
+        )
+    ],
+    "custodian_same_name_wrong_sid": [
+        _audit_event(
+            4663,
+            AUDIT_SUCCESS,
+            "OTHERDOMAIN\\qh-oos-custodian",
+            OTHER_SID,
+            RELEASED_FIXTURE,
+        )
     ],
     "custodian_wrong_object": [
         _audit_event(
             4663,
             AUDIT_SUCCESS,
             "qh-oos-custodian",
+            CUSTODIAN_SID,
             r"D:\unrelated\object.txt",
         )
     ],
@@ -265,6 +466,7 @@ AUDIT_SCENARIOS = {
             4656,
             AUDIT_FAILURE,
             "qh-research",
+            RESEARCH_SID,
             SEALED_FIXTURE,
             occurred_at="2026-09-11T05:59:59Z",
         ),
@@ -272,6 +474,7 @@ AUDIT_SCENARIOS = {
             4663,
             AUDIT_SUCCESS,
             "qh-oos-custodian",
+            CUSTODIAN_SID,
             RELEASED_FIXTURE,
             occurred_at="2026-09-11T06:01:01Z",
         ),
@@ -316,6 +519,10 @@ def audit_scenario_results(
                 SEALED_FIXTURE,
                 "-ReleasedPath",
                 RELEASED_FIXTURE,
+                "-ExpectedResearchSid",
+                RESEARCH_SID,
+                "-ExpectedCustodianSid",
+                CUSTODIAN_SID,
             ],
             check=False,
             stdout=stdout,
@@ -345,7 +552,7 @@ def test_audit_logic_accepts_bound_denial_and_custodian_success(
     [
         "research_4663_failure",
         "research_4656_success",
-        "research_wrong_identity",
+        "research_same_name_wrong_sid",
         "research_wrong_object",
     ],
 )
@@ -362,6 +569,7 @@ def test_research_denial_rejects_wrong_id_outcome_identity_or_object(
     [
         "custodian_4663_failure",
         "custodian_4656_success",
+        "custodian_same_name_wrong_sid",
         "custodian_wrong_object",
     ],
 )
@@ -371,6 +579,14 @@ def test_custodian_activity_requires_bound_successful_4663(
     """Custodian authority requires successful performed-object activity."""
     result = audit_scenario_results[scenario]
     assert result["custodian_activity_observed"] is False
+
+
+def test_audit_identity_uses_sid_not_display_name(
+    audit_scenario_results: dict[str, dict[str, bool]],
+) -> None:
+    """Diagnostic account text cannot replace or override exact SID authority."""
+    result = audit_scenario_results["research_wrong_display_name_correct_sid"]
+    assert result["research_denial_observed"] is True
 
 
 def test_audit_evidence_rejects_events_outside_verification_window(
