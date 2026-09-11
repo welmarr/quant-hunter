@@ -428,3 +428,31 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** `EXPERIMENT_LEDGER.md`; `VALIDATION_STANDARD.md`; `RESEARCH_METHODOLOGY.md`; `ARCHITECTURE.md`; `ROADMAP.md` Item 9; `src/quant_hunter/validation/temporal.py`; `src/quant_hunter/validation/evidence.py`; `src/quant_hunter/backtesting/contracts.py`; `tests/test_simulation_contracts.py`.
 - **Supersedes / superseded by:** Cross-binds DEC-0025, DEC-0026, and DEC-0027 without changing their separate authorities. Full Item 9 remains `IN PROGRESS / FULL REVIEW FIX` pending independent re-audit. Item 10 remains separately gated and `NOT STARTED`.
 - **Owner and approver:** Project owner through explicit Stage 1B Full Item 9 cross-binding-fix authorization dated 2026-09-07.
+
+### DEC-0029 — Make Project Status and Regression Invariants Repository-Authoritative
+
+- **Date:** 2026-09-10
+- **Status:** ACCEPTED
+- **Scope:** governance / reproducibility / operations
+- **Context:** Conversation memory is useful working context but is not durable or authoritative. After a pause, a new conversation, Codex session, or future agent must be able to recover the reviewed project state and its regression obligations from repository evidence without relying on hidden history.
+- **Decision:** Git repository evidence remains the durable source of truth. Maintain `docs/PROJECT_STATUS.md` as a compact, mutable current-state resume document and `docs/REGRESSION_GUARD.md` as the permanent catalog of implemented, reviewed, and future-required invariants. Future agents must read both, verify Git state, and reconcile the status summary against actual repository and review evidence before substantial work. Every material implementation batch must run its change and hostile tests, the full existing regression suite, and a cross-item invariant review before independent pass, followed by governed CI and post-merge evidence. Prior reviewed invariants cannot be intentionally changed without a new accepted decision and explicit independent review.
+- **Alternatives considered:** Conversation-only continuity is not durable. Repeating current status throughout every governing document creates drift. Turning the status file into a historical ledger duplicates Git, decisions, risks, development evidence, and pull-request records.
+- **Scientific/statistical consequences:** Current status and regression obligations become explicit without creating a new scientific authority. `PROJECT_STATUS.md` may be updated as current-state evidence; `DECISIONS.md` and `RISK_REGISTER.md` retain historical reasoning and observations. Historical decisions must not be rewritten to make current behavior appear inevitable.
+- **Reproducibility and cost consequences:** A future agent can reconstruct the exact reviewed resume point and the invariants that must remain green. This documentation/governance change adds no scientific computation, data access, Item 10 functionality, dependency, service, or infrastructure. Incremental direct cost is USD 0.
+- **References:** `AGENTS.md`, `docs/PROJECT_STATUS.md`, `docs/REGRESSION_GUARD.md`, `docs/ROADMAP.md`, `docs/RISK_REGISTER.md`, and `docs/DEVELOPMENT.md`.
+- **Supersedes / superseded by:** Adds continuity and regression governance without rewriting or superseding DEC-0028. The future sealed-OOS decision must use the next available decision number.
+- **Owner and approver:** Project owner through the explicit Quant Hunter durable project continuity and regression-governance authorization dated 2026-09-10.
+
+### DEC-0030 — Restore Bounded Codex Git Write Authority with Mandatory Audit Trail
+
+- **Date:** 2026-09-10
+- **Status:** ACCEPTED
+- **Scope:** governance / operations / reproducibility
+- **Context:** The project owner intentionally supersedes the temporary owner-only Git-write workflow recorded in the current `PROJECT_STATUS.md` draft. Codex needs bounded authority to complete the ordinary branch, commit, and publication steps of an explicitly authorized Quant Hunter batch while leaving final integration and higher-risk decisions with the owner.
+- **Decision:** For an explicitly authorized batch, Codex may use normal non-destructive Git operations: status, diff, log, fetch, fast-forward-only pull when needed, feature-branch creation and switching, add, commit, push, and upstream setup. Codex may use command-local Git author identity when needed. Codex may not merge into `main` without owner authorization, force-push, hard reset, destructive clean, rewrite published history, rebase published reviewed history, delete branches or tags, or bypass failing checks. Every executed Git command, including a failed command and any command-local identity override, must be reported under `### Git Actions Executed`. Each report occupies exactly one line using `<exact command> | <READ-ONLY|LOCAL WRITE|REMOTE WRITE> | <purpose> | Result: <concise result>`.
+- **Alternatives considered:** Keeping the owner-only workflow would leave routine authorized batches incomplete. Unbounded Git authority would weaken independent review and owner-controlled integration. Multi-line or success-only reporting would make the operational audit incomplete and harder to scan.
+- **Scientific/statistical consequences:** This decision changes workflow authority only. It does not alter scientific, security, validation, budget, architecture, or stage-gate invariants. Intentional scientific-invariant changes and architecture changes arising from failed independent review still require owner involvement.
+- **Reproducibility and cost consequences:** Exact successful and failed Git actions become durable handoff evidence in task reports. Final merge authorization, stage transitions, host or security mutations, and new spending remain with the owner. Incremental direct cost is USD 0.
+- **References:** `AGENTS.md`, `docs/PROJECT_STATUS.md`, and DEC-0029.
+- **Supersedes / superseded by:** Supersedes only the temporary owner-only Git-write restriction reflected in the `PROJECT_STATUS.md` draft. It does not modify or supersede the scientific or continuity content of DEC-0029.
+- **Owner and approver:** Project owner through the explicit Continuity Governance narrow independent-review fix authorization dated 2026-09-10.

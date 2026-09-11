@@ -646,3 +646,17 @@ Item 10 is `NOT STARTED`. This fix performs no statistical calculation, split,
 evaluation, simulation, experiment execution, registry-chain verification, or
 sealed-content access. No new dependency or incremental direct cost was added;
 the ChatGPT Pro charge remains unknown pending invoice reconciliation.
+
+### Full Item 9 independent-review closure and continuity governance
+
+The preceding status records the state of the cross-binding implementation
+before independent re-audit. Independent review subsequently passed full Item 9
+at reviewed head `d6ff6b26fced3c7750f8a4c68b520b70c0567c77`, merged on main at
+`6c9d5ae1eec58faeca53239d832748053387f1bc`. Post-merge Quality #32 passed on
+Ubuntu and Windows. Ubuntu ran all 630 tests with 90.99% combined
+statement/branch coverage; Windows also succeeded.
+
+Full Item 9 is therefore `COMPLETE / INDEPENDENT REVIEW PASSED`. Item 10 remains
+`NOT STARTED`. DEC-0029 adds repository-authoritative current-state and
+regression-governance documents without adding scientific computation, sealed
+release behavior, a dependency, or incremental direct cost.

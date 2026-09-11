@@ -37,7 +37,7 @@ Positive expectancy, robustness, calibration, drawdown, sample size, cost sensit
 
 Before changing code, documentation, data, configuration, registries, or research artifacts:
 
-1. Read this file, `docs/PROJECT_CHARTER.md`, and the documents governing the task.
+1. Read this file, `docs/PROJECT_STATUS.md`, `docs/REGRESSION_GUARD.md`, `docs/PROJECT_CHARTER.md`, and the documents governing the task.
 2. Check `docs/ROADMAP.md`, `docs/DECISIONS.md`, and `docs/RISK_REGISTER.md`; record unresolved assumptions instead of guessing.
 3. For research, allocate permanent IDs, register the hypothesis and candidate-search scope, seal holdouts, and freeze the experiment definition before evaluation.
 4. Keep raw data immutable and record provenance and vintages through the prescribed registries.
@@ -46,11 +46,52 @@ Before changing code, documentation, data, configuration, registries, or researc
 
 Do not start strategy development before the research foundation and its validation controls satisfy the Stage 1 gate in `docs/ROADMAP.md`.
 
+## Project Continuity and Regression Governance
+
+`docs/PROJECT_STATUS.md` is the operational resume point and
+`docs/REGRESSION_GUARD.md` is the permanent catalog of reviewed invariants.
+Every agent must read both before substantial Quant Hunter work and reconcile
+the status summary against the current Git and review evidence. If they
+conflict, stop and reconcile rather than guessing.
+
+Every material implementation batch must preserve the prior reviewed
+invariants that apply to it. A batch cannot pass solely because its new tests
+pass: the full existing regression suite and a cross-item invariant review are
+mandatory before independent pass, followed by the governed CI and post-merge
+evidence. An intentional invariant change requires an accepted decision and
+explicit independent review. Update current-facing status documentation after
+any material project-state change. Preserve historical decisions and risk
+evidence; never silently rewrite them to make current behavior appear
+inevitable.
+
+## Bounded Git Authority and Audit Trail
+
+For an explicitly authorized Quant Hunter batch, Codex may perform the normal
+non-destructive Git operations needed to complete that batch: status, diff,
+log, fetch, fast-forward-only pull when needed, branch switch or creation, add,
+commit, push, and upstream setup. Command-local Git author identity is permitted
+when needed.
+
+Codex must not merge into `main` without owner authorization, force-push, use
+`git reset --hard`, use `git clean -fd` or `git clean -fdx`, rewrite published
+history, rebase published reviewed history, delete branches or tags, or bypass
+failing checks. The project owner remains required for final merge
+authorization, stage transitions, host or security mutations, new spending,
+intentional scientific-invariant changes, and architecture changes arising
+from failed independent review.
+
+At the end of every Codex task in which Git commands were executed, report
+every command, including failed commands, under `### Git Actions Executed`.
+Each action must occupy exactly one line in this format:
+`<number>. <exact command> | <READ-ONLY|LOCAL WRITE|REMOTE WRITE> | <purpose> | Result: <concise result>`.
+
 ## Documentation Authority
 
 Detailed requirements live in:
 
 - `docs/PROJECT_CHARTER.md` — mission, principles, scope, research families, AI and spending boundaries.
+- `docs/PROJECT_STATUS.md` — compact current stage, reviewed authority, next work, risks, budget, and resume protocol.
+- `docs/REGRESSION_GUARD.md` — permanent reviewed and future-required invariant catalog and regression sequence.
 - `docs/ARCHITECTURE.md` — planned repository, component, security, and deployment boundaries.
 - `docs/RESEARCH_METHODOLOGY.md` — research lifecycle and canonical reproduction program.
 - `docs/VALIDATION_STANDARD.md` — leakage controls, statistical tests, backtesting assumptions, and reports.

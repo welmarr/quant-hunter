@@ -24,7 +24,7 @@ item 7 is complete after independent review passed commit
 after independent review and is merged on main at
 `265d5f49e06f841a5e23fdf9ea177670bbfbc1e9`. It provides the governed lifecycle through `DECIDED`,
 permanent result/failure evidence, immutable result-object verification, and
-deterministic rerun-input resolution. Item 9 is in progress. Item 9A is
+deterministic rerun-input resolution. Item 9A is
 `COMPLETE / INDEPENDENT REVIEW PASSED` at reviewed head
 `e19c693557fc4debe7a12746ae682e1113e404b1` and merged on main at
 `5636ad431b1c660233189a45ebfd6157308df7fa`. Item 9B is `COMPLETE / INDEPENDENT
@@ -32,13 +32,17 @@ REVIEW PASSED` at reviewed head
 `d828fb498de44df25d9fba908ac9a32868e6fbff`, merged on main at
 `26f1a8a5d62651aad9d545725d3200bad4170500`, with
 metadata-only applicability, baseline, metric, statistical-method, robustness,
-multiple-testing binding, and scientific-report contracts. Item 9 is `IN
-PROGRESS / FULL REVIEW FIX`; Item 9C is `COMPLETE / INDEPENDENT REVIEW PASSED`
+multiple-testing binding, and scientific-report contracts. Item 9C is
+`COMPLETE / INDEPENDENT REVIEW PASSED`
 with metadata-only side-aware execution, cost, simulation-input, and fail-closed
 simulation-output contracts. The full-review fix cross-binds Items 9A–9C to the
 same supplied Item 8 FROZEN experiment and revision authority. Side rules are the execution-price authority;
 standard executable MARKET assumptions require BUY to ASK and SELL to BID. Item
-10 is `NOT STARTED`.
+9 and its cross-binding are `COMPLETE / INDEPENDENT REVIEW PASSED` at reviewed
+head `d6ff6b26fced3c7750f8a4c68b520b70c0567c77`, merged on main at
+`6c9d5ae1eec58faeca53239d832748053387f1bc`. Post-merge Quality #32 passed on
+Ubuntu and Windows; Ubuntu ran 630 tests with 90.99% combined statement/branch
+coverage. Item 10 is `NOT STARTED`.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 order matcher, fill simulator, transaction-cost calculator, portfolio logic, or
@@ -47,6 +51,7 @@ live-trading capability exists.
 ## Documentation Map
 
 - Start with [`AGENTS.md`](AGENTS.md) for non-negotiable operating rules.
+- Resume from [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md), then apply the reviewed invariants in [`docs/REGRESSION_GUARD.md`](docs/REGRESSION_GUARD.md).
 - Read [`docs/PROJECT_CHARTER.md`](docs/PROJECT_CHARTER.md) for mission, scope, and success criteria.
 - Use [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the planned modular boundaries.
 - Follow [`docs/RESEARCH_METHODOLOGY.md`](docs/RESEARCH_METHODOLOGY.md) and [`docs/VALIDATION_STANDARD.md`](docs/VALIDATION_STANDARD.md) for research design and evaluation.
