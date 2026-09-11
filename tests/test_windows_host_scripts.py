@@ -146,7 +146,9 @@ def test_acl_authority_uses_actual_local_sids_and_exact_sid_verification() -> No
     assert "GetAccessRules(" in verify
     assert "GetAuditRules(" in verify
     assert "item10b_acl_evidence.ps1" in verify
-    assert ".Value.Equals(" in SCRIPTS["item10b_acl_evidence.ps1"]
+    assert "Get-Item10bSidValue" in SCRIPTS["item10b_acl_evidence.ps1"]
+    assert "$ResearchSid.Value" in verify
+    assert "$CustodianSid.Value" in verify
     assert "-match '\\\\qh-research$'" not in verify
     assert "'.\\qh-oos-custodian'" not in setup + verify
     assert "'.\\qh-research'" not in setup + verify
@@ -299,8 +301,7 @@ OTHER_SID = "S-1-5-21-999999999-888888888-777777777-1001"
 
 def test_acl_logic_rejects_same_name_with_different_sid(tmp_path: Path) -> None:
     """A display-name collision cannot satisfy exact SID authority."""
-    if PWSH is None:
-        pytest.skip("PowerShell 7 is unavailable")
+    assert PWSH is not None, "PowerShell 7 is required for the ACL classifier test"
     output = tmp_path / "acl-result.json"
     error = tmp_path / "acl-error.txt"
     with (
@@ -330,8 +331,29 @@ def test_acl_logic_rejects_same_name_with_different_sid(tmp_path: Path) -> None:
         "expected_sid_accepted": True,
         "same_name_wrong_sid_rejected": True,
         "wrong_rights_rejected": True,
+        "wrong_access_control_type_rejected": True,
         "wrong_audit_outcome_rejected": True,
+        "exact_sid_set_accepted": True,
+        "missing_sid_rejected": True,
+        "extra_sid_rejected": True,
+        "wrong_sid_set_rejected": True,
     }
+
+
+def test_acl_logic_is_provider_independent() -> None:
+    """Pure ACL classification uses only supplied SID and rule metadata."""
+    acl_logic = ACL_LOGIC.read_text(encoding="utf-8")
+    forbidden_runtime_tokens = (
+        "Security.Principal",
+        "Security.AccessControl",
+        "qh-research",
+        "qh-oos-custodian",
+        "Environment]::MachineName",
+    )
+    for token in forbidden_runtime_tokens:
+        assert token not in acl_logic
+    for command in ("Get-Acl", "Get-Item", "Resolve-Path", "Test-Path", "Join-Path"):
+        assert re.search(rf"(?im)^\s*{re.escape(command)}(?:\s|$)", acl_logic) is None
 
 
 def _audit_event(

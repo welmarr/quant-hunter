@@ -123,12 +123,17 @@ $releaseResearch = @($releaseRules | Where-Object {
 })
 $failureRights = [Security.AccessControl.FileSystemRights]'ListDirectory, ReadData, WriteData, AppendData, Delete, ChangePermissions, TakeOwnership'
 $custodianAuditRights = [Security.AccessControl.FileSystemRights]'ReadAndExecute, WriteData, AppendData'
+$fullControlRightsValue = [long][Security.AccessControl.FileSystemRights]::FullControl
+$modifyRightsValue = [long][Security.AccessControl.FileSystemRights]::Modify
+$readAndExecuteRightsValue = [long][Security.AccessControl.FileSystemRights]::ReadAndExecute
+$failureRightsValue = [long]$failureRights
+$custodianAuditRightsValue = [long]$custodianAuditRights
 $saclVerified = $vaultAuditRules.Count -eq 2 -and
     $releaseAuditRules.Count -eq 2 -and
-    (Test-Item10bExactAuditRule $vaultAuditRules $ResearchSid $failureRights 'Failure') -and
-    (Test-Item10bExactAuditRule $vaultAuditRules $CustodianSid $custodianAuditRights 'Success') -and
-    (Test-Item10bExactAuditRule $releaseAuditRules $ResearchSid $failureRights 'Failure') -and
-    (Test-Item10bExactAuditRule $releaseAuditRules $CustodianSid $custodianAuditRights 'Success')
+    (Test-Item10bExactAuditRule $vaultAuditRules $ResearchSid.Value $failureRightsValue 'Failure') -and
+    (Test-Item10bExactAuditRule $vaultAuditRules $CustodianSid.Value $custodianAuditRightsValue 'Success') -and
+    (Test-Item10bExactAuditRule $releaseAuditRules $ResearchSid.Value $failureRightsValue 'Failure') -and
+    (Test-Item10bExactAuditRule $releaseAuditRules $CustodianSid.Value $custodianAuditRightsValue 'Success')
 
 $auditPolicy = & "$env:SystemRoot\System32\auditpol.exe" /get /subcategory:'File System' /r
 $auditEnabled = ($LASTEXITCODE -eq 0) -and (($auditPolicy -join ' ') -match 'Success') -and (($auditPolicy -join ' ') -match 'Failure')
@@ -184,9 +189,9 @@ $result = [ordered]@{
         allow_list_verified = (Test-Item10bExactSidSet $vaultRules @(
             $systemSid.Value, $administratorsSid.Value, $CustodianSid.Value
         )) -and
-            (Test-Item10bExactAccessRule $vaultRules $systemSid 'FullControl') -and
-            (Test-Item10bExactAccessRule $vaultRules $administratorsSid 'FullControl') -and
-            (Test-Item10bExactAccessRule $vaultRules $CustodianSid 'Modify')
+            (Test-Item10bExactAccessRule $vaultRules $systemSid.Value $fullControlRightsValue) -and
+            (Test-Item10bExactAccessRule $vaultRules $administratorsSid.Value $fullControlRightsValue) -and
+            (Test-Item10bExactAccessRule $vaultRules $CustodianSid.Value $modifyRightsValue)
         broad_principals_absent = $vaultBroad.Count -eq 0
         research_data_rights_absent = $vaultResearch.Count -eq 0
     }
@@ -196,12 +201,12 @@ $result = [ordered]@{
             $systemSid.Value, $administratorsSid.Value,
             $CustodianSid.Value, $ResearchSid.Value
         )) -and
-            (Test-Item10bExactAccessRule $releaseRules $systemSid 'FullControl') -and
-            (Test-Item10bExactAccessRule $releaseRules $administratorsSid 'FullControl') -and
-            (Test-Item10bExactAccessRule $releaseRules $CustodianSid 'Modify')
+            (Test-Item10bExactAccessRule $releaseRules $systemSid.Value $fullControlRightsValue) -and
+            (Test-Item10bExactAccessRule $releaseRules $administratorsSid.Value $fullControlRightsValue) -and
+            (Test-Item10bExactAccessRule $releaseRules $CustodianSid.Value $modifyRightsValue)
         broad_principals_absent = $releaseBroad.Count -eq 0
         research_read_only = $releaseResearch.Count -eq 1 -and
-            (Test-Item10bExactAccessRule $releaseRules $ResearchSid 'ReadAndExecute')
+            (Test-Item10bExactAccessRule $releaseRules $ResearchSid.Value $readAndExecuteRightsValue)
     }
     audit_checks = [ordered]@{
         file_system_policy_enabled = $auditEnabled

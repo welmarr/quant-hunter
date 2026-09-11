@@ -962,3 +962,37 @@ passed and 357 fixtures could not be created. Its workspace-local `--basetemp`
 rerun passed all 782 tests with 90.15% combined statement/branch coverage. No
 dependency, lockfile, canonical-evidence schema, host, or BitLocker change was
 made.
+
+### PR #9 provider-independent ACL evidence classification
+
+Independent review passed the exact-SID authority correction at
+`2fe04559e9d61b51e7f4b937234a72b1f88c4fe8`. PR #9 Quality #40 then passed all
+782 tests on Windows but failed on Ubuntu with 781 passing tests and one failed
+ACL-classifier test. The synthetic harness constructed a Windows
+`SecurityIdentifier`, which PowerShell 7 cannot instantiate on Linux. This was
+a test-boundary provider dependency; the exact-SID security semantics remain
+unchanged.
+
+The pure ACL evidence helper now accepts canonical SID strings plus numeric or
+string rule metadata and has no Windows Principal, Access Control, or filesystem
+provider dependency. The Windows verifier still obtains real access and audit
+rules through `GetAccessRules` and `GetAuditRules` with
+`SecurityIdentifier`, then passes each governed SID's `.Value` and exact rule
+metadata into the helper. The portable synthetic harness preserves the
+same-name/different-SID, wrong-rights, wrong access type, wrong audit outcome,
+and exact-set missing/extra/wrong-SID hostile cases. No Linux skip or xfail was
+added. A new hosted Quality run must pass before PR #9 can merge; no CI success
+is claimed here. No host or BitLocker mutation occurred, no `HOST_ENFORCED`
+evidence was created, and RISK-017 remains `OPEN`.
+
+Local Windows validation passed the lock check, Ruff format and lint, strict
+mypy over 48 source files, and all 783 tests with 90.15% combined
+statement/branch coverage. The exact pytest command first encountered the known
+user-temp ACL denial after 426 passing tests and before 357 fixture setups; the
+same locked gate with a workspace-local `--basetemp` passed. The ACL harness
+also passed directly under Windows PowerShell. WSL distro enumeration was
+denied to this process, so no local Ubuntu or Linux PowerShell result is
+claimed. The offline build produced both distributions; package, PyArrow, and
+Item 10B imports passed, and archive inspection found 148 combined members with
+the governed Windows host module and ACL helper present and `.tools/` and
+`.venv/` absent.

@@ -66,8 +66,14 @@ the runtime machine name only for in-memory effective-login credentials.
 Independent review of head `6fe7ce1b097d68418cae22920725c85f00ad7729`
 returned `PASS WITH CHANGES`: the ACL/SACL correction was accepted, but 4656 and
 4663 event classification still used leaf account names. The follow-up binds
-those events to the same resolved research and custodian SIDs. It awaits
-independent review and a later owner-controlled live rerun.
+those events to the same resolved research and custodian SIDs. Independent
+review passed that authority correction at
+`2fe04559e9d61b51e7f4b937234a72b1f88c4fe8`, but PR #9 Quality #40 failed on
+Ubuntu after 781 passing tests because the synthetic ACL harness instantiated a
+Windows-only `SecurityIdentifier`; Windows passed all 782 tests. The current
+follow-up keeps Windows ACL acquisition and mutation SID-based while making the
+pure evidence classifier consume SID strings and rule metadata. A new PR check
+is required before merge or any later owner-controlled live rerun.
 
 ## PLANNED DECOMPOSITION
 
@@ -153,12 +159,13 @@ A future agent must:
 6. Reconcile this current-state summary against actual repository and review
    evidence.
 7. Stop and reconcile rather than guess if the evidence conflicts.
-8. Independently review the audit-event SID-binding follow-up on
-   `fix/item10b-windows-local-identity`, preserving the exact-SID DACL/SACL
-   authority, 4656 Failure / 4663 Success semantics, and DEC-0036 authority
-   path. After merge and green CI, resume Item 10B only in a separately
-   authorized elevated owner session and rerun the governed capture workflow
-   against the already protected fixed NTFS target. Do not change BitLocker.
+8. Independently audit the PR #9 Quality jobs for the provider-independent ACL
+   classifier follow-up on `fix/item10b-windows-local-identity`, preserving the
+   exact-SID DACL/SACL authority, 4656 Failure / 4663 Success semantics, and
+   DEC-0036 authority path. Do not merge until Ubuntu and Windows pass. After
+   merge and green CI, resume Item 10B only in a separately authorized elevated
+   owner session and rerun the governed capture workflow against the already
+   protected fixed NTFS target. Do not change BitLocker.
 9. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE
