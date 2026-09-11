@@ -273,3 +273,20 @@ Item 9C is `COMPLETE / INDEPENDENT REVIEW PASSED`. Full Item 9 is `IN PROGRESS /
 FULL REVIEW FIX` pending independent re-audit; Item 10 is `NOT STARTED`. Item 9C adds USD 0 direct cost; RISK-013
 and RISK-021 remain `OPEN` because the ChatGPT Pro charge and total Month-1
 headroom remain unknown pending invoice reconciliation.
+
+## Full Item 9 Closure and Continuity Evidence
+
+The preceding paragraph records the pre-review state. Independent review passed
+full Item 9 at reviewed head
+`d6ff6b26fced3c7750f8a4c68b520b70c0567c77`, merged on main at
+`6c9d5ae1eec58faeca53239d832748053387f1bc`. Post-merge Quality #32 passed on
+Ubuntu and Windows; Ubuntu ran 630 tests with 90.99% combined statement/branch
+coverage. Full Item 9 is `COMPLETE / INDEPENDENT REVIEW PASSED`; Item 10 remains
+`NOT STARTED`.
+
+DEC-0029 makes current project status and prior reviewed invariants durable in
+the repository. It changes no risk status. In particular, RISK-018 remains
+`OPEN`: the successful PR #5 rerun and later Quality #32 success do not resolve
+the intermittent Windows registry-lock incident. Item 12 must investigate it
+even if it never occurs again. This documentation/governance change adds USD 0
+incremental direct cost and does not start Item 10.

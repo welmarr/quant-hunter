@@ -47,6 +47,14 @@ This map records where the former 816-line Quant Hunter master specification now
 
 The user's 20 explicit operating rules are retained verbatim in substance as the numbered rules in `AGENTS.md`. Detailed enforcement lives in the referenced domain documents, including immutable raw data, point-in-time macro vintages, reproducibility, permanent IDs, inaccessible sealed OOS data until freeze, methodology decisions, realistic execution, research/production isolation, secrets, AI limits, simple baselines, failure retention, and the approval-gated USD $400 budget.
 
+## Project Continuity and Regression Governance
+
+| Requirement | Governing home |
+|---|---|
+| A future conversation, Codex session, or agent can recover the current reviewed resume point from repository evidence. | `AGENTS.md`; `PROJECT_STATUS.md`; DEC-0029 |
+| Every material batch preserves prior reviewed scientific, security, reproducibility, identity, and authority invariants through the full regression and review sequence. | `AGENTS.md`; `REGRESSION_GUARD.md`; DEC-0029 |
+| Current status may be updated without rewriting historical decisions, risks, development evidence, or Git history. | `PROJECT_STATUS.md`; `DECISIONS.md`; `RISK_REGISTER.md`; DEC-0029 |
+
 ## Coverage Maintenance Rule
 
 A requirement may be clarified or made stricter, but not silently weakened or deleted. Any methodological or statistical change requires `DECISIONS.md`; any move requires this table to be updated; any unresolved conflict applies the stricter scientific, safety, reproducibility, and spending constraint.
