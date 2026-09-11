@@ -660,3 +660,36 @@ Full Item 9 is therefore `COMPLETE / INDEPENDENT REVIEW PASSED`. Item 10 remains
 `NOT STARTED`. DEC-0029 adds repository-authoritative current-state and
 regression-governance documents without adding scientific computation, sealed
 release behavior, a dependency, or incremental direct cost.
+
+## Stage 1B Item 10A sealed-OOS software release core
+
+Item 10A adds a synthetic-only release service and an append-only exposure
+ledger. Authorization reuses Item 8's exact FROZEN authority and binds the sole
+FROZEN revision, immutable freeze manifest, code/configuration/environment,
+complete canonical dataset-ID set, exact sealed interval, release timestamp,
+and an immutable released artifact. Canonical event identity is SHA-256 over
+RFC 8785 JCS of the full event body excluding only `event_digest`, so the prior
+event digest remains inside every non-genesis preimage. Exclusive event
+publication, verified-head compare-and-swap, canonical head anchoring, and full
+chain verification reject concurrent forks, stale writers, overwrites,
+corruption, missing/reordered events, and tail truncation.
+
+Authorized release and accidental exposure are permanently `EXPOSED`. The
+release digest is retained when Item 8 appends the later `RUNNING` revision;
+new search attempts then fail, while the fixed prespecified evaluation can
+continue with zero new attempts. The software accepts no sealed source path and
+hostile tests poison read/open/stat/exists/list/hash/traversal operations. Item
+10A emits and accepts only `SYNTHETIC_TEST` evidence. It does not create or prove
+a Windows host boundary, and Item 10B remains `NOT STARTED`.
+
+The complete locked Windows gate passed with repository-pinned uv 0.12.10:
+`uv lock --check`; Ruff format over 70 files; Ruff lint; strict mypy over 45
+source files; and 674 pytest cases with 90.17% combined statement/branch
+coverage. The Item 10A hostile suite contributed 38 passing parameterized cases.
+The governed offline build produced both distributions. Package, PyArrow,
+exposure-ledger, release-service, and post-release-search imports returned
+`0.1.0`, `25.0.1`, `ExposureLedger`, `SealedReleaseService`, and
+`PostReleaseSearchError`. Archive inspection found 129 combined members,
+included both isolation modules in the source and wheel artifacts, and excluded
+`.tools/` and `.venv/` content. Independent review and hosted Ubuntu/Windows CI
+remain pending; no Item 10B host evidence is claimed.

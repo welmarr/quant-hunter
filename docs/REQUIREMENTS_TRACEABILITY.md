@@ -55,6 +55,21 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | Every material batch preserves prior reviewed scientific, security, reproducibility, identity, and authority invariants through the full regression and review sequence. | `AGENTS.md`; `REGRESSION_GUARD.md`; DEC-0029 |
 | Current status may be updated without rewriting historical decisions, risks, development evidence, or Git history. | `PROJECT_STATUS.md`; `DECISIONS.md`; `RISK_REGISTER.md`; DEC-0029 |
 
+## Stage 1B Item 10A Sealed-OOS Software Mapping
+
+| Requirement | Governing and implementation evidence |
+|---|---|
+| Exact FROZEN authorization remains subordinate to Item 8 lifecycle authority. | DEC-0031; `EXPERIMENT_LEDGER.md`; `experiments/lifecycle.py`; `test_sealed_release.py` |
+| Release binds the experiment, sole FROZEN revision and manifest, complete dataset-ID set, exact sealed interval, reproducibility identities, time, and immutable released artifact. | `sealed-release-event.schema.json`; `isolation/release.py`; authorization and cross-binding hostile tests |
+| Event identity is RFC 8785 JCS plus SHA-256 over the complete body excluding only `event_digest`, including the prior digest. | DEC-0031; `isolation/ledger.py`; digest permutation and mutation tests |
+| Release and accidental exposure are append-only, hash-chained, one-way `EXPOSED` evidence. | `sealed-release-event.schema.json`; `sealed-exposure-incident.schema.json`; ledger CAS, chain, retention, and truncation tests |
+| Release terminates every new search while allowing only a fixed zero-new-search evaluation through Item 8. | DEC-0031; `experiments/lifecycle.py`; lifecycle integration tests |
+| Item 10A evidence is synthetic only and cannot claim the separately gated host boundary. | `ARCHITECTURE.md`; `REGRESSION_GUARD.md` REG-F01–REG-F03; synthetic-mode and poisoned-filesystem tests |
+
+Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING`; Item 10B is `NOT
+STARTED`. This mapping does not establish real Windows isolation or complete
+Roadmap Item 10.
+
 ## Coverage Maintenance Rule
 
 A requirement may be clarified or made stricter, but not silently weakened or deleted. Any methodological or statistical change requires `DECISIONS.md`; any move requires this table to be updated; any unresolved conflict applies the stricter scientific, safety, reproducibility, and spending constraint.

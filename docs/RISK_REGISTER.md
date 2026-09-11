@@ -290,3 +290,31 @@ the repository. It changes no risk status. In particular, RISK-018 remains
 the intermittent Windows registry-lock incident. Item 12 must investigate it
 even if it never occurs again. This documentation/governance change adds USD 0
 incremental direct cost and does not start Item 10.
+
+## Item 10A Sealed-OOS Software Evidence
+
+On 2026-09-11, Item 10A implemented the software release core and synthetic
+security contracts under DEC-0031. Exact Item 8 FROZEN authority, the complete
+canonical dataset-ID set, the exact sealed interval, and immutable released
+artifact evidence are bound into RFC 8785/SHA-256 events. The append-only ledger
+uses compare-and-swap, exclusive publication, a prior-digest chain, and a
+canonical head anchor; hostile tests cover concurrent append, stale heads,
+overwrite attempts, corruption, missing/reordered history, and tail truncation.
+Authorized and accidental exposure remain irreversibly `EXPOSED`, and released
+experiments reject every later Item 8 search attempt while preserving a fixed
+zero-new-search evaluation path.
+
+All Item 10A evidence uses synthetic records and immutable synthetic objects.
+The research-side API accepts no sealed source path, and hostile tests poison
+filesystem read, open, stat, existence, directory-listing, traversal, and hash
+operations to detect any prohibited sealed-source dereference. The software
+creates and accepts only `SYNTHETIC_TEST`; it cannot claim `HOST_ENFORCED`.
+
+This evidence reduces the software-contract portions of RISK-017 but does not
+close it. Item 10B still requires separately authorized Windows identities,
+encrypted storage, effective DACL/SACL denial, audit, backup, sync, indexing,
+and controlled-release evidence. RISK-018 remains `OPEN`; Item 10A does not
+modify `identity/registry.py` or resolve the observed Windows allocation-lock
+incident. RISK-023 and RISK-024 also remain `OPEN`. Independent review and
+hosted CI are pending. No real sealed data, host mutation, dependency, service,
+or infrastructure was used.

@@ -532,19 +532,58 @@
   },
   "sealed-release-event.schema.json": {
     "schema_version": "1.0.0",
+    "event_type": "AUTHORIZED_RELEASE",
+    "ledger_sequence": 1,
     "event_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
     "previous_event_digest": null,
     "experiment_id": "EXP-01990f30-7f5e-7b34-9b21-3d74c513c848",
-    "sealed_dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c847",
-    "occurred_at": "2026-09-05T06:00:00Z",
-    "actor": "synthetic-custodian",
-    "reason": "schema-conformance fixture only",
+    "frozen_revision_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
     "frozen_manifest_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "sealed_binding": {
+      "dataset_ids": [
+        "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
+        "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c847"
+      ],
+      "sealed_out_of_sample": {
+        "start": "2020-01-03T00:00:00Z",
+        "end": "2020-01-03T23:59:59Z"
+      }
+    },
     "code_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "configuration_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
     "environment_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "occurred_at": "2026-09-05T06:00:00Z",
+    "actor": "synthetic-custodian",
+    "reason": "schema-conformance fixture only",
     "released_artifact_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
-    "source_partition_status": "EXPOSED"
+    "released_artifact_reference": "objects/sha256/66/6666666666666666666666666666666666666666666666666666666666666666",
+    "source_partition_status": "EXPOSED",
+    "enforcement_mode": "SYNTHETIC_TEST"
+  },
+  "sealed-exposure-incident.schema.json": {
+    "schema_version": "1.0.0",
+    "event_type": "ACCIDENTAL_EXPOSURE",
+    "ledger_sequence": 2,
+    "event_digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+    "previous_event_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "experiment_id": "EXP-01990f30-7f5e-7b34-9b21-3d74c513c848",
+    "sealed_binding": {
+      "dataset_ids": [
+        "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
+        "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c847"
+      ],
+      "sealed_out_of_sample": {
+        "start": "2020-01-03T00:00:00Z",
+        "end": "2020-01-03T23:59:59Z"
+      }
+    },
+    "occurred_at": "2026-09-05T05:59:00Z",
+    "actor": "synthetic-observer",
+    "reason": "synthetic pre-freeze exposure fixture",
+    "failure_point": "PRE_FREEZE_ACCESS",
+    "source_partition_status": "EXPOSED",
+    "enforcement_mode": "SYNTHETIC_TEST",
+    "review_requirement": "INVALIDATION_RISK_DECISION_REVIEW"
   }
 }
 

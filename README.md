@@ -42,7 +42,11 @@ standard executable MARKET assumptions require BUY to ASK and SELL to BID. Item
 head `d6ff6b26fced3c7750f8a4c68b520b70c0567c77`, merged on main at
 `6c9d5ae1eec58faeca53239d832748053387f1bc`. Post-merge Quality #32 passed on
 Ubuntu and Windows; Ubuntu ran 630 tests with 90.99% combined statement/branch
-coverage. Item 10 is `NOT STARTED`.
+coverage. Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING` on its feature
+branch: it adds a synthetic-only sealed-release authority, canonical
+hash-chained exposure ledger, exact Item 8 FROZEN binding, irreversible
+`EXPOSED` evidence, and post-release search termination. Item 10B real Windows
+host enforcement is `NOT STARTED`.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 order matcher, fill simulator, transaction-cost calculator, portfolio logic, or

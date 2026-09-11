@@ -6,22 +6,29 @@
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "event_type",
+    "ledger_sequence",
     "event_digest",
     "previous_event_digest",
     "experiment_id",
-    "sealed_dataset_id",
-    "occurred_at",
-    "actor",
-    "reason",
+    "frozen_revision_digest",
     "frozen_manifest_digest",
+    "sealed_binding",
     "code_revision",
     "configuration_digest",
     "environment_digest",
+    "occurred_at",
+    "actor",
+    "reason",
     "released_artifact_digest",
-    "source_partition_status"
+    "released_artifact_reference",
+    "source_partition_status",
+    "enforcement_mode"
   ],
   "properties": {
     "schema_version": {"const": "1.0.0"},
+    "event_type": {"const": "AUTHORIZED_RELEASE"},
+    "ledger_sequence": {"type": "integer", "minimum": 1},
     "event_digest": {"$ref": "common.schema.json#/$defs/digest"},
     "previous_event_digest": {
       "oneOf": [
@@ -30,15 +37,46 @@
       ]
     },
     "experiment_id": {"$ref": "common.schema.json#/$defs/experiment_id"},
-    "sealed_dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
-    "occurred_at": {"$ref": "common.schema.json#/$defs/timestamp"},
-    "actor": {"type": "string", "minLength": 1},
-    "reason": {"type": "string", "minLength": 1},
+    "frozen_revision_digest": {"$ref": "common.schema.json#/$defs/digest"},
     "frozen_manifest_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "sealed_binding": {"$ref": "#/$defs/sealed_binding"},
     "code_revision": {"$ref": "common.schema.json#/$defs/git_revision"},
     "configuration_digest": {"$ref": "common.schema.json#/$defs/digest"},
     "environment_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "occurred_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "actor": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "reason": {"type": "string", "minLength": 1, "pattern": "\\S"},
     "released_artifact_digest": {"$ref": "common.schema.json#/$defs/digest"},
-    "source_partition_status": {"const": "EXPOSED"}
+    "released_artifact_reference": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "source_partition_status": {"const": "EXPOSED"},
+    "enforcement_mode": {"enum": ["SYNTHETIC_TEST", "HOST_ENFORCED"]}
+  },
+  "$defs": {
+    "sealed_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset_ids", "sealed_out_of_sample"],
+      "properties": {
+        "dataset_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "common.schema.json#/$defs/dataset_id"}
+        },
+        "sealed_out_of_sample": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": {"$ref": "common.schema.json#/$defs/timestamp"},
+            "end": {"$ref": "common.schema.json#/$defs/timestamp"}
+          }
+        }
+      }
+    }
   }
 }

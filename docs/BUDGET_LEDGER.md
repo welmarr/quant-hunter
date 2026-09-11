@@ -91,6 +91,13 @@ incremental direct cost. The DEC-0029 project-continuity and regression-
 governance documentation also adds USD 0 incremental direct cost and does not
 authorize Item 10 or any paid action. The ChatGPT Pro amount, aggregate spend,
 and remaining Month-1 headroom remain `UNKNOWN`.
+Item 10A reuses the existing standard library, RFC 8785, schema-validation,
+hashing, lifecycle, and immutable-object dependencies for a local software
+release core and synthetic security tests. It adds no dependency, service,
+data, Windows host change, infrastructure, subscription, usage commitment, or
+incremental direct cost. Item 10B remains unstarted and no paid action is
+authorized. The ChatGPT Pro amount, aggregate spend, and remaining Month-1
+headroom remain `UNKNOWN`.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 

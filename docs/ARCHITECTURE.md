@@ -48,13 +48,16 @@ metadata; Item 9B requires that temporal and multiple-testing bindings identify
 the same experiment and frozen revision; and Item 9C derives compact plan digests
 from verified Item 9A and 9B objects. These interfaces cannot execute a strategy,
 match an order, generate a fill, calculate performance or cost, verify a registry
-chain, assess V6, or access sealed contents. Item 10 sealed-release
-infrastructure, executable backtesting, strategies, broker/live execution, and
-later-stage systems remain absent.
+chain, assess V6, or access sealed contents. Item 10A now adds only the
+software release core and synthetic security contracts described under
+Isolation and Leakage Controls. Item 10B host enforcement, executable
+backtesting, strategies, broker/live execution, and later-stage systems remain
+absent.
 Full Item 9 is `COMPLETE / INDEPENDENT REVIEW PASSED` at reviewed head
 `d6ff6b26fced3c7750f8a4c68b520b70c0567c77`, merged on main at
 `6c9d5ae1eec58faeca53239d832748053387f1bc`; post-merge Quality #32 passed on
-Ubuntu and Windows. This documentation/governance update does not start Item 10.
+Ubuntu and Windows. Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING`;
+Item 10B is `NOT STARTED`.
 The design must be modular, reproducible, testable, and difficult to misuse.
 
 The foundational choices are recorded in DEC-0004–DEC-0010. Stage 1B must implement those decisions and document exact setup, build, test, lint, and run commands in `README.md`. Dockerize only a component for which measured isolation or reproducibility benefit exceeds the added environment; do not introduce distributed infrastructure during Stage 1.
@@ -142,6 +145,28 @@ The Quant Hunter Meta Engine is a later-stage, dependence-aware evidence aggrega
 ## Isolation and Leakage Controls
 
 Research workflows may read development data only. Under DEC-0006, sealed partitions live outside the repository and normal artifact/cache roots on an encrypted NTFS volume. An allow-only DACL grants a dedicated custodian identity access and grants the separate research/AI identity none; SACLs audit access and permission changes. The custodian-only release path verifies the frozen experiment and all bound digests, creates an experiment-specific read-only release, and appends a hash-chained event. Release is one-way and recorded, not a developer convenience. Synthetic data must prove both denial and authorized release before the Stage 1 gate. Point-in-time joins must enforce event, publication, ingestion, and revision semantics described in `DATA_ARCHITECTURE.md`.
+
+Item 10A implements the software side of that future release path without
+creating the host boundary. The release service accepts no sealed source path.
+It starts from Item 8 `verify_frozen`, exactly binds the experiment, one FROZEN
+revision and manifest, code/configuration/environment identities, the complete
+lexicographically ordered dataset-ID set, and the exact sealed interval. It
+verifies only a synthetic released object already published through the
+immutable object-store contract. Its append-only exposure ledger uses
+zero-padded exclusive event publication, compare-and-swap against the verified
+head, an RFC 8785/SHA-256 chain, and a separate canonical head anchor so missing
+or truncated tail history fails closed. Authorized release and accidental
+exposure both create irreversible `EXPOSED` evidence. The later Item 8 `RUNNING`
+revision retains the release-event digest and permits only a fixed evaluation
+with zero new search attempts.
+
+Item 10A produces and accepts only `SYNTHETIC_TEST` evidence. It cannot establish
+`HOST_ENFORCED` evidence, create operating-system identities, configure a vault,
+or prove effective Windows denial. Item 10B remains separately gated for those
+host changes and their two-identity security evidence. As with other local
+append-only files, the software ledger detects changes at verification time but
+does not claim protection against a machine administrator who can replace both
+data and trust anchors.
 
 Research components must not import, invoke, or possess deployment capability. Paper-trading and future production execution are separate adapters, credentials, processes, and authorization boundaries. No live trading or broker credentials are allowed in initial research stages, and no research result may self-promote across a gate.
 
