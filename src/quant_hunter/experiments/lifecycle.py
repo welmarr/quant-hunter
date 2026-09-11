@@ -44,6 +44,7 @@ from quant_hunter.storage.security import reject_credential_uri, reject_secret_t
 
 if TYPE_CHECKING:
     from quant_hunter.isolation.release import VerifiedReleaseEvidence
+    from quant_hunter.isolation.windows_host import VerifiedHostReleaseEvidence
 
 _TIMESTAMP_PATTERN: Final = re.compile(
     r"^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})"
@@ -762,7 +763,9 @@ class ExperimentLifecycleService:
         expected_previous_digest: str,
         *,
         started_at: str,
-        release_evidence: VerifiedReleaseEvidence | None = None,
+        release_evidence: (
+            VerifiedReleaseEvidence | VerifiedHostReleaseEvidence | None
+        ) = None,
     ) -> Revision:
         """Append RUNNING after independently verifying exact frozen evidence."""
         revisions = self._revisions(experiment_id)
@@ -786,8 +789,12 @@ class ExperimentLifecycleService:
         payload = _payload(frozen.revision.record)
         if release_evidence is not None:
             from quant_hunter.isolation.release import VerifiedReleaseEvidence
+            from quant_hunter.isolation.windows_host import VerifiedHostReleaseEvidence
 
-            if not isinstance(release_evidence, VerifiedReleaseEvidence):
+            if not isinstance(
+                release_evidence,
+                (VerifiedReleaseEvidence, VerifiedHostReleaseEvidence),
+            ):
                 raise ExperimentIntegrityError("Release evidence is not verified")
             event = release_evidence.verify()
             binding = event.get("sealed_binding")

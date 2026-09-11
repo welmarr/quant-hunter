@@ -733,3 +733,156 @@ all 694 pytest cases with 90.18% combined statement/branch coverage. The
 governed offline build and import/archive checks also passed with no dependency
 drift. Item 10A remains `IMPLEMENTED / INDEPENDENT REVIEW PENDING` until Nova
 re-audits the corrective head; Item 10B remains `NOT STARTED`.
+
+### Item 10A closure and deferred-issue governance
+
+Independent review passed the corrected Item 10A branch head
+`0892bfdb9231053e8896867facb8fc3de47ebf8e`. PR #7 merged it on main at
+`20851f262041cda1fe26844032f298b2a1531ffd`. Post-merge Quality #36 succeeded
+on Ubuntu and Windows with 694 tests on each platform and 90.11% combined
+statement/branch coverage on Ubuntu. Item 10A is therefore `COMPLETE /
+INDEPENDENT REVIEW PASSED / MERGED / POST-MERGE CI GREEN`; this establishes no
+real Windows host boundary.
+
+DEC-0034 adds the detailed deferred-material-work standard, GitHub Issue Form,
+and agent resume/closure rules. GitHub CLI was unavailable on the local host, so
+no remote Issue was searched or created. Complete ready-to-post drafts for
+RISK-018, RISK-023, RISK-024, COST schema authority, and pre-ingestion data
+architecture are retained in `DEFERRED_ISSUE_DRAFTS.md` pending duplicate search
+and authorized remote creation. This governance work adds no dependency or
+incremental direct cost.
+
+### Item 10B Windows host tooling and blocked evidence
+
+The 2026-09-11 read-only preflight ran on the local Windows host before any
+mutation. It confirmed Windows 10.0.26200.0 and two fixed NTFS volumes, but the
+process was not elevated. BitLocker queries returned access denied, File System
+audit-policy evidence could not be obtained, and backup status could not be
+read. The governed local accounts and proposed roots were absent. Windows
+Search was running and a consumer-sync root was detected. These facts fail the
+encryption and evidence gates. No setup, verification, rollback, user, ACL,
+SACL, audit-policy, index-attribute, filesystem, or BitLocker mutation ran.
+
+Item 10B therefore adds tooling without claiming host evidence:
+
+- `windows_host.py` loads only protected canonical evidence into a typed object,
+  binds sanitized location fingerprints, and authorizes host releases only
+  through the effective custodian identity and exact Item 8/10A authorities.
+- `windows-host-boundary-evidence.schema.json` requires every successful host
+  assertion and the explicit administrator/SYSTEM limitation.
+- the release-event schema requires an exact evidence digest for
+  `HOST_ENFORCED` and forbids it for `SYNTHETIC_TEST`;
+- `item10b_preflight.ps1` is read-only; setup and rollback require explicit
+  `-Apply`; identity authentication material remains in memory; and normal CI
+  never executes host mutation scripts.
+
+From Windows CMD, an owner-selected already encrypted fixed NTFS target is
+checked with:
+
+```bat
+set QH_OOS_ROOT=<existing-encrypted-volume>:\QuantHunterOOS
+pwsh.exe -NoLogo -NoProfile -File scripts\windows\item10b_preflight.ps1 -RepositoryRoot "%CD%" -CandidateRoot "%QH_OOS_ROOT%"
+```
+
+Only after that command returns `Pass: true` in an elevated owner-controlled
+session may the single governed capture workflow be explicitly authorized. It
+reruns preflight, uses that exact in-memory result for setup and verification,
+consumes the resulting probes directly, and publishes canonical evidence:
+
+```bat
+uv run --locked python scripts\windows\item10b_finalize.py --repository-root "%CD%" --candidate-root "%QH_OOS_ROOT%" --canonical-evidence "%QH_OOS_ROOT%\host-evidence\evidence-000001.json" --authorize-setup
+```
+
+There is no supported report-finalization step. A raw mapping, JSON document,
+or caller-selected report path cannot create typed host authority. The setup
+script passes the exact successful preflight object to verification; the
+published record separates those observed facts from the later effective
+identity, ACL, SACL/audit-event, release, and indexing checks. Authentication
+material remains inside the PowerShell process and never returns to Python.
+
+The tooling must then run the locked quality gate and receive independent review.
+Do not change BitLocker, use real OOS bytes, or advance to Item 11.
+
+Local software validation passed `uv lock --check`, Ruff format and lint, strict
+mypy over 48 source files, and all 743 pytest cases with 90.55% combined
+statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
+204 cases, and the host module reached 96.62% coverage. The offline build
+produced both distributions; package, PyArrow, Item 10A, and Item 10B imports
+passed; archive inspection found 144 combined members, included
+`isolation/windows_host.py` in both artifacts, and excluded `.tools/` and
+`.venv/`. All PowerShell host files passed parser validation. These are
+software/tooling results only and do not change the blocked live-host status.
+
+Independent review of head `238a1538888a34635b7f274b451fbd57c980cb0e`
+failed Item 10B because the public raw-report finalizer could turn caller
+assertions into typed authority. DEC-0036 removes that method and the
+`--live-report` CLI route. The corrective capture path runs the governed
+workflow itself and publishes only its immediate, bound result. This correction
+creates no live host evidence and leaves Item 10B at `IMPLEMENTED TOOLING / HOST
+EVIDENCE BLOCKED` pending independent review and a separately authorized,
+successful elevated execution.
+
+Corrective local validation passed `uv lock --check`, Ruff format and lint,
+strict mypy over 48 source files, and all 757 pytest cases with 90.26% combined
+statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
+218 cases; the host module's focused suite passed 35 cases with 91.74%
+statement/branch coverage. The offline build produced both distributions;
+package, PyArrow, Item 10A, and Item 10B imports passed; archive inspection
+found 144 combined members, retained `isolation/windows_host.py` in both
+artifacts, and excluded `.tools/` and `.venv/`. All five PowerShell host scripts
+passed parser validation. These are software results only and do not constitute
+live Windows host-boundary evidence.
+
+### Item 10B Windows audit-event semantics correction
+
+The raw-report authority bypass was corrected at
+`45611b771951839c96f4f19111ae4d8e7fb6898e`. Independent re-review then found
+that the live verifier queried Security event 4663 for both denied research
+access and successful custodian activity. That does not match the configured
+SACLs: a declined handle request is evidenced by event 4656 with the standard
+Audit Failure keyword, while 4663 records a right actually exercised and uses
+Audit Success for the permitted custodian activity.
+
+The verifier now queries events 4656 and 4663 over the exact probe window and
+normalizes identity, object name, timestamp, and standard audit keywords from
+event metadata. Research denial requires a 4656 Audit Failure for
+`qh-research` and the exact synthetic vault/fixture probe target. Custodian
+activity requires a 4663 Audit Success for `qh-oos-custodian` and the exact
+synthetic fixture or released object. Event ID alone, success-classified 4656,
+failure-classified 4663, another identity, another object, and stale events do
+not satisfy either gate. Message text is not used to infer success or failure.
+
+This correction changes no SACL, host identity, BitLocker setting, dependency,
+or authority architecture. No live host workflow ran and no host evidence was
+captured. Item 10B remains `IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED` pending
+independent review and a later separately authorized live execution.
+
+Corrective local validation passed `uv lock --check`, Ruff format and lint,
+strict mypy over 48 source files, and all 767 pytest cases with 90.26% combined
+statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
+228 cases. All six production Item 10B PowerShell files and the synthetic audit
+harness passed parser validation. The offline build produced both
+distributions; package, PyArrow, Item 10A, and Item 10B imports passed; archive
+inspection found 146 combined members, retained `isolation/windows_host.py` in
+both artifacts, and excluded `.tools/` and `.venv/`. These results contain no
+live Windows host-boundary evidence.
+
+### PR #8 audit-target provider-independence correction
+
+Quality #37 passed all 767 tests on Windows. Ubuntu reported 758 passed and
+nine setup errors because the pure audit classifier called
+`Join-Path` with the synthetic Windows ObjectName base
+`D:\QuantHunterOOS\vault`; Linux PowerShell tried to resolve `D:` as a local
+provider drive. The security and scientific semantics were unchanged.
+
+The classifier now normalizes and joins Windows ObjectName evidence using only
+ordinal, case-insensitive string operations. Its pure target-building path does
+not call `Join-Path`, `Resolve-Path`, `Test-Path`, `Get-Item`, or filesystem
+APIs. Tests retain the Windows-style `D:` evidence strings and the full 4656
+Failure / 4663 Success hostile scenario set. Local Windows validation passed
+the locked dependency, Ruff, and strict mypy checks; all 768 tests passed with
+90.26% combined statement/branch coverage, and the focused Item 10A/10B/schema
+suite passed 229 cases. Local WSL enumeration was unavailable to the process,
+so no local Linux result is claimed. Item 10B remains `IMPLEMENTED TOOLING /
+HOST EVIDENCE BLOCKED` pending the new PR checks, independent review, and later
+separately authorized live evidence.

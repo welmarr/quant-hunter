@@ -42,13 +42,17 @@ standard executable MARKET assumptions require BUY to ASK and SELL to BID. Item
 head `d6ff6b26fced3c7750f8a4c68b520b70c0567c77`, merged on main at
 `6c9d5ae1eec58faeca53239d832748053387f1bc`. Post-merge Quality #32 passed on
 Ubuntu and Windows; Ubuntu ran 630 tests with 90.99% combined statement/branch
-coverage. Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING` on its feature
-branch: it adds a synthetic-only sealed-release authority, canonical
+coverage. Item 10A is `COMPLETE / INDEPENDENT REVIEW PASSED / MERGED /
+POST-MERGE CI GREEN` at merged main
+`20851f262041cda1fe26844032f298b2a1531ffd`. It adds a synthetic-only
+sealed-release authority, canonical
 hash-chained exposure ledger, exact Item 8 FROZEN binding, irreversible
 `EXPOSED` evidence, and post-release search termination. The release service is
 the sole supported public exposure writer; the ledger remains the structural
-read/verification primitive. Item 10B real Windows
-host enforcement is `NOT STARTED`.
+read/verification primitive. Item 10B real Windows host enforcement is
+`IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED`: the fail-closed software and
+host scripts exist, but the 2026-09-11 read-only preflight could not prove an
+eligible encrypted volume or obtain the required elevated host evidence.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
 order matcher, fill simulator, transaction-cost calculator, portfolio logic, or
@@ -58,6 +62,7 @@ live-trading capability exists.
 
 - Start with [`AGENTS.md`](AGENTS.md) for non-negotiable operating rules.
 - Resume from [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md), then apply the reviewed invariants in [`docs/REGRESSION_GUARD.md`](docs/REGRESSION_GUARD.md).
+- Use [`docs/ISSUE_GOVERNANCE.md`](docs/ISSUE_GOVERNANCE.md) for material deferred-work tracking and closure rules.
 - Read [`docs/PROJECT_CHARTER.md`](docs/PROJECT_CHARTER.md) for mission, scope, and success criteria.
 - Use [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the planned modular boundaries.
 - Follow [`docs/RESEARCH_METHODOLOGY.md`](docs/RESEARCH_METHODOLOGY.md) and [`docs/VALIDATION_STANDARD.md`](docs/VALIDATION_STANDARD.md) for research design and evaluation.

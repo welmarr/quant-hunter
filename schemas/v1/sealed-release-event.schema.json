@@ -53,8 +53,21 @@
       "pattern": "\\S"
     },
     "source_partition_status": {"const": "EXPOSED"},
-    "enforcement_mode": {"enum": ["SYNTHETIC_TEST", "HOST_ENFORCED"]}
+    "enforcement_mode": {"enum": ["SYNTHETIC_TEST", "HOST_ENFORCED"]},
+    "host_boundary_evidence_digest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"enforcement_mode": {"const": "HOST_ENFORCED"}},
+        "required": ["enforcement_mode"]
+      },
+      "then": {"required": ["host_boundary_evidence_digest"]},
+      "else": {"not": {"required": ["host_boundary_evidence_digest"]}}
+    }
+  ],
   "$defs": {
     "sealed_binding": {
       "type": "object",

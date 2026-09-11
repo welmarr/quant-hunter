@@ -106,6 +106,10 @@ cost. Item 10B remains unstarted.
 The Item 10A independent-review writer-authority fix also reuses the locked
 dependencies and adds USD 0 incremental direct cost. It introduces no service,
 data, host change, infrastructure, subscription, or usage commitment.
+Item 10A independent review, merge, post-merge CI reconciliation, and DEC-0034
+deferred-issue governance add USD 0 incremental direct cost. The issue template
+and ready-to-post drafts require no new service or dependency; no GitHub Issue
+was created because GitHub CLI was unavailable.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 
@@ -146,6 +150,11 @@ machine COST registry record exists because `RegistryKind.COST` has no governed
 schema mapping yet.
 
 Paid-source proposals must also satisfy `DATA_SOURCE_REGISTRY.md`; infrastructure, API, subscription, and tooling proposals use this ledger even when no data source is involved.
+
+Item 10B reuses Windows, PowerShell, the locked Python environment, and local
+synthetic bytes. The failed read-only preflight, host tooling, schema, tests,
+and documentation add USD 0 incremental direct dependency, service, data, or
+infrastructure cost. No purchase or paid commitment was made.
 
 ## Review
 

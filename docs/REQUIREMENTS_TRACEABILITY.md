@@ -54,6 +54,8 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | A future conversation, Codex session, or agent can recover the current reviewed resume point from repository evidence. | `AGENTS.md`; `PROJECT_STATUS.md`; DEC-0029 |
 | Every material batch preserves prior reviewed scientific, security, reproducibility, identity, and authority invariants through the full regression and review sequence. | `AGENTS.md`; `REGRESSION_GUARD.md`; DEC-0029 |
 | Current status may be updated without rewriting historical decisions, risks, development evidence, or Git history. | `PROJECT_STATUS.md`; `DECISIONS.md`; `RISK_REGISTER.md`; DEC-0029 |
+| Material deferred work is tracked operationally without replacing durable repository authority or bypassing a current-batch blocker. | `ISSUE_GOVERNANCE.md`; `.github/ISSUE_TEMPLATE/material-deferred-work.yml`; DEC-0034 |
+| Issue closure requires stated acceptance criteria, regression evidence, and reconciliation of affected durable authorities. | `ISSUE_GOVERNANCE.md`; `AGENTS.md`; DEC-0034 |
 
 ## Stage 1B Item 10A Sealed-OOS Software Mapping
 
@@ -68,9 +70,21 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | Retained release evidence remains verifiable through later Item 8 states against the exact historical FROZEN authority and retained event digest. | DEC-0032; `experiments/lifecycle.py`; FROZEN/RUNNING/EVALUATED/DECIDED verification tests |
 | Item 10A evidence is synthetic only and cannot claim the separately gated host boundary. | `ARCHITECTURE.md`; `REGRESSION_GUARD.md` REG-F01–REG-F03; synthetic-mode and poisoned-filesystem tests |
 
-Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING`; Item 10B is `NOT
-STARTED`. This mapping does not establish real Windows isolation or complete
-Roadmap Item 10.
+Item 10A is `COMPLETE / INDEPENDENT REVIEW PASSED / MERGED / POST-MERGE CI
+GREEN` at main `20851f262041cda1fe26844032f298b2a1531ffd`.
+
+## Stage 1B Item 10B Windows Host Mapping
+
+| Requirement | Governing and implementation evidence |
+|---|---|
+| `HOST_ENFORCED` cannot be claimed by a raw mapping or Item 10A service. | DEC-0035; `windows_host.py`; typed-construction, platform, schema, and service rejection tests |
+| Host evidence binds only complete successful checks, sanitized location fingerprints, explicit limitations, and its canonical digest. | `windows-host-boundary-evidence.schema.json`; `WindowsHostBoundaryVerifier`; tamper, wrong-profile, failed-check, secret-text, and append-only tests |
+| Host release retains exact Item 8 FROZEN, dataset/partition, code/config/environment, artifact, ledger CAS, history, overlap, and search-termination authority. | `WindowsHostReleaseService`; conditional release-event schema; Item 10A/10B hostile tests |
+| Host setup is bounded to an already protected fixed NTFS volume and performs no BitLocker mutation. | `item10b_preflight.ps1`; inert `item10b_setup.ps1`; static safety tests; DEC-0035 |
+| Dedicated identity, allow-list DACL, audit/SACL, index, sync, backup, denial, release, and account-disable assertions require live evidence. | Windows host scripts; REG-F03; RISK-017; sanitized 2026-09-11 blocker evidence |
+
+Item 10B is `IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED`. The code and tests do
+not establish real Windows isolation or complete Roadmap Item 10.
 
 ## Coverage Maintenance Rule
 

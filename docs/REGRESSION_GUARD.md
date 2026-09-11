@@ -53,15 +53,17 @@ REG-019 is only partially evidenced today and is deliberately labeled
 production-import boundary. REG-020 is a reviewed governance invariant rather
 than an automated spending system.
 
-## Item 10A Invariants Pending Independent Review
+## Item 10A Implemented and Reviewed Invariants
 
-These software protections are implemented on the Item 10A feature branch but
-must not be cited as independently reviewed or as real host isolation.
+These software protections passed independent review at head
+`0892bfdb9231053e8896867facb8fc3de47ebf8e`, merged on main at
+`20851f262041cda1fe26844032f298b2a1531ffd`, and passed post-merge Quality #36.
+They are software authority and synthetic evidence, not real host isolation.
 
 | ID | Status | Invariant | Governing authority | Required future evidence | Failure consequence |
 |---|---|---|---|---|---|
-| REG-F01 | `IMPLEMENTED / REVIEW PENDING — SOFTWARE ONLY` | Exposure belongs globally to each underlying dataset and half-open time interval. Any same-dataset overlap is one-way `EXPOSED` across experiments and can never be resealed; adjacent intervals do not overlap. `SealedReleaseService` is the sole supported public exposure writer; the ledger exposes structural read/verification operations but no public raw append authority. | DEC-0006; DEC-0031–DEC-0033; Roadmap Item 10A | `isolation/ledger.py`, `isolation/release.py`; public-API absence, raw release/incident bypass, nonexistent experiment, supported service writers, cross-experiment reuse, subset/superset/partial overlap, exact fractional adjacency, one-nanosecond overlap, multi-dataset component overlap, release-then-incident retention, repeat-release, chain, CAS, and immutable-state tests in `test_sealed_release.py` | Invalidate affected experiments and stop release. |
-| REG-F02 | `IMPLEMENTED / REVIEW PENDING — SOFTWARE ONLY` | Viewing sealed results terminates search/tuning for that experiment; changes require a new experiment and genuinely untouched evidence where possible. | `EXPERIMENT_LEDGER.md`; `VALIDATION_STANDARD.md`; DEC-0031; DEC-0032 | `experiments/lifecycle.py`; release-reference retention, post-release attempt rejection, single-FROZEN, zero-attempt fixed evaluation, and FROZEN/RUNNING/EVALUATED/DECIDED historical release-verification tests in `test_sealed_release.py` | Later result is exploratory or invalid, never confirmatory. |
+| REG-F01 | `COMPLETE / INDEPENDENT REVIEW PASSED — SOFTWARE ONLY` | Exposure belongs globally to each underlying dataset and half-open time interval. Any same-dataset overlap is one-way `EXPOSED` across experiments and can never be resealed; adjacent intervals do not overlap. `SealedReleaseService` is the sole supported public exposure writer; the ledger exposes structural read/verification operations but no public raw append authority. | DEC-0006; DEC-0031–DEC-0033; Roadmap Item 10A | `isolation/ledger.py`, `isolation/release.py`; public-API absence, raw release/incident bypass, nonexistent experiment, supported service writers, cross-experiment reuse, subset/superset/partial overlap, exact fractional adjacency, one-nanosecond overlap, multi-dataset component overlap, release-then-incident retention, repeat-release, chain, CAS, and immutable-state tests in `test_sealed_release.py` | Invalidate affected experiments and stop release. |
+| REG-F02 | `COMPLETE / INDEPENDENT REVIEW PASSED — SOFTWARE ONLY` | Viewing sealed results terminates search/tuning for that experiment; changes require a new experiment and genuinely untouched evidence where possible. | `EXPERIMENT_LEDGER.md`; `VALIDATION_STANDARD.md`; DEC-0031; DEC-0032 | `experiments/lifecycle.py`; release-reference retention, post-release attempt rejection, single-FROZEN, zero-attempt fixed evaluation, and FROZEN/RUNNING/EVALUATED/DECIDED historical release-verification tests in `test_sealed_release.py` | Later result is exploratory or invalid, never confirmatory. |
 
 ## Future Required Invariants
 
@@ -70,7 +72,7 @@ protection.
 
 | ID | Status | Invariant | Governing authority | Required future evidence | Failure consequence |
 |---|---|---|---|---|---|
-| REG-F03 | `PLANNED / NOT YET ENFORCED` | The real Windows research identity cannot list, traverse, read, write, own, or change ACLs on the sealed vault before release. | DEC-0006; RISK-017; Roadmap Item 10B | Effective two-identity DACL/SACL, encryption, backup/sync/index, denial, and controlled-release evidence | Item 10 and Stage 1B cannot pass. |
+| REG-F03 | `TOOLING IMPLEMENTED / HOST EVIDENCE BLOCKED` | A `HOST_ENFORCED` release requires typed canonical evidence created by one governed executed Windows preflight/setup/verification flow, exact Item 8 FROZEN authority, the verified release root and artifact, and the same global one-way exposure ledger. Raw mappings, JSON documents, and arbitrary report files cannot create authority. The real Windows research identity must be unable to list, read, create, write, delete, own, or change ACLs on the sealed vault before release. Denial audit evidence requires a bound 4656 Audit Failure; performed custodian activity requires a bound 4663 Audit Success in the same verification window. | DEC-0006; DEC-0035–DEC-0036; RISK-017; Roadmap Item 10B | Hostile schema/service/raw-promotion/audit-classification tests and inert-by-default scripts exist. Still required: independent review of the corrected audit semantics, then elevated proof of an already encrypted fixed NTFS volume, exact preflight binding, effective two-identity DACL/SACL, live audit events, backup/sync/index evidence, denial, and controlled release. | Item 10 and Stage 1B cannot pass. |
 | REG-F04 | `PLANNED / NOT YET ENFORCED` | Package and dependency boundaries prevent research code from importing broker, live-order, credential, deployment, or self-promotion capability. | RISK-010; Roadmap Item 11 | Dedicated import/dependency graph and prohibited-entry-point tests | Item 11 and Stage 1B cannot pass. |
 
 ## Maintenance Rule

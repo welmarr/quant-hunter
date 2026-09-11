@@ -360,3 +360,60 @@ Item 10A remains `IMPLEMENTED / INDEPENDENT REVIEW PENDING` until the corrective
 head is independently re-audited. Item 10B remains `NOT STARTED`. RISK-017,
 RISK-018, RISK-023, and RISK-024 remain `OPEN`; no risk is closed by this
 software-only correction.
+
+### Item 10A closure and deferred-work tracking
+
+Independent review passed corrected Item 10A head
+`0892bfdb9231053e8896867facb8fc3de47ebf8e`, PR #7 merged it on main at
+`20851f262041cda1fe26844032f298b2a1531ffd`, and post-merge Quality #36 passed
+on Ubuntu and Windows with 694 tests on each. The Ubuntu combined
+statement/branch coverage was 90.11%. This closes Item 10A's software-only
+review gate but does not close RISK-017 or establish real host isolation.
+
+DEC-0034 makes GitHub Issues the operational tracker for material deferred
+work while this register remains the durable risk authority. GitHub CLI was
+unavailable during the Item 10B batch, so no Issue number or URL exists yet.
+Ready-to-post drafts preserve the exact RISK-018 incident and future work for
+RISK-023 and RISK-024; remote creation still requires duplicate review. All
+three risks remain `OPEN`.
+
+## Item 10B Windows Host Preflight and Tooling Evidence
+
+On 2026-09-11, the authorized Item 10B preflight was performed read-only. The
+host was Windows 10.0.26200.0 with two fixed NTFS volumes, but the process was
+not elevated. BitLocker status returned access denied, so no already encrypted
+and fully protected eligible volume was proven. File System audit-policy and
+backup queries also lacked the necessary privilege. The governed
+`qh-oos-custodian` and `qh-research` accounts and the proposed vault/release
+roots were absent. Windows Search was running and a consumer-sync root was
+detected. No host mutation followed: no identity, path, DACL, SACL, audit,
+indexing, filesystem, backup, or BitLocker setting changed, and no credential or
+real sealed data was created or accessed.
+
+Independent review failed head `238a1538888a34635b7f274b451fbd57c980cb0e`
+because its public report finalizer could promote caller-authored assertions;
+schema validity did not prove the stated host facts. DEC-0036 removes that
+authority path. Only one elevated governed execution on an already protected
+fixed NTFS volume can produce the typed canonical evidence required by a
+`HOST_ENFORCED` release. The exact successful preflight observations are bound
+to the same setup and effective verification result; no raw mapping, JSON
+document, or arbitrary report file is accepted for authority creation.
+Synthetic tests validate the schema, digest, profile binding, service authority,
+Item 8 binding, artifact binding, ledger history, one-way exposure, and script
+safety. These controls materially define the intended mitigation but do not
+prove it on this host. RISK-017 remains `OPEN`. Required closure evidence still
+includes the effective research denials, custodian access and release,
+research-readable immutable release, observed SACL/audit events, index
+exclusion, sync non-overlap, backup assessment, residual privileged-access
+limitations, and independent review. RISK-018, RISK-023, and RISK-024 also
+remain `OPEN`; `identity/registry.py` is unchanged.
+
+The raw-report authority bypass was corrected at
+`45611b771951839c96f4f19111ae4d8e7fb6898e`. Independent re-review found a
+separate audit-evidence mismatch: the verifier treated 4663 as both denial and
+success evidence even though the SACL requests research Failure auditing and
+custodian Success auditing. The corrected tooling requires a time-, identity-,
+and object-bound 4656 Audit Failure for denied `qh-research` access and a
+separately bound 4663 Audit Success for performed `qh-oos-custodian` activity.
+This is software evidence only. No live event, host mutation, or host authority
+was created, and RISK-017 remains `OPEN`.

@@ -85,6 +85,21 @@ every command, including failed commands, under `### Git Actions Executed`.
 Each action must occupy exactly one line in this format:
 `<number>. <exact command> | <READ-ONLY|LOCAL WRITE|REMOTE WRITE> | <purpose> | Result: <concise result>`.
 
+## Deferred Issue Governance
+
+GitHub Issues are the operational tracker for material deferred work; they do
+not replace the repository's durable risk, decision, regression, roadmap, or
+status authorities. During resume and preflight, inspect open material Issues
+and reconcile them with `docs/RISK_REGISTER.md`, `docs/DECISIONS.md`,
+`docs/REGRESSION_GUARD.md`, `docs/PROJECT_STATUS.md`, and `docs/ROADMAP.md`.
+
+Before describing a material finding as deferred, verify that an equivalent
+open Issue exists or create one when authorized. A current-batch correctness
+failure cannot be deferred merely by creating an Issue; fix it, retest it, and
+obtain independent review. When an Issue is resolved, add its closure evidence
+to the Issue and reconcile every applicable durable repository authority.
+Follow `docs/ISSUE_GOVERNANCE.md` for the mandatory content and closure gate.
+
 ## Documentation Authority
 
 Detailed requirements live in:

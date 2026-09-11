@@ -6,11 +6,10 @@
 |---|---|
 | PROJECT | Quant Hunter |
 | LAST VERIFIED DATE | 2026-09-11 |
-| LAST VERIFIED IMPLEMENTATION MAIN | `3d6f5f50e9f7b202498a6d3a2357fcccee2df409` |
+| LAST VERIFIED IMPLEMENTATION MAIN | `20851f262041cda1fe26844032f298b2a1531ffd` |
 | CURRENT STAGE | Stage 1B — Foundation Implementation |
 
-The stored SHA is the verified implementation checkpoint immediately before
-the current Item 10A feature branch. It is not a
+The stored SHA is the verified post-merge Item 10A checkpoint. It is not a
 substitute for checking current Git. Every resume must obtain the current
 branch and HEAD directly from Git, then reconcile this file against that state
 and the available review evidence. Do not update this field speculatively with
@@ -20,25 +19,36 @@ the future merge SHA of this file's own change.
 
 - Stage 0
 - Stage 1A
-- Stage 1B Items 1–9
+- Stage 1B Items 1–10A
 
 ## LAST COMPLETED ITEM
 
-Item 9 — Validation and Simulation Interfaces is `COMPLETE / INDEPENDENT
-REVIEW PASSED`. Its final cross-binding reviewed head is
-`d6ff6b26fced3c7750f8a4c68b520b70c0567c77`; it is merged on main at
-`6c9d5ae1eec58faeca53239d832748053387f1bc`. Post-merge Quality #32 passed on
-Ubuntu and Windows. Ubuntu ran 630 tests with 90.99% combined statement/branch
-coverage; Windows also succeeded.
+Item 10A — software release core and synthetic security contracts is `COMPLETE /
+INDEPENDENT REVIEW PASSED / MERGED / POST-MERGE CI GREEN`. Its reviewed branch
+head is `0892bfdb9231053e8896867facb8fc3de47ebf8e`; it is merged on main at
+`20851f262041cda1fe26844032f298b2a1531ffd`. Post-merge Quality #36 succeeded on
+Ubuntu and Windows with 694 tests on each platform and 90.11% combined
+statement/branch coverage on Ubuntu.
 
 ## CURRENT ITEM
 
-Item 10A — software release core and synthetic security contracts is
-`IMPLEMENTED / INDEPENDENT REVIEW PENDING` on
-`feature/stage1b-item10a-sealed-oos-core`. Nova's review of head
-`859233574d4d8ea9595e7985f3da82aba252c99a` found a competing public raw
-exposure-ledger writer. The corrective work makes `SealedReleaseService` the
-sole supported public exposure writer and requires independent re-audit.
+Item 10B — real Windows host-enforced sealed-OOS boundary is `IMPLEMENTED
+TOOLING / HOST EVIDENCE BLOCKED` on
+`feature/stage1b-item10b-host-boundary`. The 2026-09-11 read-only Windows
+preflight confirmed two local fixed NTFS volumes but ran without elevation and
+could not read BitLocker, audit-policy, or backup evidence. It therefore did
+not prove an already encrypted eligible volume. Independent review failed head
+`238a1538888a34635b7f274b451fbd57c980cb0e` because its public report finalizer
+could promote caller assertions. DEC-0036 removes that path and binds authority
+creation to one executed preflight/setup/verification flow. Independent
+re-review confirmed that bypass fixed at
+`45611b771951839c96f4f19111ae4d8e7fb6898e`, then failed the Windows audit
+evidence semantics: denied research access must use 4656 Audit Failure, while
+4663 Audit Success remains the performed-access evidence for the custodian.
+Quality #37 passed Windows but failed Ubuntu because the pure classifier used
+`Join-Path` on a synthetic Windows `D:` ObjectName. The provider-independent
+string correction is pending new PR checks and independent review. No host
+mutation or live evidence was produced.
 
 ## PLANNED DECOMPOSITION
 
@@ -47,10 +57,14 @@ Item 10 is planned as:
 - **10A — software release core and synthetic security contracts.**
 - **10B — real Windows host-enforced boundary.**
 
-Item 10A implements only software and synthetic evidence. Item 10B is `NOT
-STARTED` and remains separately gated; no real Windows host-security mutation is
-authorized. The next action is independent re-review of Item 10A, not Item 10B
-implementation.
+Item 10A implements only software and synthetic evidence. Item 10B now provides
+the typed host-evidence, conditional release-event, host-release-service, and
+inert-by-default Windows script tooling. Raw mappings and report files have no
+supported authority-creation path; retained canonical evidence remains
+loadable for audit. The live boundary remains blocked
+until an elevated rerun proves a fully protected fixed NTFS volume and every
+DACL, SACL/audit, effective-identity, indexing, sync, backup, and controlled
+release condition. Full Item 10 is not complete.
 
 ## AFTER ITEM 10
 
@@ -61,7 +75,8 @@ implementation.
 ## OPEN RISKS
 
 - **RISK-017:** the real sealed-OOS host boundary and its residual administrator,
-  backup, sync, and indexing exposure remain open.
+  backup, sync, and indexing exposure remain open. Item 10B code and scripts do
+  not replace the missing live evidence.
 - **RISK-018:** registry concurrency, filesystem redirection, and stale/crashed
   lock recovery remain open. The intermittent Windows `.allocation.lock`
   timeout observed during PR #5 must be investigated during Item 12 even if it
@@ -112,12 +127,20 @@ A future agent must:
 1. Read `AGENTS.md`.
 2. Read this file.
 3. Verify the current Git HEAD, branch, and worktree.
-4. Read `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/RISK_REGISTER.md`, and the
+4. Inspect open material GitHub Issues and reconcile them with the repository
+   authorities.
+5. Read `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/RISK_REGISTER.md`, and the
    governing documents for the next item.
-5. Reconcile this current-state summary against actual repository and review
+6. Reconcile this current-state summary against actual repository and review
    evidence.
-6. Stop and reconcile rather than guess if the evidence conflicts.
-7. Complete the required pre-step checkpoint before implementation.
+7. Stop and reconcile rather than guess if the evidence conflicts.
+8. Verify the new PR checks and independently review the provider-independent
+   ObjectName correction while preserving the corrected 4656 Failure / 4663
+   Success semantics and DEC-0036 authority path. Then resume Item 10B from the
+   retained read-only blocker in a separately authorized elevated Windows
+   session, using the governed capture workflow against an owner-selected,
+   already encrypted fixed NTFS volume. Do not change BitLocker.
+9. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE
 
