@@ -26,7 +26,6 @@ $vault = Join-Path $root 'vault'
 $releases = Join-Path $root 'releases'
 $evidence = Join-Path $root 'host-evidence'
 $statePath = Join-Path $evidence 'item10b-created-state.json'
-$reportPath = Join-Path $evidence 'item10b-live-report.json'
 $fixturePath = Join-Path $vault 'synthetic-sealed-fixture.txt'
 $marker = 'QUANT_HUNTER_ITEM10B_SYNTHETIC_BOUNDARY'
 $createdUsers = [Collections.Generic.List[string]]::new()
@@ -149,15 +148,14 @@ try {
     )
     $result = & $verifyScript -VaultPath $vault -ReleasePath $releases `
         -EvidencePath $evidence -CustodianPassword $custodianPassword `
-        -ResearchPassword $researchPassword -AsObject
+        -ResearchPassword $researchPassword -PreflightResult $preflight -AsObject
     if (-not $result.live_verification_passed) {
         throw 'One or more effective Item 10B assertions failed.'
     }
     Disable-LocalUser -Name 'qh-oos-custodian'
     Disable-LocalUser -Name 'qh-research'
     $result.identities_disabled_after_verification = $true
-    [IO.File]::WriteAllText($reportPath, ($result | ConvertTo-Json -Depth 10), [Text.UTF8Encoding]::new($false))
-    Write-Output $reportPath
+    [pscustomobject]$result | ConvertTo-Json -Depth 10 -Compress
 } catch {
     if (Test-Path -LiteralPath $statePath) {
         & $rollbackScript -StatePath $statePath -Apply

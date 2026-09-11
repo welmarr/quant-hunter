@@ -1,4 +1,4 @@
-"""Finalize one live Item 10B report into canonical non-secret evidence."""
+"""Execute the governed Item 10B workflow and capture canonical evidence."""
 
 from __future__ import annotations
 
@@ -13,25 +13,30 @@ from quant_hunter.isolation import (
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--vault-root", type=Path, required=True)
-    parser.add_argument("--release-root", type=Path, required=True)
-    parser.add_argument("--evidence-root", type=Path, required=True)
-    parser.add_argument("--live-report", type=Path, required=True)
+    parser.add_argument("--repository-root", type=Path, required=True)
+    parser.add_argument("--candidate-root", type=Path, required=True)
     parser.add_argument("--canonical-evidence", type=Path, required=True)
+    parser.add_argument("--authorize-setup", action="store_true", required=True)
     parser.add_argument(
         "--schema-directory",
         type=Path,
         default=Path(__file__).parents[2] / "schemas" / "v1",
     )
     arguments = parser.parse_args()
+    candidate = arguments.candidate_root.resolve()
     profile = WindowsHostBoundaryProfile(
-        arguments.vault_root,
-        arguments.release_root,
-        arguments.evidence_root,
+        candidate / "vault",
+        candidate / "releases",
+        candidate / "host-evidence",
     )
     evidence = WindowsHostBoundaryVerifier(
         profile, arguments.schema_directory
-    ).finalize_live_report(arguments.live_report, arguments.canonical_evidence)
+    ).capture_live_evidence(
+        arguments.repository_root,
+        candidate,
+        arguments.canonical_evidence,
+        authorize_setup=arguments.authorize_setup,
+    )
     print(evidence.digest)
     return 0
 

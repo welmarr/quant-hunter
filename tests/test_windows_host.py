@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import subprocess
 from copy import deepcopy
@@ -60,17 +61,35 @@ class HostHarness:
     evidence_path: Path
 
 
-def _live_report(profile: WindowsHostBoundaryProfile) -> JsonRecord:
+def _execution_result(
+    profile: WindowsHostBoundaryProfile, candidate_root: Path | None = None
+) -> JsonRecord:
+    candidate = candidate_root or profile.vault_root.parent
     return {
         "schema_version": "1.0.0",
         "verified_at": "2026-09-11T06:00:00.000000001Z",
         "platform": "WINDOWS",
-        "filesystem": "NTFS",
-        "fixed_local_volume": True,
-        "encryption": {
-            "technology": "BITLOCKER",
-            "protection_status": "ON",
-            "volume_status": "FULLY_ENCRYPTED",
+        "preflight_observations": {
+            "preflight_passed": True,
+            "candidate_root": str(candidate),
+            "filesystem": "NTFS",
+            "fixed_local_volume": True,
+            "encryption": {
+                "technology": "BITLOCKER",
+                "protection_status": "On",
+                "volume_status": "FullyEncrypted",
+            },
+            "repository_worktree_excluded": True,
+            "profile_cache_temp_excluded": True,
+            "sync_overlap_detected": False,
+            "governed_identities_absent": True,
+            "candidate_path_absent": True,
+            "original_file_system_audit_policy": {
+                "success_enabled": False,
+                "failure_enabled": False,
+            },
+            "backup_observation": "CONFIGURATION_UNREADABLE",
+            "backup_status": "RESIDUAL_RISK_RETAINED",
         },
         "vault_path": str(profile.vault_root),
         "release_path": str(profile.release_root),
@@ -121,8 +140,6 @@ def _live_report(profile: WindowsHostBoundaryProfile) -> JsonRecord:
             "research_owner_change_denied": True,
         },
         "indexing_excluded": True,
-        "sync_overlap_detected": False,
-        "backup_status": "RESIDUAL_RISK_RETAINED",
         "synthetic_fixture_only": True,
         "identity_authentication_material_persisted": False,
         "identities_disabled_after_verification": True,
@@ -132,6 +149,46 @@ def _live_report(profile: WindowsHostBoundaryProfile) -> JsonRecord:
             "Only a clearly synthetic fixture was used.",
         ],
     }
+
+
+def _retained_evidence_record(
+    profile: WindowsHostBoundaryProfile,
+) -> JsonRecord:
+    result = _execution_result(profile)
+    preflight = deepcopy(cast(JsonRecord, result["preflight_observations"]))
+    preflight.pop("candidate_root")
+    record: JsonRecord = {
+        "schema_version": "1.0.0",
+        "evidence_type": "WINDOWS_HOST_BOUNDARY",
+        "evidence_mode": "HOST_ENFORCED",
+        "preflight_observations": preflight,
+        "candidate_root_fingerprint": cast(Any, windows_host)._location_fingerprint(
+            profile.vault_root.parent, "HOST_BOUNDARY_ROOT"
+        ),
+        "vault_location_fingerprint": profile.vault_location_fingerprint,
+        "release_location_fingerprint": profile.release_location_fingerprint,
+        "custodian_role": profile.custodian_role,
+        "research_role": profile.research_role,
+    }
+    for field in (
+        "verified_at",
+        "platform",
+        "vault_dacl_checks",
+        "release_dacl_checks",
+        "audit_checks",
+        "research_denial_checks",
+        "custodian_access_checks",
+        "released_artifact_checks",
+        "indexing_excluded",
+        "synthetic_fixture_only",
+        "identity_authentication_material_persisted",
+        "identities_disabled_after_verification",
+        "live_verification_passed",
+        "limitations",
+    ):
+        record[field] = deepcopy(result[field])
+    record["host_boundary_evidence_digest"] = host_boundary_evidence_digest(record)
+    return record
 
 
 def _host_request(
@@ -167,9 +224,7 @@ def _build_host_harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Host
         evidence_root=evidence_root,
     )
     verifier = WindowsHostBoundaryVerifier(profile, SCHEMA_DIRECTORY)
-    report_path = evidence_root / "live-report.json"
     evidence_path = evidence_root / "evidence-000001.json"
-    report_path.write_text(json.dumps(_live_report(profile)), encoding="utf-8")
     monkeypatch.setattr(windows_host, "_is_windows_host", lambda: True)
     monkeypatch.setattr(windows_host, "_is_elevated_administrator", lambda: True)
     monkeypatch.setattr(
@@ -177,7 +232,8 @@ def _build_host_harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Host
         "_current_windows_account",
         lambda: "SYNTHETIC-HOST\\qh-oos-custodian",
     )
-    evidence = verifier.finalize_live_report(report_path, evidence_path)
+    evidence_path.write_bytes(canonicalize_json(_retained_evidence_record(profile)))
+    evidence = verifier.load(evidence_path)
     service = WindowsHostReleaseService(
         release.lifecycle, release.ledger, release.lifecycle.object_store
     )
@@ -222,10 +278,10 @@ def test_non_windows_operations_fail_before_process_or_filesystem_mutation(
         verifier.load(profile.evidence_root / "missing.json")
 
 
-def test_live_report_finalizes_to_canonical_profile_bound_evidence(
+def test_retained_canonical_evidence_loads_with_profile_binding(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Only complete live assertions become deterministic typed evidence."""
+    """Previously governed canonical evidence remains loadable and deterministic."""
     harness = _build_host_harness(tmp_path, monkeypatch)
     record = harness.evidence.verify()
     assert harness.evidence_path.read_bytes() == canonicalize_json(record)
@@ -246,7 +302,9 @@ def test_host_evidence_tamper_and_profile_substitution_are_rejected(
     harness = _build_host_harness(tmp_path, monkeypatch)
     original = harness.evidence.record
     tampered = harness.evidence.record
-    tampered["backup_status"] = "EQUIVALENT_PROTECTION_VERIFIED"
+    cast(JsonRecord, tampered["preflight_observations"])["backup_status"] = (
+        "EQUIVALENT_PROTECTION_VERIFIED"
+    )
     harness.evidence_path.write_bytes(canonicalize_json(tampered))
     with pytest.raises(HostBoundaryEvidenceError, match="digest mismatch"):
         harness.evidence.verify()
@@ -264,86 +322,237 @@ def test_host_evidence_tamper_and_profile_substitution_are_rejected(
         wrong_verifier.load(harness.evidence_path)
 
 
+def test_raw_reports_have_no_supported_authority_creation_route() -> None:
+    """No public verifier method accepts a Mapping or arbitrary report file."""
+    assert not hasattr(WindowsHostBoundaryVerifier, "finalize_live_report")
+    parameters = inspect.signature(
+        WindowsHostBoundaryVerifier.capture_live_evidence
+    ).parameters
+    assert "report" not in parameters
+    assert "report_path" not in parameters
+
+
+def _capture_verifier(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[WindowsHostBoundaryVerifier, Path, Path, Path]:
+    repository = (tmp_path / "repository").resolve()
+    candidate = (tmp_path / "candidate").resolve()
+    repository.mkdir(parents=True)
+    (candidate / "vault").mkdir(parents=True)
+    (candidate / "releases").mkdir()
+    (candidate / "host-evidence").mkdir()
+    profile = WindowsHostBoundaryProfile(
+        candidate / "vault",
+        candidate / "releases",
+        candidate / "host-evidence",
+    )
+    monkeypatch.setattr(windows_host, "_is_windows_host", lambda: True)
+    monkeypatch.setattr(windows_host, "_is_elevated_administrator", lambda: True)
+    monkeypatch.setattr(windows_host, "_governed_repository_root", lambda: repository)
+    return (
+        WindowsHostBoundaryVerifier(profile, SCHEMA_DIRECTORY),
+        repository,
+        candidate,
+        candidate / "host-evidence" / "evidence-000001.json",
+    )
+
+
+def test_capture_executes_governed_flow_and_immediately_publishes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The sole creation API consumes only its own governed execution result."""
+    verifier, repository, candidate, evidence_path = _capture_verifier(
+        tmp_path, monkeypatch
+    )
+    result = _execution_result(verifier.profile, candidate)
+    calls: list[tuple[Path, Path]] = []
+
+    def governed_execution(
+        self: WindowsHostBoundaryVerifier, observed_repository: Path, observed: Path
+    ) -> JsonRecord:
+        calls.append((observed_repository, observed))
+        return deepcopy(result)
+
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier, "_run_governed_setup", governed_execution
+    )
+    evidence = verifier.capture_live_evidence(
+        repository, candidate, evidence_path, authorize_setup=True
+    )
+    assert calls == [(repository, candidate)]
+    assert evidence_path.read_bytes() == canonicalize_json(evidence.record)
+    assert "candidate_root" not in cast(
+        JsonRecord, evidence.record["preflight_observations"]
+    )
+    assert evidence.verify() == evidence.record
+
+
+def test_caller_authored_all_success_json_cannot_be_promoted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A complete raw execution assertion is not retained canonical evidence."""
+    verifier, _, candidate, _ = _capture_verifier(tmp_path, monkeypatch)
+    report_path = verifier.profile.evidence_root / "caller-authored-report.json"
+    report_path.write_bytes(canonicalize_json(_execution_result(verifier.profile)))
+    with pytest.raises(HostBoundaryEvidenceError, match="governed validation"):
+        verifier.load(report_path)
+    with pytest.raises(TypeError):
+        cast(Any, verifier).capture_live_evidence(
+            report_path=report_path,
+            evidence_path=verifier.profile.evidence_root / "forged-evidence.json",
+            candidate_root=candidate,
+            authorize_setup=True,
+        )
+    assert not (verifier.profile.evidence_root / "forged-evidence.json").exists()
+
+
+def test_capture_requires_windows_admin_explicit_setup_and_exclusive_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Platform, elevation, explicit mutation authority and append-only output bind."""
+    verifier, repository, candidate, evidence_path = _capture_verifier(
+        tmp_path, monkeypatch
+    )
+    monkeypatch.setattr(windows_host, "_is_elevated_administrator", lambda: False)
+    with pytest.raises(HostIdentityError, match="elevated"):
+        verifier.capture_live_evidence(
+            repository, candidate, evidence_path, authorize_setup=True
+        )
+    monkeypatch.setattr(windows_host, "_is_elevated_administrator", lambda: True)
+    with pytest.raises(HostBoundaryEvidenceError, match="explicit"):
+        verifier.capture_live_evidence(
+            repository, candidate, evidence_path, authorize_setup=False
+        )
+
+    evidence_path.write_text("retained", encoding="utf-8")
+    with pytest.raises(HostBoundaryEvidenceError, match="already exists"):
+        verifier.capture_live_evidence(
+            repository, candidate, evidence_path, authorize_setup=True
+        )
+
+
 @pytest.mark.parametrize(
-    ("mutation", "expected"),
+    ("path", "value", "expected"),
     [
+        (("preflight_observations", "preflight_passed"), False, "validation"),
         (
-            lambda report: report.__setitem__("live_verification_passed", False),
+            ("preflight_observations", "candidate_root"),
+            "different-root",
+            "different candidate root",
+        ),
+        (
+            ("preflight_observations", "encryption", "protection_status"),
+            "OFF",
             "validation",
         ),
         (
-            lambda report: report.__setitem__("sync_overlap_detected", True),
+            ("preflight_observations", "encryption", "volume_status"),
+            "UNKNOWN",
             "validation",
         ),
+        (("preflight_observations", "sync_overlap_detected"), True, "validation"),
+        (("research_denial_checks", "file_read_denied"), False, "validation"),
+        (("custodian_access_checks", "vault_list_succeeded"), False, "validation"),
         (
-            lambda report: cast(JsonRecord, report["encryption"]).__setitem__(
-                "protection_status", "OFF"
-            ),
+            ("released_artifact_checks", "research_modify_denied"),
+            False,
             "validation",
         ),
-        (lambda report: report.__setitem__("unknown", True), "shape"),
+        (("audit_checks", "sacl_verified"), False, "validation"),
+        (("indexing_excluded",), False, "validation"),
         (
-            lambda report: report.__setitem__(
-                "limitations",
-                [
-                    "Administrators and SYSTEM remain outside the Stage 1 threat model.",
-                    "Authorization: Bearer synthetic-hidden-value",
-                ],
-            ),
+            ("limitations",),
+            [
+                "Administrators and SYSTEM remain outside the Stage 1 threat model.",
+                "Authorization: Bearer synthetic-hidden-value",
+            ],
             "credential",
         ),
     ],
 )
-def test_incomplete_or_secret_bearing_live_reports_are_rejected(
+def test_failed_or_substituted_execution_cannot_yield_host_authority(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    mutation: Any,
+    path: tuple[str, ...],
+    value: JsonValue,
     expected: str,
 ) -> None:
-    """A report cannot claim HOST_ENFORCED after any material check fails."""
-    release = _build_harness(tmp_path)
-    evidence_root = (tmp_path / "host-evidence").resolve()
-    evidence_root.mkdir()
-    vault_root = (tmp_path / "vault").resolve()
-    vault_root.mkdir()
-    profile = WindowsHostBoundaryProfile(
-        vault_root, release.lifecycle.object_store.root, evidence_root
+    """Preflight and every effective probe remain in one fail-closed chain."""
+    verifier, repository, candidate, evidence_path = _capture_verifier(
+        tmp_path, monkeypatch
     )
-    report = _live_report(profile)
-    mutation(report)
-    report_path = evidence_root / "report.json"
-    report_path.write_text(json.dumps(report), encoding="utf-8")
-    verifier = WindowsHostBoundaryVerifier(profile, SCHEMA_DIRECTORY)
-    monkeypatch.setattr(windows_host, "_is_windows_host", lambda: True)
-    monkeypatch.setattr(windows_host, "_is_elevated_administrator", lambda: True)
+    result = _execution_result(verifier.profile, candidate)
+    target: JsonRecord = result
+    for component in path[:-1]:
+        target = cast(JsonRecord, target[component])
+    if value == "different-root":
+        value = str((tmp_path / "different-root").resolve())
+    target[path[-1]] = value
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_run_governed_setup",
+        lambda self, observed_repository, observed_candidate: deepcopy(result),
+    )
     with pytest.raises(HostBoundaryEvidenceError, match=expected) as captured:
-        verifier.finalize_live_report(report_path, evidence_root / "evidence.json")
+        verifier.capture_live_evidence(
+            repository, candidate, evidence_path, authorize_setup=True
+        )
     assert "synthetic-hidden-value" not in str(captured.value)
+    assert not evidence_path.exists()
 
 
-def test_live_report_requires_admin_exact_paths_and_exclusive_output(
+def test_governed_runner_invokes_only_bundled_setup_and_parses_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Finalization cannot bypass elevation, path binding, or append-only creation."""
-    harness = _build_host_harness(tmp_path, monkeypatch)
-    report_path = harness.profile.evidence_root / "second-report.json"
-    report = _live_report(harness.profile)
-    report_path.write_text(json.dumps(report), encoding="utf-8")
-    with pytest.raises(HostBoundaryEvidenceError, match="already exists"):
-        harness.verifier.finalize_live_report(report_path, harness.evidence_path)
+    """The private producer has no report-path input and captures direct stdout."""
+    verifier, repository, candidate, _ = _capture_verifier(tmp_path, monkeypatch)
+    script = repository / "scripts" / "windows" / "item10b_setup.ps1"
+    script.parent.mkdir(parents=True)
+    script.write_text("# synthetic inert test file", encoding="utf-8")
+    expected = _execution_result(verifier.profile, candidate)
+    observed: dict[str, Any] = {}
+    monkeypatch.setattr(
+        cast(Any, windows_host).shutil, "which", lambda executable: "pwsh.exe"
+    )
 
-    report["vault_path"] = str((tmp_path / "wrong-vault").resolve())
-    report_path.write_text(json.dumps(report), encoding="utf-8")
-    with pytest.raises(HostBoundaryEvidenceError, match="configured profile"):
-        harness.verifier.finalize_live_report(
-            report_path, harness.profile.evidence_root / "unused.json"
-        )
+    def run(*args: Any, **kwargs: Any) -> SimpleNamespace:
+        observed["command"] = args[0]
+        observed["kwargs"] = kwargs
+        return SimpleNamespace(returncode=0, stdout=canonicalize_json(expected))
 
-    monkeypatch.setattr(windows_host, "_is_elevated_administrator", lambda: False)
-    with pytest.raises(HostIdentityError, match="elevated"):
-        harness.verifier.finalize_live_report(
-            report_path, harness.profile.evidence_root / "unused.json"
-        )
+    monkeypatch.setattr(subprocess, "run", run)
+    assert verifier._run_governed_setup(repository, candidate) == expected
+    command = observed["command"]
+    assert command[command.index("-File") + 1] == str(script)
+    assert "-Apply" in command
+    assert "-Confirm:$false" in command
+    assert all("password" not in argument.casefold() for argument in command)
+    assert observed["kwargs"]["capture_output"] is True
+
+
+def test_governed_runner_rejects_failure_and_returns_no_error_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed preflight/setup process cannot produce evidence or echo secrets."""
+    verifier, repository, candidate, _ = _capture_verifier(tmp_path, monkeypatch)
+    script = repository / "scripts" / "windows" / "item10b_setup.ps1"
+    script.parent.mkdir(parents=True)
+    script.write_text("# synthetic inert test file", encoding="utf-8")
+    monkeypatch.setattr(
+        cast(Any, windows_host).shutil, "which", lambda executable: "pwsh.exe"
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=2,
+            stdout=b'{"untrusted":true}',
+            stderr=b"Authorization: Bearer synthetic-hidden-value",
+        ),
+    )
+    with pytest.raises(HostBoundaryEvidenceError, match="failed") as captured:
+        verifier._run_governed_setup(repository, candidate)
+    assert "synthetic-hidden-value" not in str(captured.value)
 
 
 def test_host_release_binds_typed_evidence_and_exact_artifact(
@@ -652,27 +861,6 @@ def test_evidence_loader_rejects_missing_invalid_and_noncanonical_files(
     )
     with pytest.raises(HostBoundaryEvidenceError, match="not canonical"):
         harness.verifier.load(noncanonical)
-
-    report_directory = root / "report-directory.json"
-    report_directory.mkdir()
-    with pytest.raises(HostBoundaryEvidenceError, match="regular file"):
-        harness.verifier.finalize_live_report(
-            report_directory, root / "unused-evidence.json"
-        )
-    invalid_report = root / "invalid-report.json"
-    invalid_report.write_text("{", encoding="utf-8")
-    with pytest.raises(HostBoundaryEvidenceError, match="strict JSON"):
-        harness.verifier.finalize_live_report(
-            invalid_report, root / "unused-evidence.json"
-        )
-    report = _live_report(harness.profile)
-    report["research_identity"] = "other"
-    identity_report = root / "identity-report.json"
-    identity_report.write_text(json.dumps(report), encoding="utf-8")
-    with pytest.raises(HostBoundaryEvidenceError, match="identities"):
-        harness.verifier.finalize_live_report(
-            identity_report, root / "unused-evidence.json"
-        )
 
 
 def test_verified_host_release_rejects_retained_event_substitutions(

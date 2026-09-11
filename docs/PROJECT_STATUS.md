@@ -37,7 +37,11 @@ TOOLING / HOST EVIDENCE BLOCKED` on
 `feature/stage1b-item10b-host-boundary`. The 2026-09-11 read-only Windows
 preflight confirmed two local fixed NTFS volumes but ran without elevation and
 could not read BitLocker, audit-policy, or backup evidence. It therefore did
-not prove an already encrypted eligible volume. No host mutation was permitted.
+not prove an already encrypted eligible volume. Independent review failed head
+`238a1538888a34635b7f274b451fbd57c980cb0e` because its public report finalizer
+could promote caller assertions. DEC-0036 removes that path and binds authority
+creation to one executed preflight/setup/verification flow. The correction is
+pending independent review. No host mutation or live evidence was produced.
 
 ## PLANNED DECOMPOSITION
 
@@ -48,7 +52,9 @@ Item 10 is planned as:
 
 Item 10A implements only software and synthetic evidence. Item 10B now provides
 the typed host-evidence, conditional release-event, host-release-service, and
-inert-by-default Windows script tooling. The live boundary remains blocked
+inert-by-default Windows script tooling. Raw mappings and report files have no
+supported authority-creation path; retained canonical evidence remains
+loadable for audit. The live boundary remains blocked
 until an elevated rerun proves a fully protected fixed NTFS volume and every
 DACL, SACL/audit, effective-identity, indexing, sync, backup, and controlled
 release condition. Full Item 10 is not complete.
@@ -121,9 +127,10 @@ A future agent must:
 6. Reconcile this current-state summary against actual repository and review
    evidence.
 7. Stop and reconcile rather than guess if the evidence conflicts.
-8. Resume Item 10B from the retained read-only blocker: use a separate elevated
-   Windows session to rerun `scripts/windows/item10b_preflight.ps1` against an
-   owner-selected, already encrypted fixed NTFS volume. Do not change BitLocker.
+8. Independently review the DEC-0036 corrective authority path. Then resume Item
+   10B from the retained read-only blocker in a separately authorized elevated
+   Windows session, using the governed capture workflow against an owner-selected,
+   already encrypted fixed NTFS volume. Do not change BitLocker.
 9. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE

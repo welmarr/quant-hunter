@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import shutil
 import subprocess
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
@@ -50,13 +51,11 @@ RESEARCH_ROLE: Final = "qh-research"
 REPARSE_POINT_ATTRIBUTE: Final = 0x400
 _EVIDENCE_TOKEN: Final = object()
 _RELEASE_TOKEN: Final = object()
-_RAW_REPORT_FIELDS: Final = {
+_EXECUTION_RESULT_FIELDS: Final = {
     "schema_version",
     "verified_at",
     "platform",
-    "filesystem",
-    "fixed_local_volume",
-    "encryption",
+    "preflight_observations",
     "vault_path",
     "release_path",
     "evidence_path",
@@ -69,13 +68,26 @@ _RAW_REPORT_FIELDS: Final = {
     "custodian_access_checks",
     "released_artifact_checks",
     "indexing_excluded",
-    "sync_overlap_detected",
-    "backup_status",
     "synthetic_fixture_only",
     "identity_authentication_material_persisted",
     "identities_disabled_after_verification",
     "live_verification_passed",
     "limitations",
+}
+_PREFLIGHT_OBSERVATION_FIELDS: Final = {
+    "preflight_passed",
+    "candidate_root",
+    "filesystem",
+    "fixed_local_volume",
+    "encryption",
+    "repository_worktree_excluded",
+    "profile_cache_temp_excluded",
+    "sync_overlap_detected",
+    "governed_identities_absent",
+    "candidate_path_absent",
+    "original_file_system_audit_policy",
+    "backup_observation",
+    "backup_status",
 }
 
 
@@ -128,6 +140,11 @@ class _FrozenAuthority(Protocol):
 
 def _is_windows_host() -> bool:
     return os.name == "nt"
+
+
+def _governed_repository_root() -> Path:
+    """Return the source checkout that supplied this authority implementation."""
+    return Path(__file__).resolve().parents[3]
 
 
 def _require_windows_host() -> None:
@@ -329,7 +346,7 @@ class VerifiedWindowsHostBoundaryEvidence:
 
 
 class WindowsHostBoundaryVerifier:
-    """Finalize and load sanitized evidence emitted by the live Windows harness."""
+    """Capture governed live evidence or load retained canonical evidence."""
 
     def __init__(
         self,
@@ -339,49 +356,107 @@ class WindowsHostBoundaryVerifier:
         self.profile = profile
         self._schemas = VersionedSchemaCatalog(schema_directory)
 
-    def finalize_live_report(
-        self, report_path: Path, evidence_path: Path
+    def capture_live_evidence(
+        self,
+        repository_root: Path,
+        candidate_root: Path,
+        evidence_path: Path,
+        *,
+        authorize_setup: bool,
     ) -> VerifiedWindowsHostBoundaryEvidence:
-        """Validate one live report and exclusively publish canonical evidence."""
+        """Execute the governed host workflow and publish its immediate result."""
         _require_windows_host()
         if not _is_elevated_administrator():
             raise HostIdentityError(
-                "Finalizing live host evidence requires an elevated administrator"
+                "Capturing live host evidence requires an elevated administrator"
             )
-        report_file = _require_within(
-            report_path, self.profile.evidence_root, "live report path"
+        if not authorize_setup:
+            raise HostBoundaryEvidenceError(
+                "Live host setup requires explicit caller authorization"
+            )
+        repository = _resolved_non_root(repository_root, "repository root")
+        if not repository.is_dir():
+            raise HostBoundaryEvidenceError("Repository root is not a directory")
+        governed_repository = _resolved_non_root(
+            _governed_repository_root(), "governed repository root"
         )
+        if repository != governed_repository:
+            raise HostBoundaryEvidenceError(
+                "Repository root does not match the running governed implementation"
+            )
+        candidate = _resolved_non_root(candidate_root, "candidate root")
+        self._require_candidate_profile(candidate)
         output_file = _require_within(
             evidence_path, self.profile.evidence_root, "canonical evidence path"
         )
-        if _is_link_like(report_file) or not report_file.is_file():
-            raise HostBoundaryEvidenceError("Live host report is not a regular file")
         if os.path.lexists(output_file):
             raise HostBoundaryEvidenceError(
                 "Canonical host evidence is append-only and already exists"
             )
-        try:
-            parsed = parse_json_document(report_file.read_bytes())
-        except (OSError, CanonicalJsonError) as error:
-            raise HostBoundaryEvidenceError(
-                "Live host report is not strict JSON"
-            ) from error
-        if not isinstance(parsed, dict) or set(parsed) != _RAW_REPORT_FIELDS:
-            raise HostBoundaryEvidenceError("Live host report shape is not governed")
-        report = parsed
-        try:
-            reject_secret_text_values(report, "live Windows host report")
-        except SensitiveMetadataError as error:
-            raise HostBoundaryEvidenceError(
-                "Live host report contains forbidden labelled credential material"
-            ) from error
-        self._require_report_paths(report)
-        record = self._sanitized_record(report)
+        result = self._run_governed_setup(repository, candidate)
+        self._require_execution_binding(result, candidate)
+        record = self._sanitized_record(result, candidate)
         record["host_boundary_evidence_digest"] = host_boundary_evidence_digest(record)
         self._validate_record(record)
-        content = canonicalize_json(record)
-        self._exclusive_publish(output_file, content)
+        self._exclusive_publish(output_file, canonicalize_json(record))
         return self.load(evidence_path)
+
+    def _run_governed_setup(
+        self, repository_root: Path, candidate_root: Path
+    ) -> JsonRecord:
+        """Run the sole live producer without accepting a substitutable report."""
+        setup_script = _require_within(
+            repository_root / "scripts" / "windows" / "item10b_setup.ps1",
+            repository_root,
+            "governed setup script",
+        )
+        if _is_link_like(setup_script) or not setup_script.is_file():
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B setup script is unavailable"
+            )
+        powershell = shutil.which("pwsh.exe") or shutil.which("pwsh")
+        if powershell is None:
+            raise HostBoundaryEvidenceError("PowerShell 7 is unavailable")
+        try:
+            completed = subprocess.run(  # noqa: S603 - governed local script
+                [
+                    powershell,
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-File",
+                    str(setup_script),
+                    "-RepositoryRoot",
+                    str(repository_root),
+                    "-CandidateRoot",
+                    str(candidate_root),
+                    "-Apply",
+                    "-Confirm:$false",
+                ],
+                cwd=repository_root,
+                check=False,
+                capture_output=True,
+                timeout=900,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B execution could not complete"
+            ) from error
+        if completed.returncode != 0:
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B execution failed without creating authority"
+            )
+        try:
+            parsed = parse_json_document(completed.stdout)
+        except CanonicalJsonError as error:
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B execution did not return strict JSON"
+            ) from error
+        if not isinstance(parsed, dict):
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B execution result is not a JSON object"
+            )
+        return parsed
 
     def load(self, evidence_path: Path) -> VerifiedWindowsHostBoundaryEvidence:
         """Load protected canonical evidence into the typed authority boundary."""
@@ -438,36 +513,77 @@ class WindowsHostBoundaryVerifier:
                 "Host-boundary evidence failed governed validation"
             ) from error
 
-    def _require_report_paths(self, report: Mapping[str, JsonValue]) -> None:
+    def _require_candidate_profile(self, candidate_root: Path) -> None:
+        expected = {
+            self.profile.vault_root: candidate_root / "vault",
+            self.profile.release_root: candidate_root / "releases",
+            self.profile.evidence_root: candidate_root / "host-evidence",
+        }
+        if any(actual != expected_path for actual, expected_path in expected.items()):
+            raise HostBoundaryEvidenceError(
+                "Candidate root does not match the configured host profile"
+            )
+
+    def _require_execution_binding(
+        self, result: Mapping[str, JsonValue], candidate_root: Path
+    ) -> None:
+        if set(result) != _EXECUTION_RESULT_FIELDS:
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B execution result shape is invalid"
+            )
+        try:
+            reject_secret_text_values(result, "governed Windows host execution")
+        except SensitiveMetadataError as error:
+            raise HostBoundaryEvidenceError(
+                "Governed host execution contains forbidden credential material"
+            ) from error
+        self._require_result_paths(result)
+        preflight = result.get("preflight_observations")
+        if not isinstance(preflight, dict) or set(preflight) != (
+            _PREFLIGHT_OBSERVATION_FIELDS
+        ):
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B preflight observations are invalid"
+            )
+        supplied_root = preflight.get("candidate_root")
+        if (
+            not isinstance(supplied_root, str)
+            or _resolved_non_root(Path(supplied_root), "observed candidate root")
+            != candidate_root
+        ):
+            raise HostBoundaryEvidenceError(
+                "Preflight observations belong to a different candidate root"
+            )
+
+    def _require_result_paths(self, result: Mapping[str, JsonValue]) -> None:
         expected = {
             "vault_path": self.profile.vault_root,
             "release_path": self.profile.release_root,
             "evidence_path": self.profile.evidence_root,
         }
         for field, expected_path in expected.items():
-            supplied = report.get(field)
+            supplied = result.get(field)
             if (
                 not isinstance(supplied, str)
                 or _resolved_non_root(Path(supplied), field) != expected_path
             ):
                 raise HostBoundaryEvidenceError(
-                    "Live host report path does not match the configured profile"
+                    "Governed execution path does not match the configured profile"
                 )
         if (
-            report.get("custodian_identity") != self.profile.custodian_role
-            or report.get("research_identity") != self.profile.research_role
+            result.get("custodian_identity") != self.profile.custodian_role
+            or result.get("research_identity") != self.profile.research_role
         ):
             raise HostBoundaryEvidenceError(
-                "Live host report identities do not match the governed roles"
+                "Governed execution identities do not match the governed roles"
             )
 
-    def _sanitized_record(self, report: Mapping[str, JsonValue]) -> JsonRecord:
+    def _sanitized_record(
+        self, result: Mapping[str, JsonValue], candidate_root: Path
+    ) -> JsonRecord:
         copied_fields = (
             "verified_at",
             "platform",
-            "filesystem",
-            "fixed_local_volume",
-            "encryption",
             "vault_dacl_checks",
             "release_dacl_checks",
             "audit_checks",
@@ -475,8 +591,6 @@ class WindowsHostBoundaryVerifier:
             "custodian_access_checks",
             "released_artifact_checks",
             "indexing_excluded",
-            "sync_overlap_detected",
-            "backup_status",
             "synthetic_fixture_only",
             "identity_authentication_material_persisted",
             "identities_disabled_after_verification",
@@ -487,13 +601,19 @@ class WindowsHostBoundaryVerifier:
             "schema_version": "1.0.0",
             "evidence_type": "WINDOWS_HOST_BOUNDARY",
             "evidence_mode": EnforcementMode.HOST_ENFORCED.value,
+            "preflight_observations": deepcopy(result["preflight_observations"]),
+            "candidate_root_fingerprint": _location_fingerprint(
+                candidate_root, "HOST_BOUNDARY_ROOT"
+            ),
             "vault_location_fingerprint": self.profile.vault_location_fingerprint,
             "release_location_fingerprint": self.profile.release_location_fingerprint,
             "custodian_role": self.profile.custodian_role,
             "research_role": self.profile.research_role,
         }
+        preflight = cast(JsonRecord, record["preflight_observations"])
+        preflight.pop("candidate_root")
         for field in copied_fields:
-            record[field] = deepcopy(report[field])
+            record[field] = deepcopy(result[field])
         return record
 
     @staticmethod

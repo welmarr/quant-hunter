@@ -390,9 +390,14 @@ detected. No host mutation followed: no identity, path, DACL, SACL, audit,
 indexing, filesystem, backup, or BitLocker setting changed, and no credential or
 real sealed data was created or accessed.
 
-DEC-0035 and the Item 10B tooling now make the missing evidence fail closed.
-Only an elevated live harness on an already protected fixed NTFS volume can
-produce the typed canonical evidence required by a `HOST_ENFORCED` release.
+Independent review failed head `238a1538888a34635b7f274b451fbd57c980cb0e`
+because its public report finalizer could promote caller-authored assertions;
+schema validity did not prove the stated host facts. DEC-0036 removes that
+authority path. Only one elevated governed execution on an already protected
+fixed NTFS volume can produce the typed canonical evidence required by a
+`HOST_ENFORCED` release. The exact successful preflight observations are bound
+to the same setup and effective verification result; no raw mapping, JSON
+document, or arbitrary report file is accepted for authority creation.
 Synthetic tests validate the schema, digest, profile binding, service authority,
 Item 8 binding, artifact binding, ledger history, one-way exposure, and script
 safety. These controls materially define the intended mitigation but do not

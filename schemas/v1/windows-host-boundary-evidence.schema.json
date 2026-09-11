@@ -10,9 +10,8 @@
     "evidence_mode",
     "platform",
     "verified_at",
-    "filesystem",
-    "fixed_local_volume",
-    "encryption",
+    "preflight_observations",
+    "candidate_root_fingerprint",
     "vault_location_fingerprint",
     "release_location_fingerprint",
     "custodian_role",
@@ -24,8 +23,6 @@
     "custodian_access_checks",
     "released_artifact_checks",
     "indexing_excluded",
-    "sync_overlap_detected",
-    "backup_status",
     "synthetic_fixture_only",
     "identity_authentication_material_persisted",
     "identities_disabled_after_verification",
@@ -39,17 +36,9 @@
     "evidence_mode": {"const": "HOST_ENFORCED"},
     "platform": {"const": "WINDOWS"},
     "verified_at": {"$ref": "common.schema.json#/$defs/timestamp"},
-    "filesystem": {"const": "NTFS"},
-    "fixed_local_volume": {"const": true},
-    "encryption": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["technology", "protection_status", "volume_status"],
-      "properties": {
-        "technology": {"const": "BITLOCKER"},
-        "protection_status": {"const": "ON"},
-        "volume_status": {"const": "FULLY_ENCRYPTED"}
-      }
+    "preflight_observations": {"$ref": "#/$defs/preflight_observations"},
+    "candidate_root_fingerprint": {
+      "$ref": "common.schema.json#/$defs/digest"
     },
     "vault_location_fingerprint": {
       "$ref": "common.schema.json#/$defs/digest"
@@ -68,13 +57,9 @@
       "$ref": "#/$defs/released_artifact_checks"
     },
     "indexing_excluded": {"const": true},
-    "sync_overlap_detected": {"const": false},
-    "backup_status": {
-      "enum": ["EQUIVALENT_PROTECTION_VERIFIED", "RESIDUAL_RISK_RETAINED"]
-    },
     "synthetic_fixture_only": {"const": true},
     "identity_authentication_material_persisted": {"const": false},
-    "identities_disabled_after_verification": {"type": "boolean"},
+    "identities_disabled_after_verification": {"const": true},
     "live_verification_passed": {"const": true},
     "limitations": {
       "type": "array",
@@ -90,6 +75,62 @@
     }
   },
   "$defs": {
+    "preflight_observations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "preflight_passed",
+        "filesystem",
+        "fixed_local_volume",
+        "encryption",
+        "repository_worktree_excluded",
+        "profile_cache_temp_excluded",
+        "sync_overlap_detected",
+        "governed_identities_absent",
+        "candidate_path_absent",
+        "original_file_system_audit_policy",
+        "backup_observation",
+        "backup_status"
+      ],
+      "properties": {
+        "preflight_passed": {"const": true},
+        "filesystem": {"const": "NTFS"},
+        "fixed_local_volume": {"const": true},
+        "encryption": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["technology", "protection_status", "volume_status"],
+          "properties": {
+            "technology": {"const": "BITLOCKER"},
+            "protection_status": {"const": "On"},
+            "volume_status": {"const": "FullyEncrypted"}
+          }
+        },
+        "repository_worktree_excluded": {"const": true},
+        "profile_cache_temp_excluded": {"const": true},
+        "sync_overlap_detected": {"const": false},
+        "governed_identities_absent": {"const": true},
+        "candidate_path_absent": {"const": true},
+        "original_file_system_audit_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["success_enabled", "failure_enabled"],
+          "properties": {
+            "success_enabled": {"type": "boolean"},
+            "failure_enabled": {"type": "boolean"}
+          }
+        },
+        "backup_observation": {
+          "enum": [
+            "CONFIGURATION_READABLE_REVIEW_REQUIRED",
+            "CONFIGURATION_UNREADABLE"
+          ]
+        },
+        "backup_status": {
+          "enum": ["EQUIVALENT_PROTECTION_VERIFIED", "RESIDUAL_RISK_RETAINED"]
+        }
+      }
+    },
     "vault_dacl_checks": {
       "type": "object",
       "additionalProperties": false,

@@ -10,6 +10,8 @@ param(
     [Security.SecureString]$CustodianPassword,
     [Parameter(Mandatory = $true)]
     [Security.SecureString]$ResearchPassword,
+    [Parameter(Mandatory = $true)]
+    [psobject]$PreflightResult,
     [switch]$AsObject
 )
 
@@ -23,6 +25,11 @@ $researchResult = Join-Path $EvidencePath 'research-probe.json'
 $emptyError = Join-Path $EvidencePath 'probe-error.txt'
 $shell = Join-Path $PSHOME 'pwsh.exe'
 $startedAt = Get-Date
+$candidateRoot = [IO.Path]::GetFullPath((Split-Path -Parent $VaultPath)).TrimEnd([IO.Path]::DirectorySeparatorChar)
+if (-not [bool]$PreflightResult.Pass -or
+    [IO.Path]::GetFullPath([string]$PreflightResult.CandidateRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) -ne $candidateRoot) {
+    throw 'Verification requires the exact successful preflight from this setup execution.'
+}
 
 function Invoke-IdentityProbe {
     param(
@@ -76,12 +83,27 @@ $result = [ordered]@{
     schema_version = '1.0.0'
     verified_at = (Get-Date).ToUniversalTime().ToString('o').Replace('+00:00', 'Z')
     platform = 'WINDOWS'
-    filesystem = 'NTFS'
-    fixed_local_volume = $true
-    encryption = [ordered]@{
-        technology = 'BITLOCKER'
-        protection_status = 'ON'
-        volume_status = 'FULLY_ENCRYPTED'
+    preflight_observations = [ordered]@{
+        preflight_passed = [bool]$PreflightResult.Pass
+        candidate_root = [string]$PreflightResult.CandidateRoot
+        filesystem = [string]$PreflightResult.CandidateFilesystem
+        fixed_local_volume = [bool]$PreflightResult.FixedLocalVolume
+        encryption = [ordered]@{
+            technology = 'BITLOCKER'
+            protection_status = [string]$PreflightResult.BitLockerProtectionStatus
+            volume_status = [string]$PreflightResult.BitLockerVolumeStatus
+        }
+        repository_worktree_excluded = [bool]$PreflightResult.RepositoryWorktreeExcluded
+        profile_cache_temp_excluded = [bool]$PreflightResult.ProfileCacheTempExcluded
+        sync_overlap_detected = [bool]$PreflightResult.SyncOverlapDetected
+        governed_identities_absent = [bool]$PreflightResult.GovernedIdentitiesAbsent
+        candidate_path_absent = [bool]$PreflightResult.CandidatePathAbsent
+        original_file_system_audit_policy = [ordered]@{
+            success_enabled = [bool]$PreflightResult.AuditFileSystem.Success
+            failure_enabled = [bool]$PreflightResult.AuditFileSystem.Failure
+        }
+        backup_observation = [string]$PreflightResult.BackupObservation
+        backup_status = [string]$PreflightResult.BackupStatus
     }
     vault_path = [IO.Path]::GetFullPath($VaultPath)
     release_path = [IO.Path]::GetFullPath($ReleasePath)
@@ -130,8 +152,6 @@ $result = [ordered]@{
         research_owner_change_denied = [bool]$research.research_owner_change_denied
     }
     indexing_excluded = ((Get-Item -LiteralPath $VaultPath -Force).Attributes -band [IO.FileAttributes]::NotContentIndexed) -ne 0
-    sync_overlap_detected = $false
-    backup_status = 'RESIDUAL_RISK_RETAINED'
     synthetic_fixture_only = $true
     identity_authentication_material_persisted = $false
     identities_disabled_after_verification = $false
@@ -144,6 +164,16 @@ $result = [ordered]@{
 }
 
 $required = @(
+    $result.preflight_observations.preflight_passed,
+    $result.preflight_observations.filesystem -eq 'NTFS',
+    $result.preflight_observations.fixed_local_volume,
+    $result.preflight_observations.encryption.protection_status -eq 'On',
+    $result.preflight_observations.encryption.volume_status -eq 'FullyEncrypted',
+    $result.preflight_observations.repository_worktree_excluded,
+    $result.preflight_observations.profile_cache_temp_excluded,
+    (-not $result.preflight_observations.sync_overlap_detected),
+    $result.preflight_observations.governed_identities_absent,
+    $result.preflight_observations.candidate_path_absent,
     $result.vault_dacl_checks.Values,
     $result.release_dacl_checks.Values,
     $result.audit_checks.Values,
@@ -157,7 +187,6 @@ $required = @(
     $result.custodian_access_checks.Values,
     $result.released_artifact_checks.Values,
     $result.indexing_excluded,
-    (-not $result.sync_overlap_detected),
     $result.synthetic_fixture_only,
     (-not $result.identity_authentication_material_persisted)
 ) | ForEach-Object { $_ }

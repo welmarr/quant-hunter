@@ -591,13 +591,28 @@
     "evidence_mode": "HOST_ENFORCED",
     "platform": "WINDOWS",
     "verified_at": "2026-09-11T06:00:00Z",
-    "filesystem": "NTFS",
-    "fixed_local_volume": true,
-    "encryption": {
-      "technology": "BITLOCKER",
-      "protection_status": "ON",
-      "volume_status": "FULLY_ENCRYPTED"
+    "preflight_observations": {
+      "preflight_passed": true,
+      "filesystem": "NTFS",
+      "fixed_local_volume": true,
+      "encryption": {
+        "technology": "BITLOCKER",
+        "protection_status": "On",
+        "volume_status": "FullyEncrypted"
+      },
+      "repository_worktree_excluded": true,
+      "profile_cache_temp_excluded": true,
+      "sync_overlap_detected": false,
+      "governed_identities_absent": true,
+      "candidate_path_absent": true,
+      "original_file_system_audit_policy": {
+        "success_enabled": false,
+        "failure_enabled": false
+      },
+      "backup_observation": "CONFIGURATION_UNREADABLE",
+      "backup_status": "RESIDUAL_RISK_RETAINED"
     },
+    "candidate_root_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
     "vault_location_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
     "release_location_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
     "custodian_role": "qh-oos-custodian",
@@ -644,8 +659,6 @@
       "research_owner_change_denied": true
     },
     "indexing_excluded": true,
-    "sync_overlap_detected": false,
-    "backup_status": "RESIDUAL_RISK_RETAINED",
     "synthetic_fixture_only": true,
     "identity_authentication_material_persisted": false,
     "identities_disabled_after_verification": true,

@@ -280,13 +280,18 @@ def test_host_release_schema_requires_exact_host_evidence_digest() -> None:
 @pytest.mark.parametrize(
     ("path", "value", "validator"),
     [
-        (("encryption", "protection_status"), "OFF", "const"),
+        (("preflight_observations", "preflight_passed"), False, "const"),
+        (
+            ("preflight_observations", "encryption", "protection_status"),
+            "OFF",
+            "const",
+        ),
         (("vault_dacl_checks", "inheritance_disabled"), False, "const"),
         (("audit_checks", "research_denial_observed"), False, "const"),
         (("research_denial_checks", "file_read_denied"), False, "const"),
         (("released_artifact_checks", "research_modify_denied"), False, "const"),
         (("indexing_excluded",), False, "const"),
-        (("sync_overlap_detected",), True, "const"),
+        (("preflight_observations", "sync_overlap_detected"), True, "const"),
         (("synthetic_fixture_only",), False, "const"),
         (("live_verification_passed",), False, "const"),
     ],

@@ -114,25 +114,51 @@ try {
     $blockers.Add('Fixed-volume or BitLocker protection could not be proven.')
 }
 
-$forbiddenRoots = [Collections.Generic.List[string]]::new()
-foreach ($rootPath in $worktrees) { $forbiddenRoots.Add($rootPath) }
+$repositoryWorktreeExcluded = $true
+foreach ($boundary in $worktrees | Select-Object -Unique) {
+    if ((Test-PathWithin $candidate $boundary) -or (Test-PathWithin $boundary $candidate)) {
+        $repositoryWorktreeExcluded = $false
+        $blockers.Add('CandidateRoot overlaps a repository or Git worktree boundary.')
+        break
+    }
+}
+
+$profileCacheRoots = [Collections.Generic.List[string]]::new()
 foreach ($pathValue in @(
     $env:USERPROFILE,
     $env:TEMP,
     $env:TMP,
     $env:LOCALAPPDATA,
-    $env:APPDATA,
+    $env:APPDATA
+)) {
+    if (-not [string]::IsNullOrWhiteSpace($pathValue)) {
+        $profileCacheRoots.Add((Resolve-DirectPath $pathValue 'Profile/cache/temp root'))
+    }
+}
+$profileCacheTempExcluded = $true
+foreach ($boundary in $profileCacheRoots | Select-Object -Unique) {
+    if ((Test-PathWithin $candidate $boundary) -or (Test-PathWithin $boundary $candidate)) {
+        $profileCacheTempExcluded = $false
+        $blockers.Add('CandidateRoot overlaps a profile, cache, or temp boundary.')
+        break
+    }
+}
+
+$syncRoots = [Collections.Generic.List[string]]::new()
+foreach ($pathValue in @(
     $env:OneDrive,
     $env:OneDriveConsumer,
     $env:OneDriveCommercial
 )) {
     if (-not [string]::IsNullOrWhiteSpace($pathValue)) {
-        $forbiddenRoots.Add((Resolve-DirectPath $pathValue 'Forbidden root'))
+        $syncRoots.Add((Resolve-DirectPath $pathValue 'Consumer sync root'))
     }
 }
-foreach ($boundary in $forbiddenRoots | Select-Object -Unique) {
+$syncOverlapDetected = $false
+foreach ($boundary in $syncRoots | Select-Object -Unique) {
     if ((Test-PathWithin $candidate $boundary) -or (Test-PathWithin $boundary $candidate)) {
-        $blockers.Add('CandidateRoot overlaps a repository, profile, cache, temp, or sync boundary.')
+        $syncOverlapDetected = $true
+        $blockers.Add('CandidateRoot overlaps a detected consumer-sync boundary.')
         break
     }
 }
@@ -142,7 +168,9 @@ $research = Get-LocalUser -Name 'qh-research' -ErrorAction SilentlyContinue
 if ($null -ne $custodian -or $null -ne $research) {
     $blockers.Add('A governed qh-* identity already exists and requires owner review.')
 }
-if (Test-Path -LiteralPath $candidate) {
+$governedIdentitiesAbsent = $null -eq $custodian -and $null -eq $research
+$candidatePathAbsent = -not (Test-Path -LiteralPath $candidate)
+if (-not $candidatePathAbsent) {
     $blockers.Add('CandidateRoot already exists and requires owner review.')
 }
 
@@ -159,9 +187,11 @@ if ($null -ne $search) {
 }
 
 $backupStatus = 'RESIDUAL_RISK_RETAINED'
+$backupObservation = 'CONFIGURATION_UNREADABLE'
 try {
     $null = & "$env:SystemRoot\System32\wbadmin.exe" get status 2>$null
     if ($LASTEXITCODE -eq 0) {
+        $backupObservation = 'CONFIGURATION_READABLE_REVIEW_REQUIRED'
         $observations.Add('Windows backup configuration was readable; equivalent protection still requires review.')
     } else {
         $observations.Add('Windows backup configuration was not readable; residual risk retained.')
@@ -181,10 +211,16 @@ $result = [pscustomobject]@{
     FixedLocalVolume = $null -ne $candidateVolume
     BitLockerProtectionStatus = if ($null -eq $bitLocker) { $null } else { [string]$bitLocker.ProtectionStatus }
     BitLockerVolumeStatus = if ($null -eq $bitLocker) { $null } else { [string]$bitLocker.VolumeStatus }
+    RepositoryWorktreeExcluded = $repositoryWorktreeExcluded
+    ProfileCacheTempExcluded = $profileCacheTempExcluded
+    SyncOverlapDetected = $syncOverlapDetected
+    GovernedIdentitiesAbsent = $governedIdentitiesAbsent
+    CandidatePathAbsent = $candidatePathAbsent
     CustodianExists = $null -ne $custodian
     ResearchExists = $null -ne $research
-    CandidateExists = Test-Path -LiteralPath $candidate
+    CandidateExists = -not $candidatePathAbsent
     AuditFileSystem = $audit
+    BackupObservation = $backupObservation
     BackupStatus = $backupStatus
     Blockers = @($blockers)
     Observations = @($observations)

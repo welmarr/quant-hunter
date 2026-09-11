@@ -785,18 +785,20 @@ pwsh.exe -NoLogo -NoProfile -File scripts\windows\item10b_preflight.ps1 -Reposit
 ```
 
 Only after that command returns `Pass: true` in an elevated owner-controlled
-session may the authorized setup be invoked:
+session may the single governed capture workflow be explicitly authorized. It
+reruns preflight, uses that exact in-memory result for setup and verification,
+consumes the resulting probes directly, and publishes canonical evidence:
 
 ```bat
-pwsh.exe -NoLogo -NoProfile -File scripts\windows\item10b_setup.ps1 -RepositoryRoot "%CD%" -CandidateRoot "%QH_OOS_ROOT%" -Apply -Confirm
+uv run --locked python scripts\windows\item10b_finalize.py --repository-root "%CD%" --candidate-root "%QH_OOS_ROOT%" --canonical-evidence "%QH_OOS_ROOT%\host-evidence\evidence-000001.json" --authorize-setup
 ```
 
-The resulting host-local live report remains outside Git. The elevated session
-finalizes it into canonical evidence with:
-
-```bat
-uv run --locked python scripts\windows\item10b_finalize.py --vault-root "%QH_OOS_ROOT%\vault" --release-root "%QH_OOS_ROOT%\releases" --evidence-root "%QH_OOS_ROOT%\host-evidence" --live-report "%QH_OOS_ROOT%\host-evidence\item10b-live-report.json" --canonical-evidence "%QH_OOS_ROOT%\host-evidence\evidence-000001.json"
-```
+There is no supported report-finalization step. A raw mapping, JSON document,
+or caller-selected report path cannot create typed host authority. The setup
+script passes the exact successful preflight object to verification; the
+published record separates those observed facts from the later effective
+identity, ACL, SACL/audit-event, release, and indexing checks. Authentication
+material remains inside the PowerShell process and never returns to Python.
 
 The tooling must then run the locked quality gate and receive independent review.
 Do not change BitLocker, use real OOS bytes, or advance to Item 11.
@@ -810,3 +812,23 @@ passed; archive inspection found 144 combined members, included
 `isolation/windows_host.py` in both artifacts, and excluded `.tools/` and
 `.venv/`. All PowerShell host files passed parser validation. These are
 software/tooling results only and do not change the blocked live-host status.
+
+Independent review of head `238a1538888a34635b7f274b451fbd57c980cb0e`
+failed Item 10B because the public raw-report finalizer could turn caller
+assertions into typed authority. DEC-0036 removes that method and the
+`--live-report` CLI route. The corrective capture path runs the governed
+workflow itself and publishes only its immediate, bound result. This correction
+creates no live host evidence and leaves Item 10B at `IMPLEMENTED TOOLING / HOST
+EVIDENCE BLOCKED` pending independent review and a separately authorized,
+successful elevated execution.
+
+Corrective local validation passed `uv lock --check`, Ruff format and lint,
+strict mypy over 48 source files, and all 757 pytest cases with 90.26% combined
+statement/branch coverage. The focused Item 10A/10B/schema/script suite passed
+218 cases; the host module's focused suite passed 35 cases with 91.74%
+statement/branch coverage. The offline build produced both distributions;
+package, PyArrow, Item 10A, and Item 10B imports passed; archive inspection
+found 144 combined members, retained `isolation/windows_host.py` in both
+artifacts, and excluded `.tools/` and `.venv/`. All five PowerShell host scripts
+passed parser validation. These are software results only and do not constitute
+live Windows host-boundary evidence.

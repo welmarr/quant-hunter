@@ -119,3 +119,40 @@ def test_setup_uses_allow_list_acls_auditing_and_disables_test_logons() -> None:
     assert "Disable-LocalUser -Name 'qh-research'" in setup
     assert "Get-WinEvent" in verify
     assert "research_denial_observed" in verify
+
+
+def test_cli_cannot_promote_an_arbitrary_json_report() -> None:
+    """The only CLI path delegates to the governed live capture operation."""
+    finalizer = (SCRIPT_DIRECTORY / "item10b_finalize.py").read_text(encoding="utf-8")
+    assert "--live-report" not in finalizer
+    assert "finalize_live_report" not in finalizer
+    assert "--authorize-setup" in finalizer
+    assert ".capture_live_evidence(" in finalizer
+
+
+def test_preflight_observations_flow_into_the_same_verification_result() -> None:
+    """Host facts are observed by preflight instead of asserted by verification."""
+    preflight = SCRIPTS["item10b_preflight.ps1"]
+    setup = SCRIPTS["item10b_setup.ps1"]
+    verify = SCRIPTS["item10b_verify.ps1"]
+    for observation in (
+        "RepositoryWorktreeExcluded",
+        "ProfileCacheTempExcluded",
+        "SyncOverlapDetected",
+        "GovernedIdentitiesAbsent",
+        "CandidatePathAbsent",
+        "AuditFileSystem",
+        "BackupObservation",
+        "BackupStatus",
+    ):
+        assert observation in preflight
+        assert observation in verify
+    assert "-PreflightResult $preflight" in setup
+    assert "preflight_observations" in verify
+    assert "filesystem = 'NTFS'" not in verify
+    assert "fixed_local_volume = $true" not in verify
+    assert "protection_status = 'ON'" not in verify
+    assert "volume_status = 'FULLY_ENCRYPTED'" not in verify
+    assert "sync_overlap_detected = $false" not in verify
+    assert "backup_status = 'RESIDUAL_RISK_RETAINED'" not in verify
+    assert "item10b-live-report.json" not in setup
