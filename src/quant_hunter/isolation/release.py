@@ -146,6 +146,21 @@ class _FrozenAuthority(Protocol):
         occurred_at: str,
     ) -> object: ...
 
+    def verify_historical_release_authority(
+        self,
+        *,
+        experiment_id: str,
+        frozen_revision_digest: str,
+        frozen_manifest_digest: str,
+        dataset_ids: Sequence[str],
+        sealed_partition: Mapping[str, JsonValue],
+        code_revision: str,
+        configuration_digest: str,
+        environment_digest: str,
+        occurred_at: str,
+        release_event_digest: str,
+    ) -> object: ...
+
 
 @dataclass(frozen=True, slots=True)
 class VerifiedReleaseEvidence:
@@ -254,12 +269,12 @@ class SealedReleaseService:
         return self.verify_release(event.digest)
 
     def verify_release(self, event_digest: str) -> VerifiedReleaseEvidence:
-        """Reverify retained release, artifact, and exact current FROZEN authority."""
+        """Reverify retained release, artifact, and exact historical FROZEN authority."""
         event = self.ledger.get_verified(event_digest)
         evidence = VerifiedReleaseEvidence(self.ledger, self.object_store, event)
         record = evidence.verify()
         binding = SealedBinding.from_record(record.get("sealed_binding"))
-        self.lifecycle.verify_release_authority(
+        self.lifecycle.verify_historical_release_authority(
             experiment_id=cast(str, record["experiment_id"]),
             frozen_revision_digest=cast(str, record["frozen_revision_digest"]),
             frozen_manifest_digest=cast(str, record["frozen_manifest_digest"]),
@@ -271,6 +286,7 @@ class SealedReleaseService:
             configuration_digest=cast(str, record["configuration_digest"]),
             environment_digest=cast(str, record["environment_digest"]),
             occurred_at=cast(str, record["occurred_at"]),
+            release_event_digest=event.digest,
         )
         return evidence
 
@@ -304,11 +320,9 @@ class SealedReleaseService:
             body, expected_previous_digest=expected_ledger_head
         )
 
-    def exposure_state(
-        self, experiment_id: str, sealed_binding: SealedBinding
-    ) -> ExposureState:
-        """Derive irreversible state from retained authorized or accidental evidence."""
-        event = self.ledger.exposure_for(experiment_id, sealed_binding.as_record())
+    def exposure_state(self, sealed_binding: SealedBinding) -> ExposureState:
+        """Derive irreversible state from the global dataset/time footprint."""
+        event = self.ledger.exposure_for(sealed_binding.as_record())
         return ExposureState.EXPOSED if event is not None else ExposureState.UNEXPOSED
 
     @staticmethod

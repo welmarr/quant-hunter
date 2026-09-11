@@ -318,3 +318,21 @@ modify `identity/registry.py` or resolve the observed Windows allocation-lock
 incident. RISK-023 and RISK-024 also remain `OPEN`. Independent review and
 hosted CI are pending. No real sealed data, host mutation, dependency, service,
 or infrastructure was used.
+
+### Item 10A independent-review correction
+
+Independent review found that the first Item 10A ledger scoped exposure to an
+experiment and could not reverify retained evidence after lifecycle progression.
+DEC-0032 corrects both findings. Exposure now belongs globally to each dataset
+and exact half-open interval. Same-dataset exact, subset, superset, partial, and
+one-nanosecond overlap across experiments block release; exact adjacency and
+different datasets remain independent. Multi-dataset events expose every
+component. Later and repeated incidents remain appendable after `EXPOSED`, and
+full chain verification rejects an illegally inserted overlapping release.
+
+Prospective authorization still requires a current Item 8 FROZEN head. A
+separate historical path verifies the complete append-only lifecycle, exactly
+one FROZEN revision and immutable manifest, every exact release binding, and the
+retained event digest while RUNNING, EVALUATED, or DECIDED. This correction adds
+no host evidence and does not close RISK-017. RISK-018, RISK-023, and RISK-024
+also remain `OPEN`; `identity/registry.py` is unchanged.

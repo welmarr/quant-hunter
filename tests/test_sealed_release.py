@@ -11,12 +11,16 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, cast
+from uuid import UUID
 
 import pytest
 from test_experiment_lifecycle import (
     ATTEMPT_AT,
+    CREATED_AT,
+    DECIDED_AT,
     EVALUATED_AT,
     FROZEN_AT,
+    REGISTERED_AT,
     STARTED_AT,
     data_manifests,
     planned_payload,
@@ -28,6 +32,7 @@ from test_experiment_lifecycle import (
 from quant_hunter.config import JsonRecord, JsonValue, canonicalize_json
 from quant_hunter.experiments import (
     EvaluationOutcome,
+    ExperimentDecision,
     ExperimentIntegrityError,
     ExperimentLifecycleService,
     PostReleaseSearchError,
@@ -55,6 +60,7 @@ from quant_hunter.storage import ObjectStoreError, SensitiveMetadataError
 SCHEMA_DIRECTORY = Path(__file__).parents[1] / "schemas" / "v1"
 RELEASED_AT = "2026-09-06T12:02:00.000000001Z"
 SECOND_EXPERIMENT_ID = "EXP-01990f30-7f5e-7b34-9b21-3d74c513d60b"
+FIRST_DATASET_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842"
 SECOND_DATASET_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513d701"
 THIRD_DATASET_ID = "DATASET-01990f30-7f5e-7b34-9b21-3d74c513d702"
 
@@ -88,10 +94,46 @@ def _multiple_dataset_payload() -> JsonRecord:
     return payload
 
 
-def _build_harness(tmp_path: Path) -> ReleaseHarness:
+def _payload_for_footprint(
+    dataset_ids: tuple[str, ...], start: str, end: str
+) -> JsonRecord:
+    payload = runtime_payload()
+    payload["dataset_ids"] = cast(list[JsonValue], sorted(dataset_ids))
+    payload["dataset_vintages"] = cast(
+        list[JsonValue],
+        [
+            {
+                "dataset_id": dataset_id,
+                "record_digest": "sha256:" + str(index + 3) * 64,
+                "vintage": f"synthetic-v{index + 1}",
+            }
+            for index, dataset_id in enumerate(sorted(dataset_ids))
+        ],
+    )
+    partitions = cast(JsonRecord, payload["partitions"])
+    partitions["sealed_out_of_sample"] = {"start": start, "end": end}
+    return payload
+
+
+def _build_harness(
+    tmp_path: Path,
+    *,
+    payload: JsonRecord | None = None,
+    experiment_uuid: UUID | None = None,
+    ledger: ExposureLedger | None = None,
+) -> ReleaseHarness:
     lifecycle = service(tmp_path)
-    payload = _multiple_dataset_payload()
-    experiment_id, _draft, registered = registered_experiment(lifecycle, payload)
+    payload = payload or _multiple_dataset_payload()
+    if experiment_uuid is None:
+        experiment_id, _draft, registered = registered_experiment(lifecycle, payload)
+    else:
+        draft = lifecycle.create_draft(
+            payload, created_at=CREATED_AT, uuid_factory=lambda: experiment_uuid
+        )
+        experiment_id = draft.object_id
+        registered = lifecycle.register(
+            experiment_id, draft.revision.digest, registered_at=REGISTERED_AT
+        )
     frozen = lifecycle.freeze(
         experiment_id,
         registered.digest,
@@ -107,7 +149,9 @@ def _build_harness(tmp_path: Path) -> ReleaseHarness:
         cast(str, sealed["start"]),
         cast(str, sealed["end"]),
     )
-    ledger = ExposureLedger((tmp_path / "release-ledger").resolve(), SCHEMA_DIRECTORY)
+    ledger = ledger or ExposureLedger(
+        (tmp_path / "release-ledger").resolve(), SCHEMA_DIRECTORY
+    )
     release_service = SealedReleaseService(lifecycle, ledger, lifecycle.object_store)
     artifact = lifecycle.object_store.publish(b"synthetic released OOS fixture")
     request = ReleaseRequest(
@@ -455,8 +499,7 @@ def test_accidental_exposure_is_irreversible_and_blocks_pristine_release(
         expected_ledger_head=None,
     )
     assert (
-        harness.release_service.exposure_state(harness.experiment_id, harness.binding)
-        is ExposureState.EXPOSED
+        harness.release_service.exposure_state(harness.binding) is ExposureState.EXPOSED
     )
     assert incident.record["review_requirement"] == "INVALIDATION_RISK_DECISION_REVIEW"
     with pytest.raises(ExposureAlreadyRecordedError):
@@ -464,6 +507,312 @@ def test_accidental_exposure_is_irreversible_and_blocks_pristine_release(
             harness.request, expected_ledger_head=incident.digest
         )
     assert harness.ledger.verify() == (incident,)
+
+
+@pytest.mark.parametrize(
+    ("exposed_interval", "candidate_interval"),
+    [
+        (
+            ("2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"),
+            ("2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"),
+        ),
+        (
+            ("2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"),
+            ("2025-03-01T00:00:00Z", "2025-06-01T00:00:00Z"),
+        ),
+        (
+            ("2025-03-01T00:00:00Z", "2025-06-01T00:00:00Z"),
+            ("2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"),
+        ),
+        (
+            ("2025-01-01T00:00:00Z", "2025-07-01T00:00:00Z"),
+            ("2025-06-01T00:00:00Z", "2025-12-01T00:00:00Z"),
+        ),
+        (
+            ("2025-01-01T00:00:00Z", "2025-01-01T00:00:01.000000001Z"),
+            ("2025-01-01T00:00:01Z", "2025-01-01T00:00:02Z"),
+        ),
+    ],
+)
+def test_global_exposure_rejects_cross_experiment_temporal_overlap(
+    tmp_path: Path,
+    exposed_interval: tuple[str, str],
+    candidate_interval: tuple[str, str],
+) -> None:
+    """Any same-dataset overlap is exposed regardless of experiment identity."""
+    ledger = ExposureLedger((tmp_path / "ledger").resolve(), SCHEMA_DIRECTORY)
+    first = _build_harness(
+        tmp_path / "first",
+        payload=_payload_for_footprint((FIRST_DATASET_ID,), *exposed_interval),
+        ledger=ledger,
+    )
+    second = _build_harness(
+        tmp_path / "second",
+        payload=_payload_for_footprint((FIRST_DATASET_ID,), *candidate_interval),
+        experiment_uuid=UUID(SECOND_EXPERIMENT_ID.removeprefix("EXP-")),
+        ledger=ledger,
+    )
+    release = first.release_service.authorize_release(
+        first.request, expected_ledger_head=None
+    )
+    assert first.experiment_id != second.experiment_id
+    assert (
+        second.release_service.exposure_state(second.binding) is ExposureState.EXPOSED
+    )
+    with pytest.raises(ExposureAlreadyRecordedError, match="already EXPOSED"):
+        second.release_service.authorize_release(
+            second.request, expected_ledger_head=release.event_digest
+        )
+    assert ledger.verify() == (release._event,)
+
+
+def test_fractional_adjacency_and_different_dataset_remain_independent(
+    tmp_path: Path,
+) -> None:
+    """Equivalent fractional boundaries are adjacent; other datasets do not conflict."""
+    ledger = ExposureLedger((tmp_path / "ledger").resolve(), SCHEMA_DIRECTORY)
+    first = _build_harness(
+        tmp_path / "first",
+        payload=_payload_for_footprint(
+            (FIRST_DATASET_ID,),
+            "2025-01-01T00:00:00Z",
+            "2025-01-01T00:00:01.1Z",
+        ),
+        ledger=ledger,
+    )
+    adjacent = _build_harness(
+        tmp_path / "adjacent",
+        payload=_payload_for_footprint(
+            (FIRST_DATASET_ID,),
+            "2025-01-01T00:00:01.100000000Z",
+            "2025-01-01T00:00:02Z",
+        ),
+        experiment_uuid=UUID(SECOND_EXPERIMENT_ID.removeprefix("EXP-")),
+        ledger=ledger,
+    )
+    first_release = first.release_service.authorize_release(
+        first.request, expected_ledger_head=None
+    )
+    assert (
+        adjacent.release_service.exposure_state(adjacent.binding)
+        is ExposureState.UNEXPOSED
+    )
+    adjacent_release = adjacent.release_service.authorize_release(
+        adjacent.request, expected_ledger_head=first_release.event_digest
+    )
+
+    independent = SealedBinding(
+        (SECOND_DATASET_ID,),
+        "2025-01-01T00:00:00Z",
+        "2025-01-01T00:00:01.1Z",
+    )
+    assert (
+        adjacent.release_service.exposure_state(independent) is ExposureState.UNEXPOSED
+    )
+    assert len(ledger.verify()) == 2
+    assert (
+        adjacent_release.record["previous_event_digest"] == first_release.event_digest
+    )
+
+
+@pytest.mark.parametrize(
+    ("exposed_ids", "candidate_ids"),
+    [
+        ((FIRST_DATASET_ID, SECOND_DATASET_ID), (SECOND_DATASET_ID,)),
+        ((FIRST_DATASET_ID,), (FIRST_DATASET_ID, SECOND_DATASET_ID)),
+    ],
+)
+def test_any_overlapping_multi_dataset_component_blocks_release(
+    tmp_path: Path,
+    exposed_ids: tuple[str, ...],
+    candidate_ids: tuple[str, ...],
+) -> None:
+    """A composite binding is compromised when any one dataset component overlaps."""
+    interval = ("2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z")
+    ledger = ExposureLedger((tmp_path / "ledger").resolve(), SCHEMA_DIRECTORY)
+    first = _build_harness(
+        tmp_path / "first",
+        payload=_payload_for_footprint(exposed_ids, *interval),
+        ledger=ledger,
+    )
+    second = _build_harness(
+        tmp_path / "second",
+        payload=_payload_for_footprint(candidate_ids, *interval),
+        experiment_uuid=UUID(SECOND_EXPERIMENT_ID.removeprefix("EXP-")),
+        ledger=ledger,
+    )
+    release = first.release_service.authorize_release(
+        first.request, expected_ledger_head=None
+    )
+    with pytest.raises(ExposureAlreadyRecordedError):
+        second.release_service.authorize_release(
+            second.request, expected_ledger_head=release.event_digest
+        )
+
+
+def test_cross_experiment_incident_blocks_overlapping_release(tmp_path: Path) -> None:
+    """Incident evidence exposes the data footprint globally before authorization."""
+    candidate = _build_harness(
+        tmp_path,
+        payload=_payload_for_footprint(
+            (FIRST_DATASET_ID,),
+            "2025-03-01T00:00:00Z",
+            "2025-06-01T00:00:00Z",
+        ),
+    )
+    incident = candidate.release_service.record_accidental_exposure(
+        ExposureIncidentRequest(
+            experiment_id=SECOND_EXPERIMENT_ID,
+            sealed_binding=SealedBinding(
+                (FIRST_DATASET_ID,),
+                "2025-01-01T00:00:00Z",
+                "2026-01-01T00:00:00Z",
+            ),
+            occurred_at="2026-09-06T12:01:00Z",
+            actor="synthetic-observer",
+            reason="Synthetic cross-experiment confidentiality loss.",
+            failure_point=ExposureFailurePoint.PRE_FREEZE_ACCESS,
+        ),
+        expected_ledger_head=None,
+    )
+    with pytest.raises(ExposureAlreadyRecordedError):
+        candidate.release_service.authorize_release(
+            candidate.request, expected_ledger_head=incident.digest
+        )
+    assert candidate.ledger.verify() == (incident,)
+
+
+def test_incidents_remain_appendable_after_release_and_do_not_restore_pristine(
+    tmp_path: Path,
+) -> None:
+    """Later and repeated incidents remain permanent without another state change."""
+    harness = _build_harness(
+        tmp_path,
+        payload=_payload_for_footprint(
+            (FIRST_DATASET_ID,),
+            "2025-01-01T00:00:00Z",
+            "2026-01-01T00:00:00Z",
+        ),
+    )
+    release = harness.release_service.authorize_release(
+        harness.request, expected_ledger_head=None
+    )
+    same = harness.release_service.record_accidental_exposure(
+        ExposureIncidentRequest(
+            experiment_id=SECOND_EXPERIMENT_ID,
+            sealed_binding=harness.binding,
+            occurred_at="2026-09-06T12:04:00Z",
+            actor="synthetic-observer",
+            reason="Synthetic later unauthorized access.",
+            failure_point=ExposureFailurePoint.UNAUTHORIZED_ACCESS,
+        ),
+        expected_ledger_head=release.event_digest,
+    )
+    subset_binding = SealedBinding(
+        (FIRST_DATASET_ID,),
+        "2025-03-01T00:00:00Z",
+        "2025-06-01T00:00:00Z",
+    )
+    subset = harness.release_service.record_accidental_exposure(
+        ExposureIncidentRequest(
+            experiment_id=harness.experiment_id,
+            sealed_binding=subset_binding,
+            occurred_at="2026-09-06T12:05:00Z",
+            actor="synthetic-observer",
+            reason="Synthetic overlapping incident evidence.",
+            failure_point=ExposureFailurePoint.PARTIAL_RELEASE_FAILURE,
+        ),
+        expected_ledger_head=same.digest,
+    )
+    repeated = harness.release_service.record_accidental_exposure(
+        ExposureIncidentRequest(
+            experiment_id=harness.experiment_id,
+            sealed_binding=subset_binding,
+            occurred_at="2026-09-06T12:06:00Z",
+            actor="synthetic-reviewer",
+            reason="Synthetic distinct follow-up incident evidence.",
+            failure_point=ExposureFailurePoint.OTHER,
+        ),
+        expected_ledger_head=subset.digest,
+    )
+    assert len(harness.ledger.verify()) == 4
+    assert (
+        harness.release_service.exposure_state(subset_binding) is ExposureState.EXPOSED
+    )
+    with pytest.raises(ExposureAlreadyRecordedError):
+        harness.release_service.authorize_release(
+            replace(
+                harness.request,
+                occurred_at="2026-09-06T12:07:00Z",
+            ),
+            expected_ledger_head=repeated.digest,
+        )
+
+
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [
+        ("2025-01-01T00:00:00Z", "2025-01-01T00:00:00Z"),
+        ("2025-01-01T00:00:00.000000001Z", "2025-01-01T00:00:00Z"),
+    ],
+)
+def test_empty_or_reversed_exposure_interval_is_rejected(
+    harness: ReleaseHarness, start: str, end: str
+) -> None:
+    """Every exposure footprint is a valid nonempty half-open UTC interval."""
+    with pytest.raises(ExposureLedgerIntegrityError, match="half-open"):
+        harness.release_service.record_accidental_exposure(
+            replace(
+                _incident(dataset_id=FIRST_DATASET_ID),
+                sealed_binding=SealedBinding((FIRST_DATASET_ID,), start, end),
+            ),
+            expected_ledger_head=None,
+        )
+
+
+def test_full_verification_rejects_resigned_overlapping_release_history(
+    tmp_path: Path,
+) -> None:
+    """A locally resigned event cannot hide an illegal second state transition."""
+    ledger = ExposureLedger((tmp_path / "ledger").resolve(), SCHEMA_DIRECTORY)
+    first = _build_harness(
+        tmp_path / "first",
+        payload=_payload_for_footprint(
+            (FIRST_DATASET_ID,),
+            "2025-01-01T00:00:00Z",
+            "2025-02-01T00:00:00Z",
+        ),
+        ledger=ledger,
+    )
+    second = _build_harness(
+        tmp_path / "second",
+        payload=_payload_for_footprint(
+            (FIRST_DATASET_ID,),
+            "2025-02-01T00:00:00Z",
+            "2025-03-01T00:00:00Z",
+        ),
+        experiment_uuid=UUID(SECOND_EXPERIMENT_ID.removeprefix("EXP-")),
+        ledger=ledger,
+    )
+    first_release = first.release_service.authorize_release(
+        first.request, expected_ledger_head=None
+    )
+    second_release = second.release_service.authorize_release(
+        second.request, expected_ledger_head=first_release.event_digest
+    )
+    record = second_release.record
+    record["sealed_binding"] = first.binding.as_record()
+    record["event_digest"] = release_event_digest(record)
+    _write_event(second_release._event.path, record)
+    head: JsonRecord = {
+        "schema_version": "1.0.0",
+        "ledger_sequence": 2,
+        "event_digest": record["event_digest"],
+    }
+    (ledger.root / "head.json").write_bytes(canonicalize_json(head))
+
+    with pytest.raises(ExposureLedgerIntegrityError, match="overlapping exposure"):
+        ledger.verify()
 
 
 def test_synthetic_mode_accepted_and_host_enforced_claim_rejected(
@@ -547,11 +896,12 @@ def test_low_level_event_rejects_float_host_mode_and_credential_reference(
 def test_released_lifecycle_retains_reference_stops_search_and_allows_evaluation(
     harness: ReleaseHarness,
 ) -> None:
-    """One FROZEN revision leads to fixed zero-attempt evaluation after release."""
+    """Retained release verifies through every later Item 8 lifecycle state."""
     frozen_before = deepcopy(harness.frozen_record)
     evidence = harness.release_service.authorize_release(
         harness.request, expected_ledger_head=None
     )
+    assert harness.release_service.verify_release(evidence.event_digest) == evidence
     running = harness.lifecycle.start(
         harness.experiment_id,
         harness.frozen_digest,
@@ -565,6 +915,11 @@ def test_released_lifecycle_retains_reference_stops_search_and_allows_evaluation
         "status": "RELEASED",
         "event_digest": evidence.event_digest,
     }
+    assert harness.release_service.verify_release(evidence.event_digest) == evidence
+    with pytest.raises(ExperimentIntegrityError, match="head is not FROZEN"):
+        harness.release_service.authorize_release(
+            harness.request, expected_ledger_head=evidence.event_digest
+        )
     with pytest.raises(PostReleaseSearchError):
         harness.lifecycle.record_attempt(
             harness.experiment_id,
@@ -587,6 +942,91 @@ def test_released_lifecycle_retains_reference_stops_search_and_allows_evaluation
     assert (
         evaluated.record["sealed_data_release"] == running.record["sealed_data_release"]
     )
+    assert harness.release_service.verify_release(evidence.event_digest) == evidence
+    decided = harness.lifecycle.decide(
+        harness.experiment_id,
+        evaluated.digest,
+        decided_at=DECIDED_AT,
+        decision=ExperimentDecision.INCONCLUSIVE,
+        reason="Synthetic fixed evaluation supports no directional conclusion.",
+    )
+    assert harness.release_service.verify_release(evidence.event_digest) == evidence
+    history = harness.lifecycle.registry.verify_object(harness.experiment_id)
+    assert history[-1] == decided
+    assert sum(item.record["lifecycle_status"] == "FROZEN" for item in history) == 1
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["frozen_revision_digest", "frozen_manifest_digest"],
+)
+def test_historical_release_verification_rejects_authority_mismatch(
+    harness: ReleaseHarness, field: str
+) -> None:
+    """Retained evidence cannot substitute a different historical authority."""
+    evidence = harness.release_service.authorize_release(
+        harness.request, expected_ledger_head=None
+    )
+    running = harness.lifecycle.start(
+        harness.experiment_id,
+        harness.frozen_digest,
+        started_at=STARTED_AT,
+        release_evidence=evidence,
+    )
+    assert running.record["lifecycle_status"] == "RUNNING"
+    with pytest.raises(ExperimentIntegrityError, match=r"revision|manifest"):
+        harness.lifecycle.verify_historical_release_authority(
+            experiment_id=harness.experiment_id,
+            frozen_revision_digest=(
+                "sha256:" + "d" * 64
+                if field == "frozen_revision_digest"
+                else harness.request.frozen_revision_digest
+            ),
+            frozen_manifest_digest=(
+                "sha256:" + "d" * 64
+                if field == "frozen_manifest_digest"
+                else harness.request.frozen_manifest_digest
+            ),
+            dataset_ids=harness.binding.dataset_ids,
+            sealed_partition=cast(
+                JsonRecord, harness.binding.as_record()["sealed_out_of_sample"]
+            ),
+            code_revision=harness.request.code_revision,
+            configuration_digest=harness.request.configuration_digest,
+            environment_digest=harness.request.environment_digest,
+            occurred_at=harness.request.occurred_at,
+            release_event_digest=evidence.event_digest,
+        )
+
+
+def test_historical_release_verification_requires_retained_event_digest(
+    harness: ReleaseHarness,
+) -> None:
+    """Post-FROZEN audit evidence must match the exact Item 8 release reference."""
+    evidence = harness.release_service.authorize_release(
+        harness.request, expected_ledger_head=None
+    )
+    harness.lifecycle.start(
+        harness.experiment_id,
+        harness.frozen_digest,
+        started_at=STARTED_AT,
+        release_evidence=evidence,
+    )
+    with pytest.raises(ExperimentIntegrityError, match="not retained"):
+        harness.lifecycle.verify_historical_release_authority(
+            experiment_id=harness.experiment_id,
+            frozen_revision_digest=harness.request.frozen_revision_digest,
+            frozen_manifest_digest=harness.request.frozen_manifest_digest,
+            dataset_ids=harness.binding.dataset_ids,
+            sealed_partition=cast(
+                JsonRecord, harness.binding.as_record()["sealed_out_of_sample"]
+            ),
+            code_revision=harness.request.code_revision,
+            configuration_digest=harness.request.configuration_digest,
+            environment_digest=harness.request.environment_digest,
+            occurred_at=harness.request.occurred_at,
+            release_event_digest="sha256:" + "e" * 64,
+        )
 
 
 def test_unreleased_experiment_runtime_behavior_is_unchanged(tmp_path: Path) -> None:

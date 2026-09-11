@@ -693,3 +693,23 @@ exposure-ledger, release-service, and post-release-search imports returned
 included both isolation modules in the source and wheel artifacts, and excluded
 `.tools/` and `.venv/` content. Independent review and hosted Ubuntu/Windows CI
 remain pending; no Item 10B host evidence is claimed.
+
+### Item 10A independent-review correction
+
+DEC-0032 changes the software exposure query from experiment-scoped exact
+equality to global dataset/time overlap. Exact UTC half-open intervals compare
+all fractional-second digits without floats. Any same-dataset component overlap
+across release or incident history blocks a later authorized release; adjacent
+intervals and different datasets remain independent. Incidents remain appendable
+after exposure. Prospective release still requires the current FROZEN head,
+while retained evidence is reverified against the complete Item 8 history, sole
+historical FROZEN revision and manifest, exact authority fields, and retained
+release-event digest through RUNNING, EVALUATED, and DECIDED.
+
+The corrected Item 10A hostile suite passed all 54 cases. The complete locked
+Windows gate passed `uv lock --check`, Ruff format over 70 files, Ruff lint,
+strict mypy over 45 source files, and all 690 pytest cases with 90.18% combined
+statement/branch coverage. The governed offline build and import checks passed;
+archive inspection again found 129 combined members, included both isolation
+modules in source and wheel, and excluded `.tools/` and `.venv/` content.
+Independent review and hosted CI remain pending.

@@ -62,8 +62,9 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | Exact FROZEN authorization remains subordinate to Item 8 lifecycle authority. | DEC-0031; `EXPERIMENT_LEDGER.md`; `experiments/lifecycle.py`; `test_sealed_release.py` |
 | Release binds the experiment, sole FROZEN revision and manifest, complete dataset-ID set, exact sealed interval, reproducibility identities, time, and immutable released artifact. | `sealed-release-event.schema.json`; `isolation/release.py`; authorization and cross-binding hostile tests |
 | Event identity is RFC 8785 JCS plus SHA-256 over the complete body excluding only `event_digest`, including the prior digest. | DEC-0031; `isolation/ledger.py`; digest permutation and mutation tests |
-| Release and accidental exposure are append-only, hash-chained, one-way `EXPOSED` evidence. | `sealed-release-event.schema.json`; `sealed-exposure-incident.schema.json`; ledger CAS, chain, retention, and truncation tests |
+| Exposure is global to every dataset and exact half-open interval component across experiments; authorized release requires a wholly pristine footprint, while later incidents remain appendable. | DEC-0032; `sealed-release-event.schema.json`; `sealed-exposure-incident.schema.json`; cross-experiment, overlap, adjacency, multi-dataset, ledger CAS, chain, retention, and truncation tests |
 | Release terminates every new search while allowing only a fixed zero-new-search evaluation through Item 8. | DEC-0031; `experiments/lifecycle.py`; lifecycle integration tests |
+| Retained release evidence remains verifiable through later Item 8 states against the exact historical FROZEN authority and retained event digest. | DEC-0032; `experiments/lifecycle.py`; FROZEN/RUNNING/EVALUATED/DECIDED verification tests |
 | Item 10A evidence is synthetic only and cannot claim the separately gated host boundary. | `ARCHITECTURE.md`; `REGRESSION_GUARD.md` REG-F01–REG-F03; synthetic-mode and poisoned-filesystem tests |
 
 Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING`; Item 10B is `NOT

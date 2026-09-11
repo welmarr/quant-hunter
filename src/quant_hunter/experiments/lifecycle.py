@@ -628,6 +628,94 @@ class ExperimentLifecycleService:
     ) -> FrozenExperiment:
         """Bind a prospective release to the exact verified FROZEN authority."""
         frozen = self.verify_frozen(experiment_id)
+        self._verify_release_binding(
+            frozen,
+            frozen_revision_digest=frozen_revision_digest,
+            frozen_manifest_digest=frozen_manifest_digest,
+            dataset_ids=dataset_ids,
+            sealed_partition=sealed_partition,
+            code_revision=code_revision,
+            configuration_digest=configuration_digest,
+            environment_digest=environment_digest,
+            occurred_at=occurred_at,
+        )
+        return frozen
+
+    def verify_historical_release_authority(
+        self,
+        *,
+        experiment_id: str,
+        frozen_revision_digest: str,
+        frozen_manifest_digest: str,
+        dataset_ids: Sequence[str],
+        sealed_partition: Mapping[str, JsonValue],
+        code_revision: str,
+        configuration_digest: str,
+        environment_digest: str,
+        occurred_at: str,
+        release_event_digest: str,
+    ) -> FrozenExperiment:
+        """Verify retained release evidence against the sole historical FROZEN."""
+        revisions = self._revisions(experiment_id)
+        head_status = _status(revisions[-1].record)
+        if head_status is ExperimentStatus.FROZEN:
+            frozen = self.verify_frozen(experiment_id)
+        elif head_status is ExperimentStatus.RUNNING:
+            self._verify_running_history(revisions)
+            frozen = self._frozen_from_history(
+                revisions, self._single_frozen_index(revisions)
+            )
+        elif head_status is ExperimentStatus.EVALUATED:
+            self._verify_evaluated_history(revisions)
+            frozen = self._frozen_from_history(
+                revisions, self._single_frozen_index(revisions)
+            )
+        elif head_status is ExperimentStatus.DECIDED:
+            self._verify_decided_history(revisions)
+            frozen = self._frozen_from_history(
+                revisions, self._single_frozen_index(revisions)
+            )
+        else:
+            raise ExperimentIntegrityError(
+                "Experiment has no governed historical FROZEN authority"
+            )
+        if head_status is not ExperimentStatus.FROZEN:
+            retained_release = revisions[-1].record.get("sealed_data_release")
+            if (
+                not isinstance(retained_release, dict)
+                or retained_release.get("status") != "RELEASED"
+                or retained_release.get("event_digest") != release_event_digest
+            ):
+                raise ExperimentIntegrityError(
+                    "Historical release event digest is not retained by Item 8"
+                )
+        self._verify_release_binding(
+            frozen,
+            frozen_revision_digest=frozen_revision_digest,
+            frozen_manifest_digest=frozen_manifest_digest,
+            dataset_ids=dataset_ids,
+            sealed_partition=sealed_partition,
+            code_revision=code_revision,
+            configuration_digest=configuration_digest,
+            environment_digest=environment_digest,
+            occurred_at=occurred_at,
+        )
+        return frozen
+
+    def _verify_release_binding(
+        self,
+        frozen: FrozenExperiment,
+        *,
+        frozen_revision_digest: str,
+        frozen_manifest_digest: str,
+        dataset_ids: Sequence[str],
+        sealed_partition: Mapping[str, JsonValue],
+        code_revision: str,
+        configuration_digest: str,
+        environment_digest: str,
+        occurred_at: str,
+    ) -> None:
+        """Compare release evidence with one already verified FROZEN revision."""
         record = frozen.revision.record
         if frozen.revision.digest != frozen_revision_digest:
             raise ExperimentIntegrityError("Release frozen revision digest mismatch")
@@ -667,7 +755,6 @@ class ExperimentLifecycleService:
             frozen_at, "frozen_at"
         ):
             raise ExperimentIntegrityError("Release occurred_at precedes frozen_at")
-        return frozen
 
     def start(
         self,

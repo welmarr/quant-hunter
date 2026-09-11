@@ -10,6 +10,8 @@ from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Final, cast
 
@@ -38,6 +40,13 @@ SCHEMA_BY_EVENT_TYPE: Final = {
     "AUTHORIZED_RELEASE": "sealed-release-event.schema.json",
     "ACCIDENTAL_EXPOSURE": "sealed-exposure-incident.schema.json",
 }
+_TIMESTAMP_PATTERN: Final = re.compile(
+    r"^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})"
+    r"T(?P<hour>[0-9]{2}):(?P<minute>[0-9]{2}):(?P<second>[0-9]{2})"
+    r"(?:[.](?P<fraction>[0-9]+))?Z$"
+)
+
+type _ExactTimestamp = tuple[int, int, int, int, int, int, Decimal]
 
 
 class ExposureLedgerError(RuntimeError):
@@ -72,6 +81,13 @@ class ExposureLedgerEvent:
     path: Path
     digest: str
     record: JsonRecord
+
+
+@dataclass(frozen=True, slots=True)
+class _ExposureFootprint:
+    dataset_id: str
+    start: _ExactTimestamp
+    end: _ExactTimestamp
 
 
 def release_event_digest(event: Mapping[str, JsonValue]) -> str:
@@ -225,14 +241,74 @@ def _publish_head(path: Path, content: bytes) -> None:
         temporary_path.unlink(missing_ok=True)
 
 
-def _binding_key(event: Mapping[str, JsonValue]) -> bytes:
-    experiment_id = event.get("experiment_id")
-    binding = event.get("sealed_binding")
-    if not isinstance(experiment_id, str) or not isinstance(binding, dict):
-        raise ExposureLedgerIntegrityError("Exposure binding is malformed")
-    return canonicalize_json(
-        {"experiment_id": experiment_id, "sealed_binding": deepcopy(binding)}
+def _timestamp(value: object, field: str) -> _ExactTimestamp:
+    if not isinstance(value, str):
+        raise ExposureLedgerIntegrityError(
+            f"{field} must be an exact UTC RFC 3339 timestamp"
+        )
+    match = _TIMESTAMP_PATTERN.fullmatch(value)
+    if match is None:
+        raise ExposureLedgerIntegrityError(
+            f"{field} must be an exact UTC RFC 3339 timestamp"
+        )
+    components = (
+        int(match.group("year")),
+        int(match.group("month")),
+        int(match.group("day")),
+        int(match.group("hour")),
+        int(match.group("minute")),
+        int(match.group("second")),
     )
+    try:
+        datetime(*components)
+    except ValueError as error:
+        raise ExposureLedgerIntegrityError(
+            f"{field} must be a valid UTC RFC 3339 timestamp"
+        ) from error
+    fraction = match.group("fraction") or "0"
+    return (*components, Decimal(f"0.{fraction}"))
+
+
+def _binding_footprints(binding: object) -> tuple[_ExposureFootprint, ...]:
+    if not isinstance(binding, dict):
+        raise ExposureLedgerIntegrityError("Exposure binding is malformed")
+    dataset_ids = binding.get("dataset_ids")
+    interval = binding.get("sealed_out_of_sample")
+    if (
+        not isinstance(dataset_ids, list)
+        or not dataset_ids
+        or any(not isinstance(item, str) for item in dataset_ids)
+        or len(set(dataset_ids)) != len(dataset_ids)
+        or dataset_ids != sorted(dataset_ids)
+        or not isinstance(interval, dict)
+    ):
+        raise ExposureLedgerIntegrityError("Exposure binding is malformed")
+    start = _timestamp(interval.get("start"), "Exposure interval start")
+    end = _timestamp(interval.get("end"), "Exposure interval end")
+    if start >= end:
+        raise ExposureLedgerIntegrityError(
+            "Exposure interval must use a nonempty half-open [start, end) range"
+        )
+    return tuple(
+        _ExposureFootprint(dataset_id, start, end) for dataset_id in dataset_ids
+    )
+
+
+def _footprints_overlap(
+    left: tuple[_ExposureFootprint, ...],
+    right: tuple[_ExposureFootprint, ...],
+) -> bool:
+    return any(
+        left_item.dataset_id == right_item.dataset_id
+        and left_item.start < right_item.end
+        and right_item.start < left_item.end
+        for left_item in left
+        for right_item in right
+    )
+
+
+def _event_footprints(event: Mapping[str, JsonValue]) -> tuple[_ExposureFootprint, ...]:
+    return _binding_footprints(event.get("sealed_binding"))
 
 
 class ExposureLedger:
@@ -305,10 +381,13 @@ class ExposureLedger:
             record["previous_event_digest"] = current_head
             record["event_digest"] = release_event_digest(record)
             self._validate_record(record)
-            key = _binding_key(record)
-            if any(_binding_key(event.record) == key for event in events):
+            footprints = _event_footprints(record)
+            if record.get("event_type") == "AUTHORIZED_RELEASE" and any(
+                _footprints_overlap(footprints, _event_footprints(event.record))
+                for event in events
+            ):
                 raise ExposureAlreadyRecordedError(
-                    "The sealed experiment/dataset/partition binding is already EXPOSED"
+                    "The requested dataset/time footprint is already EXPOSED"
                 )
             content = canonicalize_json(record)
             path = self.root / f"event-{len(events) + 1:06d}.json"
@@ -331,17 +410,16 @@ class ExposureLedger:
         raise ExposureLedgerIntegrityError("Exposure event is absent from the ledger")
 
     def exposure_for(
-        self, experiment_id: str, sealed_binding: Mapping[str, JsonValue]
+        self, sealed_binding: Mapping[str, JsonValue]
     ) -> ExposureLedgerEvent | None:
-        """Return retained exposure evidence for one exact structural binding."""
-        key = canonicalize_json(
-            {
-                "experiment_id": experiment_id,
-                "sealed_binding": deepcopy(dict(sealed_binding)),
-            }
-        )
+        """Return evidence overlapping any component of a global data footprint."""
+        footprints = _binding_footprints(sealed_binding)
         return next(
-            (event for event in self.verify() if _binding_key(event.record) == key),
+            (
+                event
+                for event in self.verify()
+                if _footprints_overlap(footprints, _event_footprints(event.record))
+            ),
             None,
         )
 
@@ -365,19 +443,21 @@ class ExposureLedger:
         paths.sort()
         previous: str | None = None
         events: list[ExposureLedgerEvent] = []
-        seen_bindings: set[bytes] = set()
+        prior_footprints: list[tuple[_ExposureFootprint, ...]] = []
         for expected, (number, path) in enumerate(paths, start=1):
             if number != expected:
                 raise ExposureLedgerIntegrityError(
                     "Exposure-ledger event sequence is missing or noncontiguous"
                 )
             event = self._read_event(path, expected, previous)
-            key = _binding_key(event.record)
-            if key in seen_bindings:
+            footprints = _event_footprints(event.record)
+            if event.record.get("event_type") == "AUTHORIZED_RELEASE" and any(
+                _footprints_overlap(footprints, prior) for prior in prior_footprints
+            ):
                 raise ExposureLedgerIntegrityError(
-                    "Exposure ledger contains a repeated sealed binding"
+                    "Authorized release follows prior overlapping exposure"
                 )
-            seen_bindings.add(key)
+            prior_footprints.append(footprints)
             events.append(event)
             previous = event.digest
         self._verify_head(events)
@@ -464,6 +544,7 @@ class ExposureLedger:
             if isinstance(artifact_reference, str):
                 reject_credential_uri(artifact_reference)
             self._schemas.validate(SCHEMA_BY_EVENT_TYPE[event_type], record)
+            _event_footprints(record)
         except (RecordSchemaError, SensitiveMetadataError) as error:
             raise ExposureLedgerIntegrityError(
                 "Exposure event failed governed validation"
