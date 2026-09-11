@@ -351,13 +351,18 @@ class ExposureLedger:
         events = self.verify()
         return events[-1].digest if events else None
 
-    def append_event(
+    def _append_validated_event(
         self,
         event_body: Mapping[str, JsonValue],
         *,
         expected_previous_digest: str | None,
     ) -> ExposureLedgerEvent:
-        """Append one event with compare-and-swap and one-way binding enforcement."""
+        """Persist a service-authorized event with CAS and one-way enforcement.
+
+        This internal hook provides structural validation and storage integrity. It
+        does not establish Item 8 scientific release authority or released-artifact
+        validity; ``SealedReleaseService`` must establish those conditions first.
+        """
         if MANAGED_FIELDS.intersection(event_body):
             raise ExposureLedgerIntegrityError(
                 "Caller supplied exposure-ledger managed fields"

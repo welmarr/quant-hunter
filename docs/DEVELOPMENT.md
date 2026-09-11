@@ -694,7 +694,7 @@ included both isolation modules in the source and wheel artifacts, and excluded
 `.tools/` and `.venv/` content. Independent review and hosted Ubuntu/Windows CI
 remain pending; no Item 10B host evidence is claimed.
 
-### Item 10A independent-review correction
+### Item 10A pre-independent-review hardening
 
 DEC-0032 changes the software exposure query from experiment-scoped exact
 equality to global dataset/time overlap. Exact UTC half-open intervals compare
@@ -713,3 +713,23 @@ statement/branch coverage. The governed offline build and import checks passed;
 archive inspection again found 129 combined members, included both isolation
 modules in source and wheel, and excluded `.tools/` and `.venv/` content.
 Independent review and hosted CI remain pending.
+
+### Item 10A independent-review writer-authority fix
+
+Nova's independent review of head
+`859233574d4d8ea9595e7985f3da82aba252c99a` failed because the public
+`ExposureLedger.append_event` method formed a competing supported writer path.
+It could persist a structurally valid release event without exact Item 8 FROZEN
+authorization or immutable released-artifact verification. DEC-0033 makes
+`SealedReleaseService.authorize_release` the sole supported public release
+writer and `record_accidental_exposure` the sole supported public incident
+writer. The ledger retains public read and chain-verification methods, while its
+validated append hook is private/internal and retains all existing schema,
+canonical digest, CAS, overlap, and append-only controls.
+
+The corrective Item 10A hostile suite passed all 58 cases. The complete locked
+Windows gate passed `uv lock --check`, Ruff format, Ruff lint, strict mypy, and
+all 694 pytest cases with 90.18% combined statement/branch coverage. The
+governed offline build and import/archive checks also passed with no dependency
+drift. Item 10A remains `IMPLEMENTED / INDEPENDENT REVIEW PENDING` until Nova
+re-audits the corrective head; Item 10B remains `NOT STARTED`.

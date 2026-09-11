@@ -98,11 +98,14 @@ data, Windows host change, infrastructure, subscription, usage commitment, or
 incremental direct cost. Item 10B remains unstarted and no paid action is
 authorized. The ChatGPT Pro amount, aggregate spend, and remaining Month-1
 headroom remain `UNKNOWN`.
-The Item 10A independent-review correction reuses the locked dependencies for
+The Item 10A pre-independent-review hardening reuses the locked dependencies for
 exact timestamp comparison, global exposure checks, incident retention, and
 historical FROZEN verification. It adds no dependency, service, data, host
 change, infrastructure, subscription, usage commitment, or incremental direct
 cost. Item 10B remains unstarted.
+The Item 10A independent-review writer-authority fix also reuses the locked
+dependencies and adds USD 0 incremental direct cost. It introduces no service,
+data, host change, infrastructure, subscription, or usage commitment.
 
 ### COST-01a0751b-6555-73d9-961e-78c98ff8405b — OpenAI Codex credits
 

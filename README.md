@@ -45,7 +45,9 @@ Ubuntu and Windows; Ubuntu ran 630 tests with 90.99% combined statement/branch
 coverage. Item 10A is `IMPLEMENTED / INDEPENDENT REVIEW PENDING` on its feature
 branch: it adds a synthetic-only sealed-release authority, canonical
 hash-chained exposure ledger, exact Item 8 FROZEN binding, irreversible
-`EXPOSED` evidence, and post-release search termination. Item 10B real Windows
+`EXPOSED` evidence, and post-release search termination. The release service is
+the sole supported public exposure writer; the ledger remains the structural
+read/verification primitive. Item 10B real Windows
 host enforcement is `NOT STARTED`.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,

@@ -163,6 +163,12 @@ incidents remain appendable after exposure so adverse history is never lost.
 The later Item 8 `RUNNING` revision retains the release-event digest and permits
 only a fixed evaluation with zero new search attempts. Retained release evidence
 uses the verified historical Item 8 FROZEN revision after the lifecycle advances.
+`SealedReleaseService.authorize_release` is the sole supported public release
+writer, and `record_accidental_exposure` is the sole supported public incident
+writer. `ExposureLedger` remains public for structural reads and verification,
+but its validated append hook is internal. A structurally valid ledger event is
+not sufficient scientific release authority: authorized release also requires
+the service's exact Item 8 FROZEN and immutable released-artifact verification.
 
 Item 10A produces and accepts only `SYNTHETIC_TEST` evidence. It cannot establish
 `HOST_ENFORCED` evidence, create operating-system identities, configure a vault,

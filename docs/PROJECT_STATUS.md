@@ -35,7 +35,10 @@ coverage; Windows also succeeded.
 
 Item 10A — software release core and synthetic security contracts is
 `IMPLEMENTED / INDEPENDENT REVIEW PENDING` on
-`feature/stage1b-item10a-sealed-oos-core`.
+`feature/stage1b-item10a-sealed-oos-core`. Nova's review of head
+`859233574d4d8ea9595e7985f3da82aba252c99a` found a competing public raw
+exposure-ledger writer. The corrective work makes `SealedReleaseService` the
+sole supported public exposure writer and requires independent re-audit.
 
 ## PLANNED DECOMPOSITION
 
@@ -46,7 +49,7 @@ Item 10 is planned as:
 
 Item 10A implements only software and synthetic evidence. Item 10B is `NOT
 STARTED` and remains separately gated; no real Windows host-security mutation is
-authorized. The next action is independent review of Item 10A, not Item 10B
+authorized. The next action is independent re-review of Item 10A, not Item 10B
 implementation.
 
 ## AFTER ITEM 10

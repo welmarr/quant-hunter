@@ -60,6 +60,7 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | Requirement | Governing and implementation evidence |
 |---|---|
 | Exact FROZEN authorization remains subordinate to Item 8 lifecycle authority. | DEC-0031; `EXPERIMENT_LEDGER.md`; `experiments/lifecycle.py`; `test_sealed_release.py` |
+| Every supported exposure write crosses the release-service authority boundary; no public raw ledger writer can manufacture a release or incident. | DEC-0033; `isolation/ledger.py`; `isolation/release.py`; API-surface, raw-mapping, nonexistent-experiment, and supported-writer tests |
 | Release binds the experiment, sole FROZEN revision and manifest, complete dataset-ID set, exact sealed interval, reproducibility identities, time, and immutable released artifact. | `sealed-release-event.schema.json`; `isolation/release.py`; authorization and cross-binding hostile tests |
 | Event identity is RFC 8785 JCS plus SHA-256 over the complete body excluding only `event_digest`, including the prior digest. | DEC-0031; `isolation/ledger.py`; digest permutation and mutation tests |
 | Exposure is global to every dataset and exact half-open interval component across experiments; authorized release requires a wholly pristine footprint, while later incidents remain appendable. | DEC-0032; `sealed-release-event.schema.json`; `sealed-exposure-incident.schema.json`; cross-experiment, overlap, adjacency, multi-dataset, ledger CAS, chain, retention, and truncation tests |

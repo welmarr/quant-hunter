@@ -263,7 +263,7 @@ class SealedReleaseService:
             "source_partition_status": ExposureState.EXPOSED.value,
             "enforcement_mode": EnforcementMode.SYNTHETIC_TEST.value,
         }
-        event = self.ledger.append_event(
+        event = self.ledger._append_validated_event(
             body, expected_previous_digest=expected_ledger_head
         )
         return self.verify_release(event.digest)
@@ -316,7 +316,7 @@ class SealedReleaseService:
         if request.released_artifact_digest is not None:
             require_sha256_digest(request.released_artifact_digest)
             body["released_artifact_digest"] = request.released_artifact_digest
-        return self.ledger.append_event(
+        return self.ledger._append_validated_event(
             body, expected_previous_digest=expected_ledger_head
         )
 

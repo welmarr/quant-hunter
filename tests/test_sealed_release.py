@@ -211,6 +211,61 @@ def _replace_request(
     return replace(request, **cast(Any, {field: value}))
 
 
+def test_exposure_ledger_has_no_public_raw_append_api(
+    harness: ReleaseHarness,
+) -> None:
+    """Structural ledger access cannot manufacture either exposure event type."""
+    assert not hasattr(ExposureLedger, "append_event")
+    assert not hasattr(harness.ledger, "append_event")
+
+
+@pytest.mark.parametrize("event_type", ["AUTHORIZED_RELEASE", "ACCIDENTAL_EXPOSURE"])
+def test_raw_exposure_event_cannot_use_a_public_ledger_writer(
+    harness: ReleaseHarness, event_type: str
+) -> None:
+    """Arbitrary mappings have no supported public route into the ledger."""
+    raw_event: JsonRecord = {
+        "schema_version": "1.0.0",
+        "event_type": event_type,
+        "experiment_id": SECOND_EXPERIMENT_ID,
+        "sealed_binding": harness.binding.as_record(),
+        "occurred_at": RELEASED_AT,
+        "actor": "synthetic-raw-caller",
+        "reason": "This synthetic raw write must remain unsupported.",
+        "released_artifact_digest": "sha256:" + "a" * 64,
+        "released_artifact_reference": "object://sha256/" + "a" * 64,
+        "frozen_revision_digest": "sha256:" + "b" * 64,
+        "frozen_manifest_digest": "sha256:" + "c" * 64,
+        "code_revision": "d" * 40,
+        "configuration_digest": "sha256:" + "e" * 64,
+        "environment_digest": "sha256:" + "f" * 64,
+        "source_partition_status": "EXPOSED",
+        "enforcement_mode": "SYNTHETIC_TEST",
+    }
+    public_writer_name = "append_" + "event"
+    with pytest.raises(AttributeError):
+        getattr(harness.ledger, public_writer_name)(
+            raw_event, expected_previous_digest=None
+        )
+    assert harness.ledger.verify() == ()
+
+
+def test_nonexistent_experiment_cannot_authorize_through_supported_writer(
+    harness: ReleaseHarness,
+) -> None:
+    """The sole release writer rejects invented authority before ledger append."""
+    request = replace(
+        harness.request,
+        experiment_id=SECOND_EXPERIMENT_ID,
+        frozen_revision_digest="sha256:" + "a" * 64,
+        frozen_manifest_digest="sha256:" + "b" * 64,
+        released_artifact_digest="sha256:" + "c" * 64,
+    )
+    with pytest.raises(RegistryError):
+        harness.release_service.authorize_release(request, expected_ledger_head=None)
+    assert harness.ledger.verify() == ()
+
+
 def test_empty_ledger_and_genesis_release(harness: ReleaseHarness) -> None:
     """An empty ledger is explicit and the first event has a null prior digest."""
     assert harness.ledger.verify() == ()
@@ -849,10 +904,10 @@ def test_release_text_rejects_labelled_secrets_without_echo(
     assert "synthetic-secret" not in str(captured.value)
 
 
-def test_low_level_event_rejects_float_host_mode_and_credential_reference(
+def test_internal_event_storage_rejects_float_host_mode_and_credential_reference(
     harness: ReleaseHarness,
 ) -> None:
-    """Ledger validation independently rejects unsafe canonical security claims."""
+    """The internal storage hook retains its independent structural validation."""
     released = harness.lifecycle.object_store.get(
         harness.request.released_artifact_digest
     )
@@ -879,17 +934,19 @@ def test_low_level_event_rejects_float_host_mode_and_credential_reference(
     floated = deepcopy(event_body)
     floated["reason"] = cast(JsonValue, 1.5)
     with pytest.raises(ExposureLedgerIntegrityError, match="floats"):
-        harness.ledger.append_event(floated, expected_previous_digest=None)
+        harness.ledger._append_validated_event(floated, expected_previous_digest=None)
     hosted = deepcopy(event_body)
     hosted["enforcement_mode"] = "HOST_ENFORCED"
     with pytest.raises(UnsupportedEnforcementModeError):
-        harness.ledger.append_event(hosted, expected_previous_digest=None)
+        harness.ledger._append_validated_event(hosted, expected_previous_digest=None)
     credential = deepcopy(event_body)
     credential["released_artifact_reference"] = (
         "https://example.invalid/a?api_key=hidden"
     )
     with pytest.raises(ExposureLedgerIntegrityError) as captured:
-        harness.ledger.append_event(credential, expected_previous_digest=None)
+        harness.ledger._append_validated_event(
+            credential, expected_previous_digest=None
+        )
     assert "hidden" not in str(captured.value)
 
 
