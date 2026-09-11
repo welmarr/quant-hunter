@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Final, cast
+from typing import TYPE_CHECKING, Final, cast
 from uuid import uuid7
 
 from quant_hunter.config import (
@@ -41,6 +41,9 @@ from quant_hunter.provenance.hashing import (
 )
 from quant_hunter.storage import ImmutableObjectStore, StoredObject
 from quant_hunter.storage.security import reject_credential_uri, reject_secret_text
+
+if TYPE_CHECKING:
+    from quant_hunter.isolation.release import VerifiedReleaseEvidence
 
 _TIMESTAMP_PATTERN: Final = re.compile(
     r"^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})"
@@ -75,6 +78,7 @@ _RUNTIME_FIELDS: Final = {
     "attempt_records",
     "variants_attempted",
     "variant_accounting",
+    "sealed_data_release",
 }
 _EVALUATION_FIELDS: Final = {
     "lifecycle_status",
@@ -159,6 +163,10 @@ class ExperimentIntegrityError(ExperimentLifecycleError):
 
 class AttemptBudgetExceededError(ExperimentLifecycleError):
     """A runtime attempt would exceed the frozen multiple-testing budget."""
+
+
+class PostReleaseSearchError(ExperimentLifecycleError):
+    """A search attempt was requested after sealed OOS exposure."""
 
 
 class RerunResolutionError(ExperimentLifecycleError):
@@ -605,12 +613,156 @@ class ExperimentLifecycleService:
             raise ExperimentIntegrityError("Experiment head is not FROZEN")
         return self._frozen_from_history(revisions, len(revisions) - 1)
 
+    def verify_release_authority(
+        self,
+        *,
+        experiment_id: str,
+        frozen_revision_digest: str,
+        frozen_manifest_digest: str,
+        dataset_ids: Sequence[str],
+        sealed_partition: Mapping[str, JsonValue],
+        code_revision: str,
+        configuration_digest: str,
+        environment_digest: str,
+        occurred_at: str,
+    ) -> FrozenExperiment:
+        """Bind a prospective release to the exact verified FROZEN authority."""
+        frozen = self.verify_frozen(experiment_id)
+        self._verify_release_binding(
+            frozen,
+            frozen_revision_digest=frozen_revision_digest,
+            frozen_manifest_digest=frozen_manifest_digest,
+            dataset_ids=dataset_ids,
+            sealed_partition=sealed_partition,
+            code_revision=code_revision,
+            configuration_digest=configuration_digest,
+            environment_digest=environment_digest,
+            occurred_at=occurred_at,
+        )
+        return frozen
+
+    def verify_historical_release_authority(
+        self,
+        *,
+        experiment_id: str,
+        frozen_revision_digest: str,
+        frozen_manifest_digest: str,
+        dataset_ids: Sequence[str],
+        sealed_partition: Mapping[str, JsonValue],
+        code_revision: str,
+        configuration_digest: str,
+        environment_digest: str,
+        occurred_at: str,
+        release_event_digest: str,
+    ) -> FrozenExperiment:
+        """Verify retained release evidence against the sole historical FROZEN."""
+        revisions = self._revisions(experiment_id)
+        head_status = _status(revisions[-1].record)
+        if head_status is ExperimentStatus.FROZEN:
+            frozen = self.verify_frozen(experiment_id)
+        elif head_status is ExperimentStatus.RUNNING:
+            self._verify_running_history(revisions)
+            frozen = self._frozen_from_history(
+                revisions, self._single_frozen_index(revisions)
+            )
+        elif head_status is ExperimentStatus.EVALUATED:
+            self._verify_evaluated_history(revisions)
+            frozen = self._frozen_from_history(
+                revisions, self._single_frozen_index(revisions)
+            )
+        elif head_status is ExperimentStatus.DECIDED:
+            self._verify_decided_history(revisions)
+            frozen = self._frozen_from_history(
+                revisions, self._single_frozen_index(revisions)
+            )
+        else:
+            raise ExperimentIntegrityError(
+                "Experiment has no governed historical FROZEN authority"
+            )
+        if head_status is not ExperimentStatus.FROZEN:
+            retained_release = revisions[-1].record.get("sealed_data_release")
+            if (
+                not isinstance(retained_release, dict)
+                or retained_release.get("status") != "RELEASED"
+                or retained_release.get("event_digest") != release_event_digest
+            ):
+                raise ExperimentIntegrityError(
+                    "Historical release event digest is not retained by Item 8"
+                )
+        self._verify_release_binding(
+            frozen,
+            frozen_revision_digest=frozen_revision_digest,
+            frozen_manifest_digest=frozen_manifest_digest,
+            dataset_ids=dataset_ids,
+            sealed_partition=sealed_partition,
+            code_revision=code_revision,
+            configuration_digest=configuration_digest,
+            environment_digest=environment_digest,
+            occurred_at=occurred_at,
+        )
+        return frozen
+
+    def _verify_release_binding(
+        self,
+        frozen: FrozenExperiment,
+        *,
+        frozen_revision_digest: str,
+        frozen_manifest_digest: str,
+        dataset_ids: Sequence[str],
+        sealed_partition: Mapping[str, JsonValue],
+        code_revision: str,
+        configuration_digest: str,
+        environment_digest: str,
+        occurred_at: str,
+    ) -> None:
+        """Compare release evidence with one already verified FROZEN revision."""
+        record = frozen.revision.record
+        if frozen.revision.digest != frozen_revision_digest:
+            raise ExperimentIntegrityError("Release frozen revision digest mismatch")
+        if frozen.manifest.digest != frozen_manifest_digest:
+            raise ExperimentIntegrityError("Release freeze manifest digest mismatch")
+        for field, supplied in (
+            ("code_revision", code_revision),
+            ("configuration_digest", configuration_digest),
+            ("environment_digest", environment_digest),
+        ):
+            if record.get(field) != supplied:
+                raise ExperimentIntegrityError(f"Release {field} mismatch")
+        frozen_dataset_ids = record.get("dataset_ids")
+        if not isinstance(frozen_dataset_ids, list) or any(
+            not isinstance(item, str) for item in frozen_dataset_ids
+        ):
+            raise ExperimentIntegrityError("FROZEN dataset identities are malformed")
+        supplied_dataset_ids = tuple(dataset_ids)
+        if len(set(supplied_dataset_ids)) != len(
+            supplied_dataset_ids
+        ) or supplied_dataset_ids != tuple(sorted(cast(list[str], frozen_dataset_ids))):
+            raise ExperimentIntegrityError(
+                "Release dataset identities do not match complete FROZEN authority"
+            )
+        partitions = record.get("partitions")
+        if not isinstance(partitions, dict):
+            raise ExperimentIntegrityError("FROZEN partitions are malformed")
+        sealed = partitions.get("sealed_out_of_sample")
+        if not isinstance(sealed, dict) or dict(sealed_partition) != sealed:
+            raise ExperimentIntegrityError(
+                "Release sealed partition does not match FROZEN authority"
+            )
+        frozen_at = record.get("frozen_at")
+        if not isinstance(frozen_at, str):
+            raise ExperimentIntegrityError("Experiment frozen_at is malformed")
+        if _timestamp(occurred_at, "release occurred_at") < _timestamp(
+            frozen_at, "frozen_at"
+        ):
+            raise ExperimentIntegrityError("Release occurred_at precedes frozen_at")
+
     def start(
         self,
         experiment_id: str,
         expected_previous_digest: str,
         *,
         started_at: str,
+        release_evidence: VerifiedReleaseEvidence | None = None,
     ) -> Revision:
         """Append RUNNING after independently verifying exact frozen evidence."""
         revisions = self._revisions(experiment_id)
@@ -632,6 +784,41 @@ class ExperimentLifecycleService:
             raise ExperimentIntegrityError("started_at precedes frozen_at")
 
         payload = _payload(frozen.revision.record)
+        if release_evidence is not None:
+            from quant_hunter.isolation.release import VerifiedReleaseEvidence
+
+            if not isinstance(release_evidence, VerifiedReleaseEvidence):
+                raise ExperimentIntegrityError("Release evidence is not verified")
+            event = release_evidence.verify()
+            binding = event.get("sealed_binding")
+            if not isinstance(binding, dict):
+                raise ExperimentIntegrityError("Release sealed binding is malformed")
+            dataset_ids = binding.get("dataset_ids")
+            sealed_partition = binding.get("sealed_out_of_sample")
+            if not isinstance(dataset_ids, list) or not isinstance(
+                sealed_partition, dict
+            ):
+                raise ExperimentIntegrityError("Release sealed binding is malformed")
+            self.verify_release_authority(
+                experiment_id=experiment_id,
+                frozen_revision_digest=cast(str, event.get("frozen_revision_digest")),
+                frozen_manifest_digest=cast(str, event.get("frozen_manifest_digest")),
+                dataset_ids=cast(list[str], dataset_ids),
+                sealed_partition=sealed_partition,
+                code_revision=cast(str, event.get("code_revision")),
+                configuration_digest=cast(str, event.get("configuration_digest")),
+                environment_digest=cast(str, event.get("environment_digest")),
+                occurred_at=cast(str, event.get("occurred_at")),
+            )
+            occurred_at = event.get("occurred_at")
+            if not isinstance(occurred_at, str) or _timestamp(
+                started_at, "started_at"
+            ) < _timestamp(occurred_at, "release occurred_at"):
+                raise ExperimentIntegrityError("started_at precedes sealed release")
+            payload["sealed_data_release"] = {
+                "status": "RELEASED",
+                "event_digest": release_evidence.event_digest,
+            }
         payload["lifecycle_status"] = ExperimentStatus.RUNNING.value
         payload["started_at"] = started_at
         payload["attempt_records"] = []
@@ -659,6 +846,14 @@ class ExperimentLifecycleService:
         if expected_previous_digest != head.digest:
             raise StaleWriterError(
                 f"Expected {expected_previous_digest}, current head is {head.digest}"
+            )
+        sealed_release = head.record.get("sealed_data_release")
+        if (
+            isinstance(sealed_release, dict)
+            and sealed_release.get("status") == "RELEASED"
+        ):
+            raise PostReleaseSearchError(
+                "New search attempts are forbidden after sealed OOS release"
             )
         if not isinstance(ai_generated, bool) or not isinstance(failed, bool):
             raise ExperimentIntegrityError("Attempt flags must be booleans")
@@ -987,6 +1182,7 @@ class ExperimentLifecycleService:
             )
         previous_attempts: list[JsonRecord] | None = None
         started_at: str | None = None
+        retained_release: JsonValue | None = None
         for revision in running_revisions:
             revision_started_at = revision.record.get("started_at")
             if not isinstance(revision_started_at, str):
@@ -1002,6 +1198,22 @@ class ExperimentLifecycleService:
             attempts = _validate_runtime_revision(
                 revision.record, frozen.revision.record
             )
+            release = revision.record.get("sealed_data_release")
+            if not isinstance(release, dict) or release.get("status") not in {
+                "UNRELEASED",
+                "RELEASED",
+            }:
+                raise ExperimentIntegrityError("RUNNING release evidence is malformed")
+            if retained_release is None:
+                retained_release = deepcopy(release)
+            elif release != retained_release:
+                raise ExperimentIntegrityError(
+                    "RUNNING release evidence changed after start"
+                )
+            if release.get("status") == "RELEASED" and attempts:
+                raise ExperimentIntegrityError(
+                    "Released experiment contains forbidden search attempts"
+                )
             if previous_attempts is None:
                 if attempts:
                     raise ExperimentIntegrityError(

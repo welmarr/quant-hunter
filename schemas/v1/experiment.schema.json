@@ -917,7 +917,8 @@
           "lifecycle_status": {
             "enum": [
               "DRAFT",
-              "REGISTERED"
+              "REGISTERED",
+              "FROZEN"
             ]
           }
         }
@@ -928,6 +929,45 @@
             "properties": {
               "status": {
                 "const": "UNRELEASED"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "sealed_data_release": {
+            "properties": {
+              "status": {
+                "const": "RELEASED"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        },
+        "required": [
+          "sealed_data_release"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attempt_records": {
+            "maxItems": 0
+          },
+          "variants_attempted": {
+            "const": 0
+          },
+          "variant_accounting": {
+            "properties": {
+              "ai_generated_attempts": {
+                "const": 0
+              },
+              "failed_attempts": {
+                "const": 0
               }
             }
           }

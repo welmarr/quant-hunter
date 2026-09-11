@@ -660,3 +660,76 @@ Full Item 9 is therefore `COMPLETE / INDEPENDENT REVIEW PASSED`. Item 10 remains
 `NOT STARTED`. DEC-0029 adds repository-authoritative current-state and
 regression-governance documents without adding scientific computation, sealed
 release behavior, a dependency, or incremental direct cost.
+
+## Stage 1B Item 10A sealed-OOS software release core
+
+Item 10A adds a synthetic-only release service and an append-only exposure
+ledger. Authorization reuses Item 8's exact FROZEN authority and binds the sole
+FROZEN revision, immutable freeze manifest, code/configuration/environment,
+complete canonical dataset-ID set, exact sealed interval, release timestamp,
+and an immutable released artifact. Canonical event identity is SHA-256 over
+RFC 8785 JCS of the full event body excluding only `event_digest`, so the prior
+event digest remains inside every non-genesis preimage. Exclusive event
+publication, verified-head compare-and-swap, canonical head anchoring, and full
+chain verification reject concurrent forks, stale writers, overwrites,
+corruption, missing/reordered events, and tail truncation.
+
+Authorized release and accidental exposure are permanently `EXPOSED`. The
+release digest is retained when Item 8 appends the later `RUNNING` revision;
+new search attempts then fail, while the fixed prespecified evaluation can
+continue with zero new attempts. The software accepts no sealed source path and
+hostile tests poison read/open/stat/exists/list/hash/traversal operations. Item
+10A emits and accepts only `SYNTHETIC_TEST` evidence. It does not create or prove
+a Windows host boundary, and Item 10B remains `NOT STARTED`.
+
+The complete locked Windows gate passed with repository-pinned uv 0.12.10:
+`uv lock --check`; Ruff format over 70 files; Ruff lint; strict mypy over 45
+source files; and 674 pytest cases with 90.17% combined statement/branch
+coverage. The Item 10A hostile suite contributed 38 passing parameterized cases.
+The governed offline build produced both distributions. Package, PyArrow,
+exposure-ledger, release-service, and post-release-search imports returned
+`0.1.0`, `25.0.1`, `ExposureLedger`, `SealedReleaseService`, and
+`PostReleaseSearchError`. Archive inspection found 129 combined members,
+included both isolation modules in the source and wheel artifacts, and excluded
+`.tools/` and `.venv/` content. Independent review and hosted Ubuntu/Windows CI
+remain pending; no Item 10B host evidence is claimed.
+
+### Item 10A pre-independent-review hardening
+
+DEC-0032 changes the software exposure query from experiment-scoped exact
+equality to global dataset/time overlap. Exact UTC half-open intervals compare
+all fractional-second digits without floats. Any same-dataset component overlap
+across release or incident history blocks a later authorized release; adjacent
+intervals and different datasets remain independent. Incidents remain appendable
+after exposure. Prospective release still requires the current FROZEN head,
+while retained evidence is reverified against the complete Item 8 history, sole
+historical FROZEN revision and manifest, exact authority fields, and retained
+release-event digest through RUNNING, EVALUATED, and DECIDED.
+
+The corrected Item 10A hostile suite passed all 54 cases. The complete locked
+Windows gate passed `uv lock --check`, Ruff format over 70 files, Ruff lint,
+strict mypy over 45 source files, and all 690 pytest cases with 90.18% combined
+statement/branch coverage. The governed offline build and import checks passed;
+archive inspection again found 129 combined members, included both isolation
+modules in source and wheel, and excluded `.tools/` and `.venv/` content.
+Independent review and hosted CI remain pending.
+
+### Item 10A independent-review writer-authority fix
+
+Nova's independent review of head
+`859233574d4d8ea9595e7985f3da82aba252c99a` failed because the public
+`ExposureLedger.append_event` method formed a competing supported writer path.
+It could persist a structurally valid release event without exact Item 8 FROZEN
+authorization or immutable released-artifact verification. DEC-0033 makes
+`SealedReleaseService.authorize_release` the sole supported public release
+writer and `record_accidental_exposure` the sole supported public incident
+writer. The ledger retains public read and chain-verification methods, while its
+validated append hook is private/internal and retains all existing schema,
+canonical digest, CAS, overlap, and append-only controls.
+
+The corrective Item 10A hostile suite passed all 58 cases. The complete locked
+Windows gate passed `uv lock --check`, Ruff format, Ruff lint, strict mypy, and
+all 694 pytest cases with 90.18% combined statement/branch coverage. The
+governed offline build and import/archive checks also passed with no dependency
+drift. Item 10A remains `IMPLEMENTED / INDEPENDENT REVIEW PENDING` until Nova
+re-audits the corrective head; Item 10B remains `NOT STARTED`.

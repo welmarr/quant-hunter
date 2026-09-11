@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | PROJECT | Quant Hunter |
-| LAST VERIFIED DATE | 2026-09-10 |
-| LAST VERIFIED IMPLEMENTATION MAIN | `6c9d5ae1eec58faeca53239d832748053387f1bc` |
+| LAST VERIFIED DATE | 2026-09-11 |
+| LAST VERIFIED IMPLEMENTATION MAIN | `3d6f5f50e9f7b202498a6d3a2357fcccee2df409` |
 | CURRENT STAGE | Stage 1B — Foundation Implementation |
 
-The stored SHA is the historical/current verified implementation checkpoint
-immediately before this documentation-only governance batch. It is not a
+The stored SHA is the verified implementation checkpoint immediately before
+the current Item 10A feature branch. It is not a
 substitute for checking current Git. Every resume must obtain the current
 branch and HEAD directly from Git, then reconcile this file against that state
 and the available review evidence. Do not update this field speculatively with
@@ -31,9 +31,14 @@ REVIEW PASSED`. Its final cross-binding reviewed head is
 Ubuntu and Windows. Ubuntu ran 630 tests with 90.99% combined statement/branch
 coverage; Windows also succeeded.
 
-## NEXT ROADMAP ITEM
+## CURRENT ITEM
 
-Item 10 — Sealed OOS Boundary.
+Item 10A — software release core and synthetic security contracts is
+`IMPLEMENTED / INDEPENDENT REVIEW PENDING` on
+`feature/stage1b-item10a-sealed-oos-core`. Nova's review of head
+`859233574d4d8ea9595e7985f3da82aba252c99a` found a competing public raw
+exposure-ledger writer. The corrective work makes `SealedReleaseService` the
+sole supported public exposure writer and requires independent re-audit.
 
 ## PLANNED DECOMPOSITION
 
@@ -42,7 +47,10 @@ Item 10 is planned as:
 - **10A — software release core and synthetic security contracts.**
 - **10B — real Windows host-enforced boundary.**
 
-Neither 10A nor 10B is started or authorized by this documentation batch.
+Item 10A implements only software and synthetic evidence. Item 10B is `NOT
+STARTED` and remains separately gated; no real Windows host-security mutation is
+authorized. The next action is independent re-review of Item 10A, not Item 10B
+implementation.
 
 ## AFTER ITEM 10
 

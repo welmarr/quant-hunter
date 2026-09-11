@@ -290,3 +290,73 @@ the repository. It changes no risk status. In particular, RISK-018 remains
 the intermittent Windows registry-lock incident. Item 12 must investigate it
 even if it never occurs again. This documentation/governance change adds USD 0
 incremental direct cost and does not start Item 10.
+
+## Item 10A Sealed-OOS Software Evidence
+
+On 2026-09-11, Item 10A implemented the software release core and synthetic
+security contracts under DEC-0031. Exact Item 8 FROZEN authority, the complete
+canonical dataset-ID set, the exact sealed interval, and immutable released
+artifact evidence are bound into RFC 8785/SHA-256 events. The append-only ledger
+uses compare-and-swap, exclusive publication, a prior-digest chain, and a
+canonical head anchor; hostile tests cover concurrent append, stale heads,
+overwrite attempts, corruption, missing/reordered history, and tail truncation.
+Authorized and accidental exposure remain irreversibly `EXPOSED`, and released
+experiments reject every later Item 8 search attempt while preserving a fixed
+zero-new-search evaluation path.
+
+All Item 10A evidence uses synthetic records and immutable synthetic objects.
+The research-side API accepts no sealed source path, and hostile tests poison
+filesystem read, open, stat, existence, directory-listing, traversal, and hash
+operations to detect any prohibited sealed-source dereference. The software
+creates and accepts only `SYNTHETIC_TEST`; it cannot claim `HOST_ENFORCED`.
+
+This evidence reduces the software-contract portions of RISK-017 but does not
+close it. Item 10B still requires separately authorized Windows identities,
+encrypted storage, effective DACL/SACL denial, audit, backup, sync, indexing,
+and controlled-release evidence. RISK-018 remains `OPEN`; Item 10A does not
+modify `identity/registry.py` or resolve the observed Windows allocation-lock
+incident. RISK-023 and RISK-024 also remain `OPEN`. Independent review and
+hosted CI are pending. No real sealed data, host mutation, dependency, service,
+or infrastructure was used.
+
+### Item 10A pre-independent-review hardening
+
+Builder self-review before independent review found that the first Item 10A ledger scoped exposure to an
+experiment and could not reverify retained evidence after lifecycle progression.
+DEC-0032 corrects both findings. Exposure now belongs globally to each dataset
+and exact half-open interval. Same-dataset exact, subset, superset, partial, and
+one-nanosecond overlap across experiments block release; exact adjacency and
+different datasets remain independent. Multi-dataset events expose every
+component. Later and repeated incidents remain appendable after `EXPOSED`, and
+full chain verification rejects an illegally inserted overlapping release.
+
+Prospective authorization still requires a current Item 8 FROZEN head. A
+separate historical path verifies the complete append-only lifecycle, exactly
+one FROZEN revision and immutable manifest, every exact release binding, and the
+retained event digest while RUNNING, EVALUATED, or DECIDED. This correction adds
+no host evidence and does not close RISK-017. RISK-018, RISK-023, and RISK-024
+also remain `OPEN`; `identity/registry.py` is unchanged.
+
+### Item 10A independent-review writer-authority finding
+
+Nova's independent review of head
+`859233574d4d8ea9595e7985f3da82aba252c99a` returned `FAIL`: public
+`ExposureLedger.append_event` could accept a raw schema-valid exposure mapping
+without exact Item 8 FROZEN verification and, for authorized release, immutable
+released-artifact verification. This was a competing supported release and
+incident writer even though the high-level service path was correct.
+
+DEC-0033 removes the public raw writer. `SealedReleaseService.authorize_release`
+is now the sole supported public release writer, and
+`record_accidental_exposure` is the sole supported public incident writer. The
+ledger remains the structural append-only persistence and verification layer;
+its structural validity alone is not scientific release authorization. Hostile
+API-surface, raw mapping, nonexistent-experiment, supported-service, chain, CAS,
+overlap, history, and search-termination tests retain this boundary. Python
+privacy addresses accidental workflow misuse only and adds no administrator-
+resistant host claim.
+
+Item 10A remains `IMPLEMENTED / INDEPENDENT REVIEW PENDING` until the corrective
+head is independently re-audited. Item 10B remains `NOT STARTED`. RISK-017,
+RISK-018, RISK-023, and RISK-024 remain `OPEN`; no risk is closed by this
+software-only correction.

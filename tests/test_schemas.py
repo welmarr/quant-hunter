@@ -88,6 +88,7 @@ def test_schema_catalog_is_complete_and_meta_valid() -> None:
         "raw-capture.schema.json",
         "research-backlog.schema.json",
         "research-object.schema.json",
+        "sealed-exposure-incident.schema.json",
         "sealed-release-event.schema.json",
         "source.schema.json",
     }
@@ -194,10 +195,6 @@ def test_completed_experiment_metadata(status: str) -> None:
     if status in {"EVALUATED", "DECIDED"}:
         instance["evaluated_at"] = "2026-09-05T06:07:00Z"
         instance["evaluation_outcome"] = "POSITIVE"
-        instance["sealed_data_release"] = {
-            "status": "RELEASED",
-            "event_digest": "sha256:" + "b" * 64,
-        }
         instance["results"] = "Synthetic conformance result only."
         instance["result_artifact_digests"] = ["sha256:" + "c" * 64]
         instance["result_artifact_locations"] = ["https://example.invalid/result.json"]
@@ -224,6 +221,90 @@ def test_completed_experiment_metadata(status: str) -> None:
             "Synthetic fixture supplies no market evidence."
         )
     validator_for("experiment.schema.json").validate(instance)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "validator"),
+    [
+        (lambda value: value.pop("frozen_revision_digest"), "required"),
+        (
+            lambda value: cast(JsonObject, value["sealed_binding"]).__setitem__(
+                "dataset_ids",
+                [
+                    "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
+                    "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
+                ],
+            ),
+            "uniqueItems",
+        ),
+        (
+            lambda value: cast(JsonObject, value["sealed_binding"]).pop(
+                "sealed_out_of_sample"
+            ),
+            "required",
+        ),
+        (
+            lambda value: value.__setitem__("source_partition_status", "UNEXPOSED"),
+            "const",
+        ),
+    ],
+)
+def test_sealed_release_schema_requires_complete_one_way_binding(
+    mutation: Any, validator: str
+) -> None:
+    """Release events cannot omit or weaken frozen OOS identity evidence."""
+    instance = deepcopy(VALID_OBJECTS["sealed-release-event.schema.json"])
+    mutation(instance)
+    errors = list(
+        validator_for("sealed-release-event.schema.json").iter_errors(instance)
+    )
+    assert validator in {error.validator for error in errors}
+
+
+def test_released_experiment_schema_forbids_search_attempts() -> None:
+    """A released experiment record cannot retain post-release search exposure."""
+    instance = deepcopy(VALID_OBJECTS["experiment.schema.json"])
+    instance.update(
+        {
+            "lifecycle_status": "RUNNING",
+            "registered_at": "2026-09-05T06:01:00Z",
+            "frozen_at": "2026-09-05T06:02:00Z",
+            "started_at": "2026-09-05T06:03:00Z",
+            "frozen_manifest_digest": "sha256:" + "a" * 64,
+            "attempt_records": [
+                {
+                    "attempt_number": 1,
+                    "experiment_id": instance["experiment_id"],
+                    "recorded_at": "2026-09-05T06:04:00Z",
+                    "ai_generated": True,
+                    "failed": False,
+                    "exposure_reason": "Forbidden post-release schema attempt.",
+                }
+            ],
+            "variants_attempted": 1,
+            "variant_accounting": {
+                "ai_generated_attempts": 1,
+                "failed_attempts": 0,
+                "accounting_basis": "Synthetic hostile schema case.",
+            },
+            "sealed_data_release": {
+                "status": "RELEASED",
+                "event_digest": "sha256:" + "b" * 64,
+            },
+        }
+    )
+    for field in (
+        "feature_definitions",
+        "label_definitions",
+        "candidate_universe",
+        "parameters_considered",
+    ):
+        instance[field] = "Fixed synthetic conformance definition."
+    instance["baselines"] = ["Synthetic identity baseline"]
+
+    errors = list(validator_for("experiment.schema.json").iter_errors(instance))
+
+    assert {"const", "maxItems"}.intersection(error.validator for error in errors)
 
 
 @pytest.mark.parametrize(

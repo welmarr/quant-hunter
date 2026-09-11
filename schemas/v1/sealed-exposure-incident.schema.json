@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/sealed-exposure-incident.schema.json",
+  "title": "Quant Hunter Sealed Out-of-Sample Exposure Incident",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_type",
+    "ledger_sequence",
+    "event_digest",
+    "previous_event_digest",
+    "experiment_id",
+    "sealed_binding",
+    "occurred_at",
+    "actor",
+    "reason",
+    "failure_point",
+    "source_partition_status",
+    "enforcement_mode",
+    "review_requirement"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "event_type": {"const": "ACCIDENTAL_EXPOSURE"},
+    "ledger_sequence": {"type": "integer", "minimum": 1},
+    "event_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "previous_event_digest": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "common.schema.json#/$defs/digest"}
+      ]
+    },
+    "experiment_id": {"$ref": "common.schema.json#/$defs/experiment_id"},
+    "sealed_binding": {
+      "$ref": "sealed-release-event.schema.json#/$defs/sealed_binding"
+    },
+    "occurred_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "actor": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "reason": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "failure_point": {
+      "enum": [
+        "PRE_FREEZE_ACCESS",
+        "UNAUTHORIZED_ACCESS",
+        "MISMATCHED_AUTHORITY",
+        "PARTIAL_RELEASE_FAILURE",
+        "OTHER"
+      ]
+    },
+    "released_artifact_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "source_partition_status": {"const": "EXPOSED"},
+    "enforcement_mode": {"const": "SYNTHETIC_TEST"},
+    "review_requirement": {"const": "INVALIDATION_RISK_DECISION_REVIEW"}
+  }
+}
