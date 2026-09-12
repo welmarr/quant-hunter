@@ -464,3 +464,14 @@ unreadable residual risk. This preflight created no live authority and does not
 close RISK-017. A successful separately authorized governed capture and
 independent review of its complete `HOST_ENFORCED` evidence remain required.
 RISK-018 remains `OPEN` for Item 12 and is unaffected by this checkpoint.
+
+On 2026-09-12, the first governed capture attempt after that preflight failed at
+the repository-binding comparison before `_run_governed_setup()`. Runtime import
+provenance had not been explicitly anchored to the launcher checkout. The
+failure therefore prevented setup, performed no host/security or BitLocker
+mutation, and created no canonical evidence. The corrective branch binds the
+launcher, implementation, caller repository, and schemas to one resolved
+checkout and adds bounded operator diagnostics without weakening DEC-0036.
+This is corrective software evidence only. RISK-017 remains `OPEN` until a
+separately authorized capture produces complete live evidence and that evidence
+passes independent review. RISK-018 remains unchanged.

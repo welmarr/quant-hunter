@@ -18,7 +18,8 @@ SENSITIVE_KEY: Final = re.compile(
 SENSITIVE_TEXT: Final = re.compile(
     r"(?:"
     r"--(?:api[-_]?key|token|password)(?=\s|=)(?:\s*=\s*|\s+)\S+"
-    r"|(?:authorization|cookie)\s*(?::|=)\s*\S+"
+    r"|authorization\s*(?::|=)\s*(?:bearer\s+)?\S+"
+    r"|cookie\s*(?::|=)\s*\S+"
     r"|(?<![A-Za-z0-9_-])bearer\s+[A-Za-z0-9][A-Za-z0-9._~+/=-]*"
     r")",
     re.IGNORECASE,

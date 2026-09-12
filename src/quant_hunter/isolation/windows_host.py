@@ -34,6 +34,7 @@ from quant_hunter.provenance.hashing import (
 )
 from quant_hunter.storage import ImmutableObjectStore
 from quant_hunter.storage.security import (
+    SENSITIVE_TEXT,
     SensitiveMetadataError,
     reject_secret_text_values,
 )
@@ -55,6 +56,18 @@ _RELEASE_TOKEN: Final = object()
 _SETUP_FAILURE_MARKER: Final = "ITEM10B_SETUP_FAILED"
 _SETUP_DIAGNOSTIC_MAX_CHARS: Final = 384
 _SETUP_REASON_MAX_CHARS: Final = 240
+_CAPTURE_FAILURE_MARKER: Final = "ITEM10B_CAPTURE_FAILED"
+_CAPTURE_DIAGNOSTIC_MAX_CHARS: Final = 512
+_CAPTURE_PHASES: Final = frozenset(
+    {
+        "REPOSITORY_BINDING",
+        "PREFLIGHT",
+        "SETUP",
+        "VERIFICATION",
+        "PUBLICATION",
+        "UNEXPECTED",
+    }
+)
 _SETUP_PHASES: Final = frozenset(
     {
         "PREFLIGHT",
@@ -84,6 +97,16 @@ _RECOVERY_MATERIAL_RE: Final = re.compile(
     re.IGNORECASE,
 )
 _SAFE_EXCEPTION_TYPE_RE: Final = re.compile(r"[A-Za-z0-9_.+]{1,120}")
+_QUOTED_ABSOLUTE_PATH_RE: Final = re.compile(
+    r"(['\"])(?:(?:[A-Za-z]:[\\/])|(?:\\\\)|/)[^'\"\r\n]+\1"
+)
+_UNQUOTED_ABSOLUTE_PATH_RE: Final = re.compile(
+    r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/][^\s,;]+|\\\\[^\s,;]+|"
+    r"/(?:[^/\s]+/)+[^\s,;]+)"
+)
+_UNSAFE_OBJECT_REPR_RE: Final = re.compile(
+    r"<[^>\r\n]{0,200}(?:object at 0x[0-9A-Fa-f]+|repr)[^>\r\n]*>"
+)
 _EXECUTION_RESULT_FIELDS: Final = {
     "schema_version",
     "verified_at",
@@ -126,6 +149,10 @@ _PREFLIGHT_OBSERVATION_FIELDS: Final = {
 
 class WindowsHostBoundaryError(SealedReleaseError):
     """Windows host evidence or host release authorization is invalid."""
+
+    def __init__(self, message: str, *, phase: str = "VERIFICATION") -> None:
+        self.phase = phase if phase in _CAPTURE_PHASES else "VERIFICATION"
+        super().__init__(message)
 
 
 class UnsupportedHostPlatformError(WindowsHostBoundaryError):
@@ -177,13 +204,30 @@ def _is_windows_host() -> bool:
 
 def _governed_repository_root() -> Path:
     """Return the source checkout that supplied this authority implementation."""
-    return Path(__file__).resolve().parents[3]
+    implementation = Path(__file__).resolve()
+    try:
+        repository = implementation.parents[3]
+    except IndexError as error:
+        raise HostBoundaryEvidenceError(
+            "Governed implementation is not in the required checkout layout",
+            phase="REPOSITORY_BINDING",
+        ) from error
+    expected_implementation = (
+        repository / "src" / "quant_hunter" / "isolation" / "windows_host.py"
+    ).resolve()
+    launcher = (repository / "scripts" / "windows" / "item10b_finalize.py").resolve()
+    if implementation != expected_implementation or not launcher.is_file():
+        raise HostBoundaryEvidenceError(
+            "Governed implementation is not bound to its launcher checkout",
+            phase="REPOSITORY_BINDING",
+        )
+    return repository
 
 
 def _require_windows_host() -> None:
     if not _is_windows_host():
         raise UnsupportedHostPlatformError(
-            "Live host-boundary operations require Windows"
+            "Live host-boundary operations require Windows", phase="PREFLIGHT"
         )
 
 
@@ -221,6 +265,61 @@ def _account_leaf(account: str) -> str:
     return account.rsplit("\\", maxsplit=1)[-1].casefold()
 
 
+def _sanitize_operator_reason(value: object, fallback: str) -> str:
+    """Remove sensitive, terminal, path and environment content from a reason."""
+    text = value if isinstance(value, str) else ""
+    text = _ANSI_ESCAPE_RE.sub("", text)
+    text = "".join(character for character in text if character.isprintable())
+    text = " ".join(text.split())
+    text = _RECOVERY_MATERIAL_RE.sub(r"\1[REDACTED]", text)
+    text = SENSITIVE_TEXT.sub("[REDACTED]", text)
+    text = _QUOTED_ABSOLUTE_PATH_RE.sub("<REDACTED_PATH>", text)
+    text = _UNQUOTED_ABSOLUTE_PATH_RE.sub("<REDACTED_PATH>", text)
+    text = _UNSAFE_OBJECT_REPR_RE.sub("<REDACTED_OBJECT>", text)
+    environment_values = sorted(
+        {
+            item
+            for item in os.environ.values()
+            if isinstance(item, str) and len(item) >= 4
+        },
+        key=len,
+        reverse=True,
+    )
+    for environment_value in environment_values:
+        text = text.replace(environment_value, "<REDACTED_ENV>")
+    text = " ".join(text.split()).strip(" :-")
+    return (text or fallback)[:_SETUP_REASON_MAX_CHARS]
+
+
+def item10b_capture_failure_diagnostic(error: Exception) -> str:
+    """Return the bounded owner-facing diagnostic for a failed live capture."""
+    if isinstance(error, WindowsHostBoundaryError):
+        phase = error.phase
+        if phase == "REPOSITORY_BINDING":
+            reason = "Governed repository binding verification failed"
+        else:
+            reason = _sanitize_operator_reason(
+                str(error), "Governed Item 10B operation failed"
+            )
+    else:
+        phase = "UNEXPECTED"
+        reason = _sanitize_operator_reason(
+            str(error), "Unexpected governed operation failure"
+        )
+    exception_type = type(error).__name__
+    if _SAFE_EXCEPTION_TYPE_RE.fullmatch(exception_type) is None:
+        exception_type = "Exception"
+    diagnostic = "\n".join(
+        (
+            _CAPTURE_FAILURE_MARKER,
+            f"phase={phase}",
+            f"type={exception_type}",
+            f"reason={reason}",
+        )
+    )
+    return diagnostic[:_CAPTURE_DIAGNOSTIC_MAX_CHARS]
+
+
 def _governed_setup_failure_message(stderr: object) -> str:
     """Return only the bounded, structured diagnostic emitted by setup."""
     if isinstance(stderr, bytes):
@@ -251,16 +350,13 @@ def _governed_setup_failure_message(stderr: object) -> str:
     exception_type = fields.get("exception_type", "System.Exception")
     if _SAFE_EXCEPTION_TYPE_RE.fullmatch(exception_type) is None:
         exception_type = "System.Exception"
-    reason = " ".join(fields.get("reason", "").split())
-    reason = "".join(character for character in reason if character.isprintable())
-    if not reason:
-        reason = "No safe reason was available."
-    reason = _RECOVERY_MATERIAL_RE.sub(r"\1[REDACTED]", reason)
+    reason = _sanitize_operator_reason(
+        fields.get("reason", ""), "No safe reason was available."
+    )
     try:
         reject_secret_text_values(reason, "governed setup diagnostic")
     except SensitiveMetadataError:
         reason = "[REDACTED]"
-    reason = reason[:_SETUP_REASON_MAX_CHARS]
     message = (
         f"Governed Item 10B execution failed at {phase} ({exception_type}): {reason}"
     )
@@ -447,38 +543,62 @@ class WindowsHostBoundaryVerifier:
         _require_windows_host()
         if not _is_elevated_administrator():
             raise HostIdentityError(
-                "Capturing live host evidence requires an elevated administrator"
+                "Capturing live host evidence requires an elevated administrator",
+                phase="PREFLIGHT",
             )
         if not authorize_setup:
             raise HostBoundaryEvidenceError(
-                "Live host setup requires explicit caller authorization"
+                "Live host setup requires explicit caller authorization",
+                phase="PREFLIGHT",
             )
-        repository = _resolved_non_root(repository_root, "repository root")
+        try:
+            repository = _resolved_non_root(repository_root, "repository root")
+            governed_repository = _resolved_non_root(
+                _governed_repository_root(), "governed repository root"
+            )
+        except HostBoundaryEvidenceError as error:
+            raise HostBoundaryEvidenceError(
+                "Governed repository binding verification failed",
+                phase="REPOSITORY_BINDING",
+            ) from error
         if not repository.is_dir():
-            raise HostBoundaryEvidenceError("Repository root is not a directory")
-        governed_repository = _resolved_non_root(
-            _governed_repository_root(), "governed repository root"
-        )
+            raise HostBoundaryEvidenceError(
+                "Repository root is not a directory", phase="REPOSITORY_BINDING"
+            )
         if repository != governed_repository:
             raise HostBoundaryEvidenceError(
-                "Repository root does not match the running governed implementation"
+                "Repository root does not match the running governed implementation",
+                phase="REPOSITORY_BINDING",
             )
-        candidate = _resolved_non_root(candidate_root, "candidate root")
-        self._require_candidate_profile(candidate)
-        output_file = _require_within(
-            evidence_path, self.profile.evidence_root, "canonical evidence path"
-        )
+        try:
+            candidate = _resolved_non_root(candidate_root, "candidate root")
+            self._require_candidate_profile(candidate)
+        except HostBoundaryEvidenceError as error:
+            raise HostBoundaryEvidenceError(str(error), phase="PREFLIGHT") from error
+        try:
+            output_file = _require_within(
+                evidence_path, self.profile.evidence_root, "canonical evidence path"
+            )
+        except HostBoundaryEvidenceError as error:
+            raise HostBoundaryEvidenceError(str(error), phase="PUBLICATION") from error
         if os.path.lexists(output_file):
             raise HostBoundaryEvidenceError(
-                "Canonical host evidence is append-only and already exists"
+                "Canonical host evidence is append-only and already exists",
+                phase="PUBLICATION",
             )
-        result = self._run_governed_setup(repository, candidate)
+        try:
+            result = self._run_governed_setup(repository, candidate)
+        except HostBoundaryEvidenceError as error:
+            raise HostBoundaryEvidenceError(str(error), phase="SETUP") from error
         self._require_execution_binding(result, candidate)
         record = self._sanitized_record(result, candidate)
         record["host_boundary_evidence_digest"] = host_boundary_evidence_digest(record)
-        self._validate_record(record)
-        self._exclusive_publish(output_file, canonicalize_json(record))
-        return self.load(evidence_path)
+        try:
+            self._validate_record(record)
+            self._exclusive_publish(output_file, canonicalize_json(record))
+            return self.load(evidence_path)
+        except HostBoundaryEvidenceError as error:
+            raise HostBoundaryEvidenceError(str(error), phase="PUBLICATION") from error
 
     def _run_governed_setup(
         self, repository_root: Path, candidate_root: Path
