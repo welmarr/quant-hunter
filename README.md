@@ -64,6 +64,7 @@ live-trading capability exists.
 ## Documentation Map
 
 - Start with [`AGENTS.md`](AGENTS.md) for non-negotiable operating rules.
+- Use [`docs/WORKING_PROTOCOL.md`](docs/WORKING_PROTOCOL.md) for the permanent Nova, Codex, owner, GitHub, merge, command, checkpoint, and continuity workflow.
 - Resume from [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md), then apply the reviewed invariants in [`docs/REGRESSION_GUARD.md`](docs/REGRESSION_GUARD.md).
 - Use [`docs/ISSUE_GOVERNANCE.md`](docs/ISSUE_GOVERNANCE.md) for material deferred-work tracking and closure rules.
 - Read [`docs/PROJECT_CHARTER.md`](docs/PROJECT_CHARTER.md) for mission, scope, and success criteria.
