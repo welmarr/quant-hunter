@@ -6,10 +6,10 @@
 |---|---|
 | PROJECT | Quant Hunter |
 | LAST VERIFIED DATE | 2026-09-11 |
-| LAST VERIFIED IMPLEMENTATION MAIN | `cf26f4a3c8abd2387649a0baf90d398679ea8ca5` |
+| LAST VERIFIED IMPLEMENTATION MAIN | `27a81e9374e97566789f1a61000312d64b91a563` |
 | CURRENT STAGE | Stage 1B — Foundation Implementation |
 
-The stored SHA is the verified PR #8 post-merge implementation checkpoint. It is
+The stored SHA is the verified PR #9 post-merge implementation checkpoint. It is
 not a substitute for checking current Git. Every resume must obtain the current
 branch and HEAD directly from Git, then reconcile this file against that state
 and the available review evidence. Do not update this field speculatively with
@@ -33,20 +33,17 @@ statement/branch coverage on Ubuntu.
 ## CURRENT ITEM
 
 Item 10B — real Windows host-enforced sealed-OOS boundary is `TOOLING MERGED /
-LIVE HOST EVIDENCE BLOCKED`. PR #8 is merged on main at
-`cf26f4a3c8abd2387649a0baf90d398679ea8ca5`; post-merge Quality #39 passed 768
-tests on Ubuntu and Windows with 90.20% combined statement/branch coverage on
-Ubuntu. Independent review previously failed head
-`238a1538888a34635b7f274b451fbd57c980cb0e` because its public report finalizer
-could promote caller assertions. DEC-0036 removes that path and binds authority
-creation to one executed preflight/setup/verification flow. Independent
-re-review confirmed that bypass fixed at
-`45611b771951839c96f4f19111ae4d8e7fb6898e`, then failed the Windows audit
-evidence semantics: denied research access must use 4656 Audit Failure, while
-4663 Audit Success remains the performed-access evidence for the custodian.
-Quality #37 passed Windows but failed Ubuntu because the pure classifier used
-`Join-Path` on a synthetic Windows `D:` ObjectName. PR #8 corrected that
-provider dependency and passed independent review.
+LIVE HOST EVIDENCE BLOCKED`. The final PR #9 head
+`8efa0f5d874c3306ea1cd1c5078ddf35c508c305` is merged on main at
+`27a81e9374e97566789f1a61000312d64b91a563`. Final pre-merge Quality #41 and
+post-merge Quality #42 passed all 783 tests on Ubuntu and Windows; Ubuntu
+combined statement/branch coverage was 90.09%. The PR #9 software/security
+correction is closed. Governed DACL/SACL creation and verification use actual
+local-user SIDs, denied research access requires 4656 Audit Failure from the
+exact research SID, performed custodian access requires 4663 Audit Success from
+the exact custodian SID, and the pure ACL classifier is provider-independent.
+DEC-0036 still permits authority creation only through one governed executed
+preflight/setup/verification flow.
 
 The owner then ran an elevated preflight against a separate fixed NTFS target.
 It passed with BitLocker On/FullyEncrypted, no path or identity conflict, and no
@@ -58,22 +55,14 @@ no 4719 audit-policy change and no governed 4656/4663 evidence. Rollback removed
 the users and batch-created root, restored File System auditing to No Auditing,
 and left BitLocker unchanged. No canonical `HOST_ENFORCED` evidence exists.
 
-A read-only translation probe showed that local `.\qh-*` names are not a
-portable ACL authority on the tested host. Branch
-`fix/item10b-windows-local-identity` binds DACL/SACL creation and verification to
-the actual local-user SIDs, uses well-known SYSTEM/Administrators SIDs, and uses
-the runtime machine name only for in-memory effective-login credentials.
-Independent review of head `6fe7ce1b097d68418cae22920725c85f00ad7729`
-returned `PASS WITH CHANGES`: the ACL/SACL correction was accepted, but 4656 and
-4663 event classification still used leaf account names. The follow-up binds
-those events to the same resolved research and custodian SIDs. Independent
-review passed that authority correction at
-`2fe04559e9d61b51e7f4b937234a72b1f88c4fe8`, but PR #9 Quality #40 failed on
-Ubuntu after 781 passing tests because the synthetic ACL harness instantiated a
-Windows-only `SecurityIdentifier`; Windows passed all 782 tests. The current
-follow-up keeps Windows ACL acquisition and mutation SID-based while making the
-pure evidence classifier consume SID strings and rule metadata. A new PR check
-is required before merge or any later owner-controlled live rerun.
+A fresh elevated owner-host read-only preflight against `D:\QuantHunterOOS`
+then passed with zero blockers. It confirmed an elevated administrator, a fixed
+local NTFS volume with BitLocker On/FullyEncrypted, repository/worktree and
+profile/cache/temp exclusion, no consumer-sync overlap, absent governed `qh-*`
+identities, an absent candidate path, and original File System auditing set to
+No Auditing. Windows Search was running. Backup configuration remained
+unreadable and is retained as residual risk. This preflight is not
+`HOST_ENFORCED` authority and created none.
 
 ## PLANNED DECOMPOSITION
 
@@ -159,13 +148,13 @@ A future agent must:
 6. Reconcile this current-state summary against actual repository and review
    evidence.
 7. Stop and reconcile rather than guess if the evidence conflicts.
-8. Independently audit the PR #9 Quality jobs for the provider-independent ACL
-   classifier follow-up on `fix/item10b-windows-local-identity`, preserving the
-   exact-SID DACL/SACL authority, 4656 Failure / 4663 Success semantics, and
-   DEC-0036 authority path. Do not merge until Ubuntu and Windows pass. After
-   merge and green CI, resume Item 10B only in a separately authorized elevated
-   owner session and rerun the governed capture workflow against the already
-   protected fixed NTFS target. Do not change BitLocker.
+8. After this documentation checkpoint, resume Item 10B only through the
+   separately authorized elevated owner-host governed capture workflow against
+   `D:\QuantHunterOOS`. Preserve the exact-SID DACL/SACL authority, 4656 Failure
+   / 4663 Success semantics, provider-independent classifier, and DEC-0036
+   single executed authority path. Do not change BitLocker. The passed read-only
+   preflight is not `HOST_ENFORCED` evidence; Item 10B remains blocked until the
+   complete live evidence is captured and independently reviewed.
 9. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE
