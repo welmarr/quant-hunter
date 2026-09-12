@@ -139,23 +139,24 @@ line in this exact structure:
 A future agent must:
 
 1. Read `AGENTS.md`.
-2. Read this file.
-3. Verify the current Git HEAD, branch, and worktree.
-4. Inspect open material GitHub Issues and reconcile them with the repository
+2. Read `docs/WORKING_PROTOCOL.md`.
+3. Read this file.
+4. Verify the current Git HEAD, branch, and worktree.
+5. Inspect open material GitHub Issues and reconcile them with the repository
    authorities.
-5. Read `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/RISK_REGISTER.md`, and the
+6. Read `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/RISK_REGISTER.md`, and the
    governing documents for the next item.
-6. Reconcile this current-state summary against actual repository and review
+7. Reconcile this current-state summary against actual repository and review
    evidence.
-7. Stop and reconcile rather than guess if the evidence conflicts.
-8. After this documentation checkpoint, resume Item 10B only through the
+8. Stop and reconcile rather than guess if the evidence conflicts.
+9. After this documentation checkpoint, resume Item 10B only through the
    separately authorized elevated owner-host governed capture workflow against
    `D:\QuantHunterOOS`. Preserve the exact-SID DACL/SACL authority, 4656 Failure
    / 4663 Success semantics, provider-independent classifier, and DEC-0036
    single executed authority path. Do not change BitLocker. The passed read-only
    preflight is not `HOST_ENFORCED` evidence; Item 10B remains blocked until the
    complete live evidence is captured and independently reviewed.
-9. Complete the required pre-step checkpoint before any later item.
+10. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE
 
