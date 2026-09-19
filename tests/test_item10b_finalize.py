@@ -253,34 +253,66 @@ def test_unknown_diagnostic_redacts_multiple_secrets_and_path_together(
 def test_environment_redaction_requires_a_complete_value_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A common environment value is redacted alone, never inside safe prose."""
+    """Ordinary prose is not sensitive merely because it equals environment data."""
     monkeypatch.setenv("ITEM10B_CI_COMMON_VALUE", "main")
+    monkeypatch.setenv("ITEM10B_CI_BRANCH_WORD", "branch")
+    monkeypatch.setenv("ITEM10B_CI_PUSH_WORD", "push")
+    monkeypatch.setenv("ITEM10B_CI_TRUE_WORD", "true")
+    monkeypatch.setenv("ITEM10B_CI_FALSE_WORD", "false")
     diagnostic = item10b_capture_failure_diagnostic(
         RuntimeError(
             "Selected branch=main; governed retry remains available; "
-            "main validation context"
+            "main validation context; push true false"
         )
     )
-    assert "branch=<REDACTED_ENV>" in diagnostic
+    assert "Selected branch=main" in diagnostic
     assert "governed retry remains available" in diagnostic
-    assert "<REDACTED_ENV> validation context" in diagnostic
+    assert "main validation context; push true false" in diagnostic
+    assert "<REDACTED_ENV>" not in diagnostic
     assert "re<REDACTED_ENV>s" not in diagnostic
 
 
-def test_long_private_environment_value_remains_redacted(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("label", ["environment", "env"])
+def test_explicit_environment_context_redacts_real_value(
+    monkeypatch: pytest.MonkeyPatch, label: str
 ) -> None:
-    """Boundary awareness does not weaken redaction of a private environment value."""
+    """Explicit environment contexts redact an exact process-environment value."""
     private_value = "opaque-private-environment-value-7391"
     monkeypatch.setenv("ITEM10B_CI_PRIVATE_VALUE", private_value)
     diagnostic = item10b_capture_failure_diagnostic(
-        RuntimeError(
-            f"Cannot continue; environment={private_value}; safe context remains"
-        )
+        RuntimeError(f"Cannot continue; {label}={private_value}; safe context remains")
     )
     assert private_value not in diagnostic
-    assert "environment=<REDACTED_ENV>" in diagnostic
+    assert f"{label}=<REDACTED_ENV>" in diagnostic
     assert "safe context remains" in diagnostic
+
+
+def test_actual_environment_key_redacts_its_exact_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A real environment key and its exact value identify environment material."""
+    private_value = "opaque-private-environment-value-7391"
+    monkeypatch.setenv("ITEM10B_PRIVATE_VALUE", private_value)
+    diagnostic = item10b_capture_failure_diagnostic(
+        RuntimeError(f"ITEM10B_PRIVATE_VALUE={private_value}; retry remains available")
+    )
+    assert private_value not in diagnostic
+    assert "ITEM10B_PRIVATE_VALUE=<REDACTED_ENV>" in diagnostic
+    assert "retry remains available" in diagnostic
+
+
+def test_sensitive_environment_key_cannot_leak(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Credential-shaped environment assignments remain fail-closed."""
+    private_value = "very-secret-value"
+    monkeypatch.setenv("ITEM10B_TOKEN", private_value)
+    diagnostic = item10b_capture_failure_diagnostic(
+        RuntimeError(f"ITEM10B_TOKEN={private_value}; governed retry available")
+    )
+    assert private_value not in diagnostic
+    assert "ITEM10B_TOKEN=<REDACTED_ENV>" in diagnostic
+    assert "governed retry available" in diagnostic
 
 
 def test_unknown_diagnostic_strips_controls_preserves_meaning_and_is_bounded() -> None:

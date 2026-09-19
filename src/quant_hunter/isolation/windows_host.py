@@ -34,6 +34,7 @@ from quant_hunter.provenance.hashing import (
 )
 from quant_hunter.storage import ImmutableObjectStore
 from quant_hunter.storage.security import (
+    SENSITIVE_KEY,
     SensitiveMetadataError,
     redact_secret_text,
     reject_secret_text_values,
@@ -117,6 +118,11 @@ _UNSAFE_OBJECT_REPR_RE: Final = re.compile(
     r"<[^>\r\n]{0,200}(?:object at 0x[0-9A-Fa-f]+|repr)[^>\r\n]*>"
 )
 _ENVIRONMENT_VALUE_BOUNDARY: Final = r"[\w./\\-]"
+_ENVIRONMENT_SENSITIVE_ASSIGNMENT_RE: Final = re.compile(
+    r"(?P<label>(?<![A-Za-z0-9_-])[A-Za-z_][A-Za-z0-9_-]*)"
+    r"(?P<separator>\s*(?:=|:)\s*)"
+    r"(?P<value>\"[^\"\r\n]*\"|'[^'\r\n]*'|[^,;\r\n]+)"
+)
 _EXECUTION_RESULT_FIELDS: Final = {
     "schema_version",
     "verified_at",
@@ -275,6 +281,40 @@ def _account_leaf(account: str) -> str:
     return account.rsplit("\\", maxsplit=1)[-1].casefold()
 
 
+def _redact_environment_material(text: str) -> str:
+    """Redact environment data only when an assignment identifies its context."""
+
+    def redact_sensitive_assignment(match: re.Match[str]) -> str:
+        label = match.group("label")
+        if SENSITIVE_KEY.search(label) is None:
+            return match.group(0)
+        if "[REDACTED]" in match.group("value"):
+            return match.group(0)
+        return f"{label}{match.group('separator')}<REDACTED_ENV>"
+
+    text = _ENVIRONMENT_SENSITIVE_ASSIGNMENT_RE.sub(redact_sensitive_assignment, text)
+    environment_items = sorted(
+        (
+            (key, environment_value)
+            for key, environment_value in os.environ.items()
+            if key and isinstance(environment_value, str) and environment_value
+        ),
+        key=lambda item: len(item[1]),
+        reverse=True,
+    )
+    for key, environment_value in environment_items:
+        labels = "|".join(("environment", "env", re.escape(key)))
+        escaped_value = re.escape(environment_value)
+        contextual_value = re.compile(
+            rf"(?P<prefix>(?<![A-Za-z0-9_-])(?i:{labels})"
+            rf"\s*(?:=|:)\s*)"
+            rf'(?:"{escaped_value}"|\'{escaped_value}\'|'
+            rf"{escaped_value}(?!{_ENVIRONMENT_VALUE_BOUNDARY}))"
+        )
+        text = contextual_value.sub(r"\g<prefix><REDACTED_ENV>", text)
+    return text
+
+
 def _sanitize_operator_reason(value: object, fallback: str) -> str:
     """Remove sensitive, terminal, path and environment content from a reason."""
     text = value if isinstance(value, str) else ""
@@ -288,22 +328,7 @@ def _sanitize_operator_reason(value: object, fallback: str) -> str:
     text = _UNQUOTED_WINDOWS_PATH_TO_DELIMITER_RE.sub("<REDACTED_PATH>", text)
     text = _UNQUOTED_ABSOLUTE_PATH_RE.sub("<REDACTED_PATH>", text)
     text = _UNSAFE_OBJECT_REPR_RE.sub("<REDACTED_OBJECT>", text)
-    environment_values = sorted(
-        {
-            item
-            for item in os.environ.values()
-            if isinstance(item, str) and len(item) >= 4
-        },
-        key=len,
-        reverse=True,
-    )
-    for environment_value in environment_values:
-        bounded_value = re.compile(
-            rf"(?<!{_ENVIRONMENT_VALUE_BOUNDARY})"
-            rf"{re.escape(environment_value)}"
-            rf"(?!{_ENVIRONMENT_VALUE_BOUNDARY})"
-        )
-        text = bounded_value.sub("<REDACTED_ENV>", text)
+    text = _redact_environment_material(text)
     text = " ".join(text.split()).strip(" :-")
     return (text or fallback)[:_SETUP_REASON_MAX_CHARS]
 
