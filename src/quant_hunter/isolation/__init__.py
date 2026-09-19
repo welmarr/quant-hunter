@@ -35,6 +35,7 @@ from quant_hunter.isolation.windows_host import (
     WindowsHostBoundaryVerifier,
     WindowsHostReleaseService,
     host_boundary_evidence_digest,
+    item10b_capture_failure_diagnostic,
     verify_host_boundary_evidence_digest,
 )
 
@@ -67,6 +68,7 @@ __all__ = (
     "WindowsHostBoundaryVerifier",
     "WindowsHostReleaseService",
     "host_boundary_evidence_digest",
+    "item10b_capture_failure_diagnostic",
     "release_event_digest",
     "verify_host_boundary_evidence_digest",
     "verify_release_event_digest",

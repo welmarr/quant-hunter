@@ -1,16 +1,15 @@
-# Nova Review Session Log
+# Nova Review Checkpoint Index
 
-This file is an append-only, manual index of Nova review sessions. The project
-owner adds one short entry after each session. Do not reconstruct, backfill, or
-fabricate earlier sessions. GitHub and the repository authorities remain the
-source of truth for the evidence named by an entry.
+This file is an optional compact index for major `CLOSED` or `BLOCKED`
+checkpoints. It is not mandatory after every Nova review, does not validate a
+pull-request head, and must never be changed on the same reviewed pull request
+solely to record that review.
 
-Use exactly this five-line format:
+GitHub pull requests, reviews, commits, and CI are the actual review evidence.
+`PROJECT_STATUS.md` remains the current resume snapshot. This index is lower
+authority than those sources and may be updated only when a checkpoint entry is
+naturally included in a later governed change.
 
-```text
-## [DATE]
-- Reviewed: [commit SHA / PR #]
-- Verdict: [#CASEPASSED | #CASEFAILED]
-- Model/level assigned: [Astra|Sol, level]
-- Next: [one line]
-```
+When useful, keep an entry short and include the checkpoint date, reviewed
+evidence, `CLOSED` or `BLOCKED` outcome, and next durable gate. Do not backfill or
+fabricate earlier sessions.

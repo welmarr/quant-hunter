@@ -41,8 +41,8 @@ Nova is the independent architect, reviewer, and gatekeeper. Nova:
   and a short reason for that choice;
 - independently audits actual diffs, commits, pull-request state, CI, security and
   scientific invariants, and post-merge state;
-- returns `#CASEPASSED` or `#CASEFAILED` under the mandatory response structure
-  below and supplies a PR package when the evidence passes;
+- returns an evidence-grounded `#CASEPASSED` or `#CASEFAILED` under the compact
+  review structure below;
 - provides exact Windows CMD commands and stop conditions for owner-controlled host
   actions; and
 - performs a post-merge audit before authorizing later work.
@@ -75,9 +75,9 @@ rewrite published or reviewed history, delete branches or tags, bypass failed
 checks, start later-stage work, or perform owner-controlled host or security
 mutations without separate explicit authorization.
 
-Codex does not create the GitHub pull request under the normal team convention.
-The owner creates it after Codex pushes. A task-specific owner instruction may
-explicitly change this convention for that task.
+Codex never creates a GitHub pull request. After validation, commit, and push,
+Codex supplies the owner with a PR package and stops. The owner is the sole PR
+creator.
 
 When Codex executes Git commands, its final response must include
 `### Git Actions Executed`. Every command, including failures, occupies one line:
@@ -91,8 +91,8 @@ When Codex executes Git commands, its final response must include
 The owner:
 
 - creates the pull request after Codex pushes the reviewed branch;
-- decides whether to authorize and performs the final merge only after Nova has
-  returned an evidence-grounded `#CASEPASSED` verdict and PR package;
+- may decline any merge and, only after Nova returns an evidence-grounded
+  `#CASEPASSED`, decides whether to authorize and execute the final merge;
 - executes owner-controlled Windows host and security commands when required;
 - authorizes host or security mutations, stage transitions, spending, intentional
   scientific-invariant changes, and applicable architecture corrections arising
@@ -128,7 +128,7 @@ Nova
   -> inspect CI and review state
   -> #CASEPASSED / #CASEFAILED
 
-Owner, only after deciding to authorize the merge from the reviewed evidence
+Owner, only after `#CASEPASSED` and a separate human decision to authorize
   -> merge by the exact authorized method
 
 Nova
@@ -141,11 +141,20 @@ Nova
 An owner's statement that a merge finished is a prompt for verification, not
 closure evidence by itself.
 
-### Owner Merge Decision
+### Two-Key Merge Authority
 
-Nova's `#CASEPASSED` verdict and PR package are recommendations for the owner;
-they are never merge authorization. If the owner decides to authorize a merge,
-the resulting instruction must state:
+Nova is the independent technical reviewer and the owner is the sole human merge
+authorizer and executor. `#CASEFAILED` prohibits treating the branch as governed
+merge-ready. `#CASEPASSED` satisfies the technical gate but does not compel or
+authorize a merge. The canonical handoff is:
+
+```text
+MERGE TECHNICAL GATE PASSED — OWNER DECISION REQUIRED
+```
+
+Nova supplies the exact reviewed head SHA and the required or recommended merge
+method but never executes the merge. If the owner then decides to authorize it,
+the instruction must state:
 
 - repository;
 - pull-request number;
@@ -159,13 +168,13 @@ the resulting instruction must state:
 - what must not be done after the merge; and
 - the exact completion phrase the owner must return.
 
-The owner is the sole merge authorizer and executor, must use the authorized
-method, and must not infer a method from context.
+The owner may choose not to merge after `#CASEPASSED`. If the owner proceeds,
+the owner must use the stated method and must not infer one from context.
 
 ### Codex PR Package
 
-Every Codex batch final report must include, in addition to the required
-`### Git Actions Executed` audit trail:
+Every Codex report that leaves a branch ready for owner PR creation must include,
+in addition to the required `### Git Actions Executed` audit trail:
 
 ```text
 ### PR Package
@@ -175,11 +184,12 @@ Every Codex batch final report must include, in addition to the required
 - Comparison URL if determinable
 ```
 
-Every batch produces exactly one pull request at its end on its own branch. A
-`#CASEFAILED` correction cycle continues on that same branch and pull request
-until `#CASEPASSED`. The next authorized batch after a pass starts a new branch
-and pull request. The owner remains the sole creator of pull requests and the
-sole executor of merges.
+One coherent goal or review unit uses one branch and one pull request. In-scope
+bug fixes, tests, and directly related documentation remain in that review unit.
+A `#CASEFAILED` correction cycle continues on the same branch and pull request
+until `#CASEPASSED`; it does not create corrective PRs. A genuinely distinct
+next objective starts a new branch and pull request. The owner remains the sole
+creator of pull requests and the sole authorizer and executor of merges.
 
 ## Precise Owner Requests
 
@@ -252,7 +262,10 @@ do not need a checkpoint unless they close or block a governed gate.
 
 ## Codex Delegation Prompt
 
-When Nova delegates repository work to Codex, Nova normally begins with:
+When Nova delegates repository work to Codex, Nova may recommend an available
+model/configuration and reasoning effort appropriate to the task's actual
+complexity. Product model names are operational choices, not durable governance
+authority. A delegation normally begins with:
 
 ```text
 Model:
@@ -281,81 +294,42 @@ You have no memory of prior conversations. Do not assume anything not
 written in the attached files or fetched live via your GitHub plugin.
 Reconstruct current state only from: AGENTS.md,
 docs/WORKING_PROTOCOL.md, docs/PROJECT_STATUS.md,
-docs/REGRESSION_GUARD.md, docs/SESSION_LOG.md, docs/ROADMAP.md,
+docs/REGRESSION_GUARD.md, docs/ROADMAP.md,
 docs/DECISIONS.md, docs/RISK_REGISTER.md, and live GitHub evidence
 (diff, commits, CI status, PR state, Issues). Flag explicitly any
 place where docs/PROJECT_STATUS.md's claims do not match what
 GitHub/CI/Issues actually show.
 ```
 
-## Nova Mandatory Response Structure
+## Nova Review Response Structure
 
-Nova must use the following sections, in this order, with these exact headers,
-on every review or audit turn.
+Substantive reviews and audits use a compact evidence-first core:
 
-### 0. Evidence Sufficiency Check
-Before issuing any verdict: confirm you have actual, current evidence
-(real diff content, real CI logs/status, real commit list, fetched
-live via the GitHub plugin) for this specific push/PR — not memory,
-not assumption, not inference from a prior session. If evidence is
-missing or incomplete, do NOT guess a verdict. Output exactly:
-"INSUFFICIENT EVIDENCE — need: [specific missing item]" and stop
-there, skipping all remaining sections.
+1. **Evidence** — current evidence actually fetched for the reviewed SHA, PR,
+   CI run, host output, or other governed object.
+2. **Reconstructed State** — the current stage, item, authority, and any mismatch
+   between repository claims and live evidence.
+3. **Verdict + Findings** — exactly one concise `#CASEPASSED` or
+   `#CASEFAILED` tag plus severity-classified findings and required corrections.
+4. **Next Gate** — the next authorized action and every material action that
+   remains blocked.
 
-### 1. Reconstructed State
-- Current Stage/Item/sub-step, confirmed against live GitHub evidence
-  (not just docs/PROJECT_STATUS.md's claim)
-- Evidence used (commit SHA, PR #, CI run, files)
-- Any mismatch found between docs/PROJECT_STATUS.md and actual
-  GitHub/CI/Issue state (state "No mismatch found" if none)
-- Whether docs/PROJECT_STATUS.md was updated as required by this push
-  — explicitly confirm yes/no
-- Any prior docs/SESSION_LOG.md entry contradicted by current state
+If evidence is insufficient, Nova states exactly what evidence is missing and
+does not guess a verdict.
 
-### 2. Audit Verdict
-- Verdict tag, alone on its own line, exactly one of:
-  #CASEPASSED
-  #CASEFAILED
-- Findings classified BLOCKER/HIGH/MEDIUM/LOW/ADVISORY, each labeled
-  fact vs. inference vs. recommendation
-- If #CASEFAILED: precise list of required corrections
-- If #CASEPASSED: confirm this verdict is grounded in real evidence
-  just checked in Section 0/1, not inferred or assumed
+The following sections are conditional rather than ceremonial:
 
-### 3. If #CASEPASSED — PR Package
-- Branch name (head) and base branch
-- Suggested PR title
-- Suggested PR description (what changed, why, what to verify)
-- Comparison URL if available
-(Skip this section entirely if the verdict is #CASEFAILED.)
+- **PR Package:** only when a branch is ready for owner PR creation.
+- **Model / reasoning recommendation:** only when Nova delegates a real batch or
+  correction to Codex; recommend an available configuration suited to the work.
+- **Codex copy-paste prompt:** only when work is actually authorized. A failed
+  review targets only the corrections on the same branch and PR.
+- **SESSION_LOG block:** optional and checkpoint-only. Never change the reviewed
+  PR solely to record its own review.
 
-### 4. Model & Reasoning-Level Decision
-- Model selected for the next Codex batch: Astra | Sol
-- Reasoning/effort level selected
-- One-line justification tied to the batch's actual complexity
-  (core invariants/security/multi-file/financial logic → higher
-  effort; narrow/low-risk/single-file/documentation-only → lighter)
-- If verdict was #CASEFAILED, this selects model/level for the
-  CORRECTION batch, not a new forward step
-
-### 5. SESSION_LOG.md entry — copy-paste block
-Single fenced block, ready to paste verbatim, in the A2 format above.
-
-### 6. Next Batch — copy-paste block
-Single fenced block, ready to relay to Codex without editing:
-- If #CASEFAILED: a batch targeting ONLY the corrections listed in
-  Section 2, on the same branch — not new forward progress.
-- If #CASEPASSED: the next batch, grounded in docs/ROADMAP.md's
-  already-authorized next item — never an invented direction — on a
-  NEW branch.
-- Calibrated to the model/level chosen in Section 4.
-- Non-destructive Git operations only, no merge into main.
-- Required final "### Git Actions Executed" report.
-- Required last step: rewrite docs/PROJECT_STATUS.md.
-- Required: the Section 3 PR Package format, to be produced by Codex
-  at the end of that batch.
-If nothing is ready to start (e.g. waiting on an owner decision),
-this section states this plainly instead of inventing a batch.
+A small delta re-audit, post-merge confirmation, CI check, or owner-host output
+audit may be correspondingly short while still identifying its evidence,
+reconstructed state, verdict/findings, and next gate.
 
 ## New-Chat and Resume Protocol
 
@@ -368,11 +342,11 @@ Read:
 2. this file;
 3. `PROJECT_STATUS.md`;
 4. `REGRESSION_GUARD.md`;
-5. `SESSION_LOG.md`;
-6. `ROADMAP.md`;
-7. `DECISIONS.md`;
-8. `RISK_REGISTER.md`; and
-9. the documents governing the current task.
+5. `ROADMAP.md`;
+6. `DECISIONS.md`;
+7. `RISK_REGISTER.md`;
+8. the documents governing the current task; and
+9. `SESSION_LOG.md` only when an optional major-checkpoint index is useful.
 
 Then inspect GitHub directly for:
 
@@ -397,7 +371,10 @@ These authorities have distinct purposes:
   protocol.
 - `PROJECT_STATUS.md` — compact current operational resume point.
 - `REGRESSION_GUARD.md` — reviewed invariant catalog.
-- `SESSION_LOG.md` — append-only manual index of Nova review sessions.
+- `SESSION_LOG.md` — optional compact index of major closed or blocked
+  checkpoints; never validation authority for a reviewed PR head.
+- `PENDING_ISSUES_DRAFT.md` — the sole active local Issue-draft backlog; it
+  creates neither implementation authority nor remote Issues.
 - `DEVELOPMENT.md` — detailed implementation, build, and host history.
 - `RISK_REGISTER.md` — durable risk authority.
 - `DECISIONS.md` — durable architectural and methodological decisions.

@@ -49,7 +49,7 @@ GitHub Issues. A GitHub-plugin duplicate check found no open Issues.
 |---|---|---|
 | Month-1 aggregate spend and headroom are unknown. | RISK-013; RISK-021; DEC-0010; `BUDGET_LEDGER.md` | Existing exact risk coverage; local Issue draft added. |
 | Public visibility may expose future proprietary or licensed work. | RISK-011; RISK-023 | Existing exact risk coverage; local Issue draft added. |
-| No experiment has traversed the complete governed lifecycle. | RISK-015; REG-008–REG-018; Items 8–10 | DEC-0038 defers a synthetic tracer but makes it a Stage 2 gate; local Issue draft added. |
+| No experiment has traversed the complete governed lifecycle. | RISK-015; REG-008–REG-018; Items 8–13 | DEC-0038 accepts the synthetic tracer as the Stage 1 Exit Integration Gate after Item 13; local Issue draft added. |
 | Item 10B remains unproven after two failed-closed attempts; alternative isolation was proposed. | RISK-017; REG-F03; DEC-0035–DEC-0036 | Existing exact host risk; alternative remains an unaccepted hypothesis in the local draft. |
 | Literal counting of every AI prompt/retry may be unworkable at scale. | RISK-002; REG-011; AGENTS rule 5 | Existing multiple-testing risk; methodology question registered locally without relaxing the rule. |
 | `main` is not proven protected. | RISK-024 | Existing exact risk coverage; local Issue draft added. |
@@ -491,3 +491,24 @@ unreadable residual risk. This preflight created no live authority and does not
 close RISK-017. A successful separately authorized governed capture and
 independent review of its complete `HOST_ENFORCED` evidence remain required.
 RISK-018 remains `OPEN` for Item 12 and is unaffected by this checkpoint.
+
+On 2026-09-12, the first governed capture attempt after that preflight failed at
+the repository-binding comparison before `_run_governed_setup()`. Runtime import
+provenance had not been explicitly anchored to the launcher checkout. The
+failure therefore prevented setup, performed no host/security or BitLocker
+mutation, and created no canonical evidence. The corrective branch binds the
+launcher, implementation, caller repository, and schemas to one resolved
+checkout and adds bounded operator diagnostics without weakening DEC-0036.
+This is corrective software evidence only. RISK-017 remains `OPEN` until a
+separately authorized capture produces complete live evidence and that evidence
+passes independent review. RISK-018 remains unchanged.
+
+PR #12 subsequently merged that governed repository/runtime binding correction
+and the operator-diagnostic sanitization corrections on `main` at
+`e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`. Post-merge Quality #51 passed on
+that exact commit on Ubuntu and Windows, and the elevated owner read-only
+binding proof had passed before merge. These are software and read-only proof,
+not canonical `HOST_ENFORCED` evidence. RISK-017 therefore remains `OPEN`; its
+next closure evidence is the separately authorized successful live capture and
+independent review under the accepted design. Alternative isolation ideas remain
+unaccepted future analysis rather than current authority.

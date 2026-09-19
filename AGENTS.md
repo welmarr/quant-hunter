@@ -73,6 +73,11 @@ log, fetch, fast-forward-only pull when needed, branch switch or creation, add,
 commit, push, and upstream setup. Command-local Git author identity is permitted
 when needed.
 
+Codex does not create pull requests. One coherent goal or review unit uses one
+branch and one owner-created pull request; failed review and directly related
+fixes, tests, and documentation remain on that same branch and PR. The owner is
+the sole PR creator and sole human merge authorizer and executor.
+
 Codex must not merge into `main` without owner authorization, force-push, use
 `git reset --hard`, use `git clean -fd` or `git clean -fdx`, rewrite published
 history, rebase published reviewed history, delete branches or tags, or bypass
@@ -100,6 +105,8 @@ failure cannot be deferred merely by creating an Issue; fix it, retest it, and
 obtain independent review. When an Issue is resolved, add its closure evidence
 to the Issue and reconcile every applicable durable repository authority.
 Follow `docs/ISSUE_GOVERNANCE.md` for the mandatory content and closure gate.
+`docs/PENDING_ISSUES_DRAFT.md` is the sole active local draft backlog. Drafts
+create neither a GitHub Issue nor implementation authority.
 
 ## Documentation Authority
 
@@ -123,5 +130,7 @@ Detailed requirements live in:
 - `docs/ROADMAP.md` — stage gates, ordered work, completion evidence, and deferred scope.
 - `docs/REQUIREMENTS_TRACEABILITY.md` — mapping from the original master specification to this hierarchy.
 - `docs/DEVELOPMENT.md` — pinned toolchain, quality commands, CI policy, and host preflight evidence.
+- `docs/SESSION_LOG.md` — optional compact index of major closed or blocked checkpoints; not review authority.
+- `docs/PENDING_ISSUES_DRAFT.md` — sole active local Issue-draft backlog; no implementation authority.
 
 This file governs invariant behavior. The detailed documents govern implementation and research procedures. If they conflict, apply the stricter scientific, safety, reproducibility, and spending constraint and record the resolution in `docs/DECISIONS.md`.

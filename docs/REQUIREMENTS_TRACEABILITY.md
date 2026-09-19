@@ -52,15 +52,16 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | Requirement | Governing home |
 |---|---|
 | A future conversation, Codex session, or agent can recover the current reviewed resume point from repository evidence. | `AGENTS.md`; `PROJECT_STATUS.md`; DEC-0029 |
-| Nova session continuity is reconstructed only from repository and GitHub evidence; local assistant-memory files, including `~/.codex/memories/`, are not project authority. | `WORKING_PROTOCOL.md`; `PROJECT_STATUS.md`; `SESSION_LOG.md`; DEC-0037 |
-| Every Nova review response follows the fixed evidence-first structure and ends with exactly `#CASEPASSED` or `#CASEFAILED`. | `WORKING_PROTOCOL.md`; DEC-0037 |
+| Nova session continuity is reconstructed only from repository and GitHub evidence; product-generated or local assistant memory is not project authority. | `WORKING_PROTOCOL.md`; `PROJECT_STATUS.md`; optional `SESSION_LOG.md`; DEC-0037 |
+| Substantive Nova reviews use the compact evidence-first core `Evidence → Reconstructed State → Verdict + Findings → Next Gate`; missing evidence blocks a verdict, while PR packages, model recommendations, prompts, and checkpoint blocks are conditional. | `WORKING_PROTOCOL.md`; DEC-0037 |
 | Every material batch preserves prior reviewed scientific, security, reproducibility, identity, and authority invariants through the full regression and review sequence. | `AGENTS.md`; `REGRESSION_GUARD.md`; DEC-0029 |
 | Current status may be updated without rewriting historical decisions, risks, development evidence, or Git history. | `PROJECT_STATUS.md`; `DECISIONS.md`; `RISK_REGISTER.md`; DEC-0029 |
 | Material deferred work is tracked operationally without replacing durable repository authority or bypassing a current-batch blocker. | `ISSUE_GOVERNANCE.md`; `.github/ISSUE_TEMPLATE/material-deferred-work.yml`; DEC-0034 |
 | Issue closure requires stated acceptance criteria, regression evidence, and reconciliation of affected durable authorities. | `ISSUE_GOVERNANCE.md`; `AGENTS.md`; DEC-0034 |
-| Only the owner creates and merges pull requests; each authorized batch uses one PR, a failed review cycle stays on that branch and PR, and the next passed batch starts a new branch and PR. | `WORKING_PROTOCOL.md`; DEC-0037 |
-| External-review findings awaiting owner or Nova submission are retained as complete local Issue drafts without creating remote tracker authority. | `PENDING_ISSUES_DRAFT.md`; `ISSUE_GOVERNANCE.md`; `RISK_REGISTER.md` |
-| A synthetic end-to-end lifecycle tracer remains deferred until Stage 1B is complete but is mandatory before Stage 2 begins. | `ROADMAP.md`; `PENDING_ISSUES_DRAFT.md`; DEC-0038 |
+| The owner is the sole PR creator and sole human merge authorizer/executor; Nova's `#CASEFAILED` prohibits merge readiness and `#CASEPASSED` satisfies only the technical gate. | `WORKING_PROTOCOL.md`; DEC-0037 |
+| One coherent goal/review unit uses one branch and one PR; failed review and in-scope fixes stay there, while a genuinely distinct objective starts another. | `WORKING_PROTOCOL.md`; DEC-0037 |
+| External-review findings awaiting owner or Nova submission are retained in the sole active local draft authority without creating remote tracker or implementation authority. | `PENDING_ISSUES_DRAFT.md`; `ISSUE_GOVERNANCE.md`; `RISK_REGISTER.md` |
+| After Item 13, a synthetic end-to-end lifecycle tracer is mandatory as the Stage 1 Exit Integration Gate before Stage 1 can complete or Stage 2 can begin. | `ROADMAP.md`; `PENDING_ISSUES_DRAFT.md`; DEC-0038 |
 | Container or sandbox isolation is reconsidered at Item 11 or before the first real connector or credential, whichever occurs first. | `PENDING_ISSUES_DRAFT.md`; `RISK_REGISTER.md`; DEC-0039 |
 
 ## Stage 1B Item 10A Sealed-OOS Software Mapping
@@ -89,8 +90,12 @@ GREEN` at main `20851f262041cda1fe26844032f298b2a1531ffd`.
 | Host setup is bounded to an already protected fixed NTFS volume and performs no BitLocker mutation. | `item10b_preflight.ps1`; inert `item10b_setup.ps1`; static safety tests; DEC-0035 |
 | Dedicated identity, allow-list DACL, audit/SACL, index, sync, backup, denial, release, and account-disable assertions require live evidence. | Windows host scripts; REG-F03; RISK-017; sanitized 2026-09-11 blocker evidence |
 
-Item 10B is `IMPLEMENTED TOOLING / HOST EVIDENCE BLOCKED`. The code and tests do
-not establish real Windows isolation or complete Roadmap Item 10.
+Item 10B is `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED`. PR #12 merged the
+governed repository/runtime binding and operator-diagnostic sanitization
+corrections on `main` at `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`, and
+post-merge Quality #51 passed on that exact commit. The code, tests, CI, and
+read-only binding proof do not establish real Windows isolation or complete
+Roadmap Item 10.
 
 ## Coverage Maintenance Rule
 

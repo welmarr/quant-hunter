@@ -20,6 +20,12 @@ Issues do not replace the repository authorities:
 An Issue links actionable work to these records. Closing or editing an Issue
 cannot by itself change a risk, decision, invariant, stage, or item status.
 
+`PENDING_ISSUES_DRAFT.md` is the sole active repository file for complete local
+Issue drafts awaiting an owner or Nova duplicate check and GitHub creation.
+`DEFERRED_ISSUE_DRAFTS.md` is a migration tombstone only. A local draft creates
+neither a remote Issue nor implementation, architecture, spending, host,
+security, scientific, stage, or merge authority.
+
 ## When an Issue is mandatory
 
 Create an Issue when all of these conditions apply:

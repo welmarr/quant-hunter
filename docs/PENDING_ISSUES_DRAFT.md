@@ -1,9 +1,12 @@
 # Pending GitHub Issue Drafts — External Review Backlog
 
-This file contains local drafts only. It is not an operational GitHub Issue
-tracker and does not authorize any implementation, architecture change, host
-mutation, purchase, strategy, or later-stage work. Nova or the owner may create
-the corresponding Issues through GitHub after a fresh duplicate check.
+This is the sole active repository authority for local Issue drafts. It is a
+draft operational backlog only, not an operational GitHub Issue tracker, and it
+does not authorize implementation, architecture change, host mutation,
+purchase, strategy, merge, or later-stage work. Nova or the owner may create
+the corresponding Issues through GitHub only after a fresh duplicate check.
+`DEFERRED_ISSUE_DRAFTS.md` is a migration tombstone and must not receive active
+drafts.
 
 The GitHub plugin found no open Issues on 2026-09-18. Earlier write attempts in
 this batch returned HTTP 403 `Resource not accessible by integration` and
@@ -163,19 +166,19 @@ GitHub repository-visibility documentation and future provider license terms.
 
 PENDING.
 
-## `[STAGE-2 GATE] Run a full synthetic tracer-bullet experiment`
+## `[STAGE-1 EXIT] Run a full synthetic end-to-end tracer experiment`
 
 ### Summary
 
-Complete one synthetic experiment through the full governed lifecycle before
-Stage 2 begins.
+Complete one synthetic experiment through the full governed lifecycle as the
+Stage 1 Exit Integration Gate.
 
 ### Problem
 
 Lifecycle and V0–V9 components have tests, but no experiment has traversed
 `DRAFT → REGISTERED → FROZEN → RUNNING → EVALUATED → DECIDED` as one retained
-end-to-end workflow. The owner deferred the tracer until after Stage 1B while
-making it a Stage 2 entry criterion.
+end-to-end workflow. DEC-0038 accepts the tracer requirement and defers its
+execution until after Stage 1B Item 13, without allowing Stage 1 to complete.
 
 ### Evidence
 
@@ -183,7 +186,7 @@ making it a Stage 2 entry criterion.
 - `docs/EXPERIMENT_LEDGER.md` states that no experiments are registered.
 - Items 8 and 9 implement separately reviewed lifecycle/evidence contracts.
 - DEC-0038 records the deferral.
-- `docs/ROADMAP.md` records the added Stage 2 gate.
+- `docs/ROADMAP.md` records the Stage 1 Exit Integration Gate.
 
 ### Why This Matters
 
@@ -198,11 +201,13 @@ separate controls form one usable process.
 
 ### Why Deferred
 
-Owner decision: finish Stage 1B first. Deferral does not waive the Stage 2 gate.
+Finish Stage 1B Items 10B–13 first. Deferral does not waive the Stage 1 exit
+integration proof.
 
 ### Target
 
-After Stage 1B closeout and before any Stage 2 work.
+After Stage 1B Item 13 closeout, as the Stage 1 Exit Integration Gate and before
+Stage 1 may be declared complete.
 
 ### Proposed Investigation
 
@@ -231,7 +236,7 @@ rerun evidence, and reconciled governance records.
 
 ### Relationships
 
-DEC-0038; REG-008–REG-018; Roadmap Stage 2 gate; Items 8–10.
+DEC-0038; REG-008–REG-018; Roadmap Stage 1 Exit Integration Gate; Items 8–13.
 
 ### Technical References
 
@@ -242,19 +247,19 @@ DEC-0038; REG-008–REG-018; Roadmap Stage 2 gate; Items 8–10.
 
 PENDING.
 
-## `[RISK-017] Decide Item 10B isolation path and complete live evidence`
+## `[RISK-017] Complete Item 10B live Windows host-boundary evidence`
 
 ### Summary
 
-Complete the Windows host-enforced OOS boundary or explicitly replace it with
-an independently reviewed mechanism that proves the required non-access property.
+Complete and independently review the accepted Windows host-enforced OOS
+boundary through the separately authorized live capture.
 
 ### Problem
 
-Item 10B tooling has failed closed during two governed attempts and no canonical
-`HOST_ENFORCED` evidence exists. External review asked whether to continue the
-SID/DACL/SACL design or evaluate a software-only cryptographic-seal alternative.
-The alternative is an unvalidated question, not an approved architecture change.
+Item 10B tooling is merged, including the repository/runtime binding and
+operator-diagnostic corrections, but no canonical `HOST_ENFORCED` evidence
+exists. The missing proof is the successful owner-gated live capture and
+independent evidence review under the accepted design.
 
 ### Evidence
 
@@ -263,8 +268,11 @@ The alternative is an unvalidated question, not an approved architecture change.
   identity evidence.
 - A later capture failed at repository binding before setup and made no host
   mutation.
-- PR #12 head `58b66b3` corrects the binding defect; Ubuntu and Windows checks
-  are green, but independent review remains pending.
+- PR #12 merged the governed repository/runtime binding and diagnostic
+  sanitization corrections on `main` at
+  `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`.
+- Post-merge Quality #51 passed on that exact commit on Ubuntu and Windows.
+- The elevated owner read-only binding proof passed before merge.
 - RISK-017 and REG-F03 remain open.
 - No canonical `HOST_ENFORCED` authority exists.
 
@@ -278,14 +286,15 @@ Stage 1B completion.
 - Confirmed: software/tooling evidence is not live host evidence.
 - Confirmed: the accepted design uses actual SIDs, exact-SID 4656 Failure,
   exact-SID 4663 Success, and one governed capture path.
-- Hypothesis: another design might reduce host complexity.
-- Unknown: whether the suggested hash design can prevent or prove pre-evaluation
-  reads; hashing alone proves identity, not confidentiality or non-access.
+- Confirmed: the remaining current-path proof is the separately authorized live
+  capture and independent review.
+- Future alternative-isolation ideas remain unaccepted analysis and cannot
+  replace the current authority without a separate decision and review.
 
 ### Why Deferred
 
-This batch may register but cannot change the accepted architecture, execute
-host mutations, or authorize an alternative. PR #12 must first be reviewed.
+This governance batch cannot execute host mutations or alter the accepted
+architecture. The live capture remains separately owner-gated.
 
 ### Target
 
@@ -294,10 +303,10 @@ decision and independent review.
 
 ### Proposed Investigation
 
-First audit PR #12 and retry the bounded current design only after separate
-owner authorization. If architecture is reopened, compare the threat model and
-evidence guarantees of SID/ACL/SACL, cryptographic, external IAM, WORM, or
-physically separate alternatives.
+Run the bounded current design only after separate owner authorization, retain
+its complete sanitized evidence, and subject that evidence to independent
+review. If architecture is later reopened, compare alternatives under a
+separate explicit decision without treating hashing alone as non-access proof.
 
 ### Proposed Solution
 
@@ -915,6 +924,184 @@ DEC-0039; RISK-010; RISK-011; REG-019; REG-F04; Item 11.
 ### Technical References
 
 Official platform documentation selected during comparison.
+
+### Closure Evidence
+
+PENDING.
+
+## `[DEBT] Resolve RegistryKind.COST schema authority before Stage 1B closeout`
+
+### Summary
+
+Resolve the mismatch between the persistent `COST` identifier kind and the
+absence of a governed cost-registry schema mapping.
+
+### Problem
+
+`RegistryKind.COST` exists, but `SCHEMA_BY_KIND` intentionally has no COST
+schema. Governed COST writes therefore fail closed while `BUDGET_LEDGER.md`
+acts as the durable cost authority. The future authority model is ambiguous.
+
+### Evidence
+
+- `src/quant_hunter/identity/ids.py` defines `RegistryKind.COST`.
+- `src/quant_hunter/config/schema.py` has no COST entry in `SCHEMA_BY_KIND`.
+- `MissingGovernedSchemaError` rejects a governed write for an unmapped kind.
+- Permanent COST IDs already appear in `BUDGET_LEDGER.md`.
+
+### Why This Matters
+
+Reproducibility, maintainability, and budget-governance clarity.
+
+### Current Understanding
+
+- Confirmed: the current path fails closed; there is no silent machine write.
+- Confirmed: the Markdown ledger is the present durable authority.
+- Unknown: whether Stage 1B should introduce a machine-governed cost registry or
+  explicitly remove that expectation.
+
+### Why Deferred
+
+Item 10B must not modify registry schema authority or start closeout work.
+
+### Target
+
+Stage 1B Item 13 at latest.
+
+### Proposed Investigation
+
+Compare the budget ledger's mandatory fields with registry needs, review why
+COST was included in persistent IDs, and assess the migration and duplication
+risks of introducing `cost.schema.json`.
+
+### Proposed Solution
+
+Choose exactly one model: add and test `cost.schema.json` plus the governed
+mapping, or accept `BUDGET_LEDGER.md` as the sole durable cost authority and
+remove or explicitly constrain misleading machine-write expectations.
+
+### Acceptance Criteria
+
+- One authority model is accepted and documented.
+- Governed behavior fails closed with no contradictory dual authority.
+- Schema/mapping tests exist if a machine registry is selected.
+- Budget, architecture, decision, and traceability documents agree.
+
+### Regression Evidence Required
+
+Governed-registry rejection or acceptance tests, schema-catalog tests where
+applicable, the locked quality gate, and budget/decision/traceability review.
+
+### Relationships
+
+DEC-0009; DEC-0014; `RegistryKind.COST`; `SCHEMA_BY_KIND`;
+`BUDGET_LEDGER.md`; Stage 1B Item 13.
+
+### Technical References
+
+`schemas/v1/`, `src/quant_hunter/config/schema.py`, and
+`src/quant_hunter/identity/registry.py`.
+
+### Closure Evidence
+
+PENDING.
+
+## `[ARCH] Decide real-data storage, catalog, connector lifecycle and Instrument Master before ingestion`
+
+### Summary
+
+Choose the physical storage, operational catalog, connector-evolution,
+source-lifecycle, and instrument-identity architecture before real ingestion.
+
+### Problem
+
+Current immutable, provenance, Parquet, and PIT primitives are scientific
+foundations, not a complete real-ingestion architecture. Durable choices are
+still needed for storage layout, query indexing, provider changes, licenses,
+and cross-provider instrument identity.
+
+### Evidence
+
+- Stage 1 has exact raw-object identity, deterministic derived Parquet,
+  canonical JCS manifests, distinct physical/lineage/logical identities, and
+  PIT selection contracts.
+- No real connector, catalog database, paid feed, instrument master, or cloud
+  storage is implemented or authorized.
+- `DATA_SOURCE_REGISTRY.md` requires permanent source identity and provider
+  assessment.
+
+### Why This Matters
+
+Scientific validity, reproducibility, availability, performance,
+maintainability, cost, and legal/licensing compliance.
+
+### Current Understanding
+
+- Confirmed: scientific authority belongs to immutable bytes and canonical
+  manifests, not a mutable query index.
+- Confirmed: physical storage location must not define logical dataset identity.
+- Candidate architecture, not accepted: exact raw-object storage; partitioned
+  Parquet for normalized, curated, and feature data; DuckDB for analytical
+  scans; PostgreSQL as a queryable operational/catalog index rather than
+  scientific authority; separated provider connectors and canonical normalizers.
+- Unknown: measured scale, access patterns, provider constraints, deployment
+  topology, and whether either database is justified.
+
+### Why Deferred
+
+Item 10B authorizes no ingestion, connector, database, cloud, or paid service.
+The choice needs explicit pre-ingestion evidence and owner approval.
+
+### Target
+
+Stage 1B closeout / Stage 2 pre-ingestion architecture decision.
+
+### Proposed Investigation
+
+1. Measure representative synthetic scan, update, and catalog workloads.
+2. Evaluate exact raw-object and partitioned Parquet layouts independently from
+   logical dataset identity.
+3. Compare DuckDB and PostgreSQL roles without making either scientific
+   authority.
+4. Define connector versus canonical-normalizer boundaries.
+5. Define permanent `SOURCE` IDs and append-only `APPROVED`, `REJECTED`,
+   `DEPRECATED`, and `UNAVAILABLE` source revisions.
+6. Define auditable provider API, schema, pricing, and license changes while old
+   experiments retain exact source/dataset revision bindings.
+7. Specify a Global Instrument Master that separates canonical instruments from
+   provider symbols.
+8. Define license-driven byte purge with retained tombstone metadata.
+
+### Proposed Solution
+
+Evaluate the candidate architecture above, then record an explicit decision
+based on measured needs and provider/license constraints. This draft does not
+authorize PostgreSQL, DuckDB, cloud storage, or paid feeds.
+
+### Acceptance Criteria
+
+- An accepted pre-ingestion architecture assigns scientific and operational
+  authority explicitly.
+- Raw, Parquet, catalog, connector, source-lifecycle, Instrument Master, and
+  license-purge boundaries are specified and tested with synthetic evidence.
+- Old experiment bindings remain reproducible across provider evolution.
+- Cost and license implications are approved before commitment.
+
+### Regression Evidence Required
+
+Synthetic storage/replay tests, source-revision and instrument-mapping hostile
+tests, license-purge/tombstone tests, performance measurements, the full locked
+gate, and reconciled architecture/risk/decision/roadmap documentation.
+
+### Relationships
+
+RISK-004; RISK-005; RISK-012; RISK-019; `DATA_ARCHITECTURE.md`;
+`DATA_SOURCE_REGISTRY.md`; Stage 1B closeout; Stage 2 pre-ingestion gate.
+
+### Technical References
+
+Evaluate official documentation for any selected database, storage system, and
+provider only when that option reaches the decision stage.
 
 ### Closure Evidence
 

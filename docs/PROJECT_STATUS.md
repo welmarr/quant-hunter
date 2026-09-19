@@ -1,51 +1,85 @@
 # Quant Hunter Project Status
 
-## 1. Current Stage / Item / Status
+## Current Stage and Item
 
-Stage 1B — Foundation Implementation; Item 10B is `TOOLING MERGED / LIVE HOST
-EVIDENCE BLOCKED`. No canonical `HOST_ENFORCED` evidence exists. The continuity,
-Nova-response, and external-review-backlog documentation batch is complete on
-the active branch and awaits an owner-created pull request and independent
-review. No code, schema, strategy, data, dependency, infrastructure, host, or
-security state changed.
+- **Current stage:** Stage 1B — Foundation Implementation.
+- **Current item:** Item 10B.
+- **Canonical status:** `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED`.
 
-## 2. Last Reviewed Commit / Active Branch / Open PR
+## Software State
 
-- Last independently reviewed Item 10B implementation head:
-  `8efa0f5d874c3306ea1cd1c5078ddf35c508c305`, merged on `main` at
-  `27a81e9374e97566789f1a61000312d64b91a563`.
-- Active branch: `codex/continuity-review-governance` from current `main`
-  `c350c26bc619677e479602559c054a22363c1aba`.
-- Open PR: [#12 — fix: bind Item 10B runtime to governed checkout](https://github.com/welmarr/quant-hunter/pull/12),
-  head `58b66b34c62f8df32a2043c129e0b6523537d56f`, base `main`. It is separate
-  from this documentation batch.
-- Current documentation-batch PR: none; only the owner may create it.
+- Item 10A is complete, independently reviewed, merged, and post-merge CI green.
+- PR #12 merged the governed repository/runtime binding correction and the
+  operator-diagnostic sanitization corrections into `main` at
+  `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`.
+- Post-merge Quality #51 completed successfully on that exact `main` commit on
+  Ubuntu and Windows.
+- The elevated owner read-only binding proof passed before PR #12 merged.
+- No canonical `HOST_ENFORCED` evidence exists. Software tests, CI, and the
+  read-only proof do not replace the separately gated live host evidence.
+- BitLocker must not be changed by the Item 10B workflow.
 
-## 3. Last Decision Taken
+## Open Material Risks
 
-2026-09-18 — DEC-0039 defers container or sandbox isolation because the current
-project has no real data, credentials, or live connections, but requires review
-at Item 11 or before the first real connector or broker credential, whichever
-comes first. See `docs/DECISIONS.md`.
+- **RISK-017:** the real sealed-OOS host boundary remains unproven until a
+  successful governed live capture is independently reviewed.
+- **RISK-018:** registry concurrency and stale/crashed/orphan lock recovery
+  remain open for Item 12.
+- **RISK-021:** Month-1 aggregate spend and remaining headroom are unknown; no
+  paid action is authorized.
+- **RISK-023:** repository visibility, intellectual-property, and licensed-data
+  policy must be decided before Stage 2.
+- **RISK-024:** effective protection of `main` must be established and verified
+  before Stage 2.
 
-## 4. Currently Blocked Items
+The complete authoritative inventory and retained evidence are in
+`RISK_REGISTER.md`. Local deferred-work drafts are consolidated in
+`PENDING_ISSUES_DRAFT.md`; they are not implementation authority and no GitHub
+Issue is created merely by their presence.
 
-- Item 10B live authority remains blocked pending independent review and owner
-  disposition of PR #12, then a separately authorized owner-host governed
-  capture with complete live evidence and independent review. RISK-017 remains
-  `OPEN`.
-- New paid actions remain blocked because aggregate Month-1 spend and remaining
-  headroom are `UNKNOWN`. RISK-021 remains `OPEN`.
-- Stage 2 remains blocked by the Stage 1 exit gate, the mandatory synthetic
-  end-to-end lifecycle tracer, repository-visibility policy, and verified main
-  protection. RISK-023 and RISK-024 remain `OPEN`.
-- External-review findings are local drafts in
-  `docs/PENDING_ISSUES_DRAFT.md`; no GitHub Issues were created.
+## Next Durable Technical Gate
 
-## 5. Next Authorized Gate
+The next technical gate is a separately authorized, successful Item 10B live
+`HOST_ENFORCED` capture followed by independent evidence review. Item 10 cannot
+close and Item 11 cannot begin before that gate passes. The capture must preserve
+the accepted exact-SID DACL/SACL authority, 4656 Failure / 4663 Success audit
+semantics, provider-independent classification, and DEC-0036 single executed
+authority path. It must use only synthetic fixtures and must not change
+BitLocker.
 
-The owner may create one pull request from `codex/continuity-review-governance`
-to `main`; Nova then audits the actual diff, commits, CI, PR state, Issues, and
-repository authorities using `docs/WORKING_PROTOCOL.md`. This does not authorize
-a merge, Item 10B live capture, Item 11, the tracer experiment, Stage 2, a paid
-action, or creation of the drafted GitHub Issues.
+After Items 10B–13 close, Stage 1 still requires its exit integration gate: at
+least one synthetic end-to-end tracer must complete the governed
+`DRAFT → REGISTERED → FROZEN → RUNNING → EVALUATED → DECIDED` lifecycle with
+retained evidence and independent review before Stage 1 is complete or Stage 2
+can unlock.
+
+## Budget
+
+- Month-1 cap: USD 400.
+- OpenAI Codex credits: USD 10 `SPENT`.
+- ChatGPT Pro charge details, aggregate Month-1 spend, and remaining headroom:
+  `UNKNOWN`.
+- No new paid action is authorized.
+
+`BUDGET_LEDGER.md` is the canonical aggregate budget record.
+
+## Resume Protocol
+
+1. Read `../AGENTS.md`, `WORKING_PROTOCOL.md`, this file, and
+   `REGRESSION_GUARD.md`.
+2. Verify current Git and live GitHub evidence; repository and GitHub evidence
+   outrank conversational memory.
+3. Inspect open material GitHub Issues and reconcile them with the durable
+   authorities and the active local draft backlog.
+4. Read `ROADMAP.md`, `DECISIONS.md`, `RISK_REGISTER.md`, and the documents
+   governing the next authorized gate.
+5. Stop and reconcile any conflict rather than guessing.
+
+## Status Update Rule
+
+Update this snapshot when a governed change materially changes the current
+stage, item status, implementation authority, next technical gate, material
+risks, budget facts, or resume point. Keep transient branch, open-PR, review-wait,
+and comparison-URL state in GitHub rather than this file. Historical reasoning
+and evidence belong in Git, `DECISIONS.md`, `RISK_REGISTER.md`,
+`DEVELOPMENT.md`, and pull-request records.
