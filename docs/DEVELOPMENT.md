@@ -1019,3 +1019,52 @@ remained unreadable residual risk. This checkpoint did not run setup, change
 BitLocker, or create `HOST_ENFORCED` authority. The next technical action is the
 separately authorized elevated owner-host governed capture rerun through the
 single DEC-0036 preflight/setup/verification authority path.
+
+### Item 10B governed-checkout binding failure and correction
+
+On 2026-09-12, the owner invoked `item10b_finalize.py` from the verified main
+checkout at `c350c26bc619677e479602559c054a22363c1aba` against the previously
+preflighted synthetic candidate root. The launcher raised
+`HostBoundaryEvidenceError` at its governed-repository comparison. Independent
+control-flow review confirmed that this comparison failed before
+`_run_governed_setup()`, so the attempt performed no host or security mutation,
+did not change BitLocker, and created no `HOST_ENFORCED` evidence.
+
+The runtime had derived its repository solely from the imported module's
+`__file__` parents. That check correctly failed closed, but the launcher had
+allowed Python's environment to select the package before proving that the
+implementation came from the launcher's checkout. The correction resolves the
+launcher path, prepends only that checkout's `src` directory before importing
+Quant Hunter, requires the caller repository and schema directory to equal the
+same resolved checkout, and passes the launcher-derived repository into capture.
+The capture boundary retains an independent check that the imported module has
+the exact checkout source layout beside the governed launcher. A foreign
+installation, caller-spoofed repository, or schema override therefore fails
+before setup rather than becoming authority.
+
+The owner-facing launcher now converts expected governed failures into a
+bounded `ITEM10B_CAPTURE_FAILED` diagnostic with a stable phase, exception type,
+and sanitized reason. Repository binding, preflight, setup, verification, and
+publication remain distinguishable. Unexpected exceptions preserve their real
+type and useful sanitized message while removing absolute paths, environment
+values, labelled credentials, recovery material, terminal controls, unsafe
+object representations, and oversized content. Tracebacks and raw PowerShell
+stderr are not printed by default. The existing structured setup diagnostic is
+processed through the same bounded reason sanitizer.
+
+All new tests are synthetic. They substitute a setup sentinel, inject a foreign
+`PYTHONPATH`, simulate a module under a virtual-environment install layout, and
+exercise expected and unexpected diagnostic failures. No test or manual action
+runs Item 10B setup, mutates host security, changes BitLocker, accesses real
+sealed data, or creates authority. Item 10B remains `TOOLING MERGED / LIVE HOST
+EVIDENCE BLOCKED` until this correction is independently reviewed and merged and
+a separately authorized live capture succeeds.
+
+Local validation passed `uv lock --check`, Ruff format and lint, strict mypy over
+49 source files, and all 794 pytest cases with 90.11% combined statement/branch
+coverage. The focused launcher, Windows-host, host-script, and storage-security
+suite passed 104 cases. The full pytest gate used the documented workspace-local
+`--basetemp` workaround because the host user-temp directory denies enumeration.
+The offline build produced the source and wheel distributions, and the package
+plus Item 10B module imported at version `0.1.0`. No dependency or lockfile
+change was made.

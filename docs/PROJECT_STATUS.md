@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | PROJECT | Quant Hunter |
-| LAST VERIFIED DATE | 2026-09-11 |
+| LAST VERIFIED DATE | 2026-09-12 |
 | LAST VERIFIED IMPLEMENTATION MAIN | `27a81e9374e97566789f1a61000312d64b91a563` |
 | CURRENT STAGE | Stage 1B — Foundation Implementation |
 
@@ -63,6 +63,17 @@ identities, an absent candidate path, and original File System auditing set to
 No Auditing. Windows Search was running. Backup configuration remained
 unreadable and is retained as residual risk. This preflight is not
 `HOST_ENFORCED` authority and created none.
+
+On 2026-09-12, the owner invoked the governed live-capture launcher from the
+verified checkout at `c350c26bc619677e479602559c054a22363c1aba`. It failed at
+the repository-binding comparison before governed setup because runtime import
+provenance was inferred from the imported module location rather than anchored
+by the launcher checkout. The attempt did not create accounts, paths, ACLs,
+SACLs, audit-policy changes, or canonical evidence, and it did not change
+BitLocker. The corrective branch `fix/item10b-governed-repo-binding` anchors the
+runtime and schemas to the launcher checkout, preserves the runtime's
+independent equality check, and sanitizes bounded operator failures. It requires
+independent review and merge before any separately authorized live rerun.
 
 ## PLANNED DECOMPOSITION
 
@@ -149,13 +160,15 @@ A future agent must:
 7. Reconcile this current-state summary against actual repository and review
    evidence.
 8. Stop and reconcile rather than guess if the evidence conflicts.
-9. After this documentation checkpoint, resume Item 10B only through the
-   separately authorized elevated owner-host governed capture workflow against
+9. Resume with independent review of `fix/item10b-governed-repo-binding`. After
+   that correction is accepted and merged, Item 10B may continue only through a
+   separately authorized elevated owner-host governed capture against
    `D:\QuantHunterOOS`. Preserve the exact-SID DACL/SACL authority, 4656 Failure
    / 4663 Success semantics, provider-independent classifier, and DEC-0036
    single executed authority path. Do not change BitLocker. The passed read-only
-   preflight is not `HOST_ENFORCED` evidence; Item 10B remains blocked until the
-   complete live evidence is captured and independently reviewed.
+   preflight and failed repository-binding attempt are not `HOST_ENFORCED`
+   evidence; Item 10B remains blocked until complete live evidence is captured
+   and independently reviewed.
 10. Complete the required pre-step checkpoint before any later item.
 
 ## STATUS UPDATE RULE

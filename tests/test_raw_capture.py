@@ -266,6 +266,9 @@ def test_raw_metadata_rejects_credentials_in_endpoint(
         ("native_reference", "Bearer do-not-echo"),
         ("coverage_reference", "Cookie: do-not-echo"),
         ("warning", "retry used --password=do-not-echo"),
+        ("warning", "connection failed password=do-not-echo"),
+        ("warning", "connection failed token: do-not-echo"),
+        ("warning", "connection failed client_secret=do-not-echo"),
     ],
 )
 def test_raw_metadata_rejects_labelled_secrets_in_free_text(

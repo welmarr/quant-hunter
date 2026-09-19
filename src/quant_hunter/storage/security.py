@@ -15,12 +15,25 @@ SENSITIVE_KEY: Final = re.compile(
     r"(?:$|[_-])",
     re.IGNORECASE,
 )
+_LABEL_PATTERN: Final = (
+    r"(?:password|passwd|token|secret|credential|api[-_]?key|access[-_]?key|"
+    r"private[-_]?key|client[-_]?secret)"
+)
+_VALUE_PATTERN: Final = r"""(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;]+)"""
 SENSITIVE_TEXT: Final = re.compile(
     r"(?:"
-    r"--(?:api[-_]?key|token|password)(?=\s|=)(?:\s*=\s*|\s+)\S+"
-    r"|(?:authorization|cookie)\s*(?::|=)\s*\S+"
-    r"|(?<![A-Za-z0-9_-])bearer\s+[A-Za-z0-9][A-Za-z0-9._~+/=-]*"
-    r")",
+    r"(?P<switch_prefix>--(?:api[-_]?key|token|password)"
+    r"(?=\s|=)(?:\s*=\s*|\s+))\S+"
+    r"|(?P<authorization_prefix>authorization\s*(?::|=)\s*"
+    r"(?:bearer\s+)?)\S+"
+    r"|(?P<cookie_prefix>cookie\s*(?::|=)\s*)\S+"
+    r"|(?P<bearer_prefix>(?<![A-Za-z0-9_-])bearer\s+)"
+    r"[A-Za-z0-9][A-Za-z0-9._~+/=-]*"
+    r"|(?P<label_prefix>(?<![A-Za-z0-9_-])"
+    + _LABEL_PATTERN
+    + r"(?![A-Za-z0-9_-])\s*(?:=|:)\s*)"
+    + _VALUE_PATTERN
+    + r")",
     re.IGNORECASE,
 )
 
@@ -64,6 +77,25 @@ def reject_secret_text(value: str, context: str) -> None:
         raise SensitiveMetadataError(
             f"Labelled credential material is forbidden in {context}"
         )
+
+
+def redact_secret_text(value: str) -> str:
+    """Redact labelled credential values while retaining diagnostic context."""
+
+    def replacement(match: re.Match[str]) -> str:
+        for group_name in (
+            "switch_prefix",
+            "authorization_prefix",
+            "cookie_prefix",
+            "bearer_prefix",
+            "label_prefix",
+        ):
+            prefix = match.group(group_name)
+            if prefix is not None:
+                return f"{prefix}[REDACTED]"
+        return "[REDACTED]"
+
+    return SENSITIVE_TEXT.sub(replacement, value)
 
 
 def reject_secret_text_values(

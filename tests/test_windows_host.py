@@ -332,6 +332,28 @@ def test_raw_reports_have_no_supported_authority_creation_route() -> None:
     assert "report_path" not in parameters
 
 
+def test_governed_repository_rejects_foreign_install_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A package outside the checkout source layout cannot supply host authority."""
+    foreign_module = (
+        tmp_path
+        / ".venv"
+        / "Lib"
+        / "site-packages"
+        / "quant_hunter"
+        / "isolation"
+        / "windows_host.py"
+    )
+    foreign_module.parent.mkdir(parents=True)
+    foreign_module.write_text("# synthetic foreign install", encoding="utf-8")
+    monkeypatch.setattr(windows_host, "__file__", str(foreign_module))
+    with pytest.raises(HostBoundaryEvidenceError) as captured:
+        cast(Any, windows_host)._governed_repository_root()
+    assert captured.value.phase == "REPOSITORY_BINDING"
+    assert "launcher checkout" in str(captured.value)
+
+
 def _capture_verifier(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[WindowsHostBoundaryVerifier, Path, Path, Path]:
@@ -385,6 +407,36 @@ def test_capture_executes_governed_flow_and_immediately_publishes(
         JsonRecord, evidence.record["preflight_observations"]
     )
     assert evidence.verify() == evidence.record
+
+
+def test_capture_rejects_spoofed_repository_before_governed_setup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Caller root spoofing fails independently before any host setup can run."""
+    verifier, _, candidate, evidence_path = _capture_verifier(tmp_path, monkeypatch)
+    foreign_repository = (tmp_path / "foreign-repository").resolve()
+    foreign_repository.mkdir()
+    setup_called = False
+
+    def forbidden_setup(
+        self: WindowsHostBoundaryVerifier,
+        observed_repository: Path,
+        observed_candidate: Path,
+    ) -> JsonRecord:
+        nonlocal setup_called
+        setup_called = True
+        raise AssertionError("governed setup must not run")
+
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier, "_run_governed_setup", forbidden_setup
+    )
+    with pytest.raises(HostBoundaryEvidenceError) as captured:
+        verifier.capture_live_evidence(
+            foreign_repository, candidate, evidence_path, authorize_setup=True
+        )
+    assert captured.value.phase == "REPOSITORY_BINDING"
+    assert not setup_called
+    assert not evidence_path.exists()
 
 
 def test_caller_authored_all_success_json_cannot_be_promoted(
