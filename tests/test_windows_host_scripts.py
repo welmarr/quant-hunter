@@ -106,6 +106,8 @@ def test_preflight_is_read_only_and_host_mutations_are_not_in_ci() -> None:
     )
     assert "item10b_setup.ps1" not in workflows
     assert "item10b_rollback.ps1" not in workflows
+    assert "git -C $repository worktree list --porcelain" in preflight
+    assert "$LASTEXITCODE -ne 0 -or -not $gitLines" in preflight
 
 
 def test_setup_uses_allow_list_acls_auditing_and_disables_test_logons() -> None:
@@ -123,6 +125,7 @@ def test_setup_uses_allow_list_acls_auditing_and_disables_test_logons() -> None:
     assert "NotContentIndexed" in setup
     assert "Disable-LocalUser -Name 'qh-oos-custodian'" in setup
     assert "Disable-LocalUser -Name 'qh-research'" in setup
+    assert "if ($disabledCustodian.Enabled -or $disabledResearch.Enabled)" in setup
     assert "Get-WinEvent" in verify
     assert "research_denial_observed" in verify
     assert "[Security.AccessControl.AuditFlags]::Failure" in setup
@@ -207,9 +210,13 @@ def test_setup_failure_phases_are_bounded_and_rollback_remains_exact() -> None:
     assert setup.index("& $rollbackScript -StatePath $statePath -Apply") < setup.index(
         "Write-SafeSetupFailure $failurePhase $failureRecord"
     )
+    assert "& $rollbackScript -StatePath $statePath -Apply -Confirm:$false" in setup
     assert "QUANT_HUNTER_ITEM10B_SYNTHETIC_BOUNDARY" in rollback
     assert "audit_success_before" in rollback
     assert "audit_failure_before" in rollback
+    assert "created_identities" in setup
+    assert "Rollback state is not the exact governed state path." in rollback
+    assert "Rollback identity SID no longer matches" in rollback
     assert "Remove-LocalUser -Name $name" in rollback
     assert "Remove-Item -LiteralPath $root -Recurse -Force" in rollback
     assert "Enable-BitLocker" not in rollback
@@ -233,6 +240,10 @@ def test_verifier_uses_failure_4656_and_success_4663_metadata() -> None:
     assert "Test-Item10bAuditIdentity" not in audit_logic
     assert "-ExpectedResearchSid $ResearchSid.Value" in verify
     assert "-ExpectedCustodianSid $CustodianSid.Value" in verify
+    assert "identity_authority" in verify
+    assert "audit_event_evidence" in verify
+    assert "research_denial_event" in verify
+    assert "custodian_activity_event" in verify
 
 
 def test_audit_target_matching_uses_no_filesystem_provider() -> None:
@@ -251,6 +262,7 @@ def test_cli_cannot_promote_an_arbitrary_json_report() -> None:
     assert "finalize_live_report" not in finalizer
     assert "--authorize-setup" in finalizer
     assert ".capture_live_evidence(" in finalizer
+    assert '"schemas" / "v2"' in finalizer
 
 
 def test_preflight_observations_flow_into_the_same_verification_result() -> None:
@@ -485,7 +497,7 @@ AUDIT_SCENARIOS = {
 @pytest.fixture(scope="module")
 def audit_scenario_results(
     tmp_path_factory: pytest.TempPathFactory,
-) -> dict[str, dict[str, bool]]:
+) -> dict[str, dict[str, object]]:
     if PWSH is None:
         pytest.skip("PowerShell 7 is unavailable")
     audit_directory = tmp_path_factory.mktemp("item10b-audit")
@@ -532,19 +544,37 @@ def audit_scenario_results(
         )
     assert completed.returncode == 0, error.read_text(encoding="utf-8")
     return cast(
-        dict[str, dict[str, bool]], json.loads(output.read_text(encoding="utf-8"))
+        dict[str, dict[str, object]], json.loads(output.read_text(encoding="utf-8"))
     )
 
 
 def test_audit_logic_accepts_bound_denial_and_custodian_success(
-    audit_scenario_results: dict[str, dict[str, bool]],
+    audit_scenario_results: dict[str, dict[str, object]],
 ) -> None:
     """The two roles require their distinct, correctly classified audit events."""
     result = audit_scenario_results["valid"]
-    assert result == {
-        "research_denial_observed": True,
-        "custodian_activity_observed": True,
+    assert result["research_denial_observed"] is True
+    assert result["custodian_activity_observed"] is True
+    research = cast(dict[str, object], result["research_denial_event"])
+    custodian = cast(dict[str, object], result["custodian_activity_event"])
+    research_time = research.pop("occurred_at")
+    custodian_time = custodian.pop("occurred_at")
+    assert research == {
+        "event_id": 4656,
+        "outcome": "FAILURE",
+        "subject_user_sid": RESEARCH_SID,
+        "object_kind": "SEALED_FIXTURE",
     }
+    assert custodian == {
+        "event_id": 4663,
+        "outcome": "SUCCESS",
+        "subject_user_sid": CUSTODIAN_SID,
+        "object_kind": "RELEASED_FIXTURE",
+    }
+    assert str(research_time).startswith("2026-09-11T06:00:30")
+    assert str(research_time).endswith("Z")
+    assert str(custodian_time).startswith("2026-09-11T06:00:30")
+    assert str(custodian_time).endswith("Z")
 
 
 @pytest.mark.parametrize(
@@ -557,7 +587,7 @@ def test_audit_logic_accepts_bound_denial_and_custodian_success(
     ],
 )
 def test_research_denial_rejects_wrong_id_outcome_identity_or_object(
-    audit_scenario_results: dict[str, dict[str, bool]], scenario: str
+    audit_scenario_results: dict[str, dict[str, object]], scenario: str
 ) -> None:
     """An event's existence does not establish a denied research access."""
     result = audit_scenario_results[scenario]
@@ -574,7 +604,7 @@ def test_research_denial_rejects_wrong_id_outcome_identity_or_object(
     ],
 )
 def test_custodian_activity_requires_bound_successful_4663(
-    audit_scenario_results: dict[str, dict[str, bool]], scenario: str
+    audit_scenario_results: dict[str, dict[str, object]], scenario: str
 ) -> None:
     """Custodian authority requires successful performed-object activity."""
     result = audit_scenario_results[scenario]
@@ -582,7 +612,7 @@ def test_custodian_activity_requires_bound_successful_4663(
 
 
 def test_audit_identity_uses_sid_not_display_name(
-    audit_scenario_results: dict[str, dict[str, bool]],
+    audit_scenario_results: dict[str, dict[str, object]],
 ) -> None:
     """Diagnostic account text cannot replace or override exact SID authority."""
     result = audit_scenario_results["research_wrong_display_name_correct_sid"]
@@ -590,11 +620,11 @@ def test_audit_identity_uses_sid_not_display_name(
 
 
 def test_audit_evidence_rejects_events_outside_verification_window(
-    audit_scenario_results: dict[str, dict[str, bool]],
+    audit_scenario_results: dict[str, dict[str, object]],
 ) -> None:
     """Stale otherwise-matching events cannot satisfy either evidence gate."""
     result = audit_scenario_results["stale"]
-    assert result == {
-        "research_denial_observed": False,
-        "custodian_activity_observed": False,
-    }
+    assert result["research_denial_observed"] is False
+    assert result["custodian_activity_observed"] is False
+    assert result["research_denial_event"] is None
+    assert result["custodian_activity_event"] is None

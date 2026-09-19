@@ -25,6 +25,7 @@ $statePath = Join-Path $evidence 'item10b-created-state.json'
 $fixturePath = Join-Path $vault 'synthetic-sealed-fixture.txt'
 $marker = 'QUANT_HUNTER_ITEM10B_SYNTHETIC_BOUNDARY'
 $createdUsers = [Collections.Generic.List[string]]::new()
+$createdIdentities = [Collections.Generic.List[object]]::new()
 $createdRoot = $false
 $systemSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
 $administratorsSid = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
@@ -209,6 +210,7 @@ try {
         candidate_root = $root
         created_root = $createdRoot
         created_users = @()
+        created_identities = @()
         audit_success_before = [bool]$preflight.AuditFileSystem.Success
         audit_failure_before = [bool]$preflight.AuditFileSystem.Failure
     }
@@ -223,6 +225,12 @@ try {
     [IO.File]::WriteAllText($statePath, ($state | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
     $custodianUser = Get-GovernedLocalUser 'qh-oos-custodian'
     $custodianSid = $custodianUser.SID
+    $createdIdentities.Add([ordered]@{
+        name = 'qh-oos-custodian'
+        sid = $custodianSid.Value
+    })
+    $state.created_identities = @($createdIdentities)
+    [IO.File]::WriteAllText($statePath, ($state | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
     $phase = 'RESEARCH_CREATE'
     New-LocalUser -Name 'qh-research' -Password $researchPassword -AccountNeverExpires -PasswordNeverExpires -UserMayNotChangePassword | Out-Null
     $createdUsers.Add('qh-research')
@@ -230,6 +238,12 @@ try {
     [IO.File]::WriteAllText($statePath, ($state | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
     $researchUser = Get-GovernedLocalUser 'qh-research'
     $researchSid = $researchUser.SID
+    $createdIdentities.Add([ordered]@{
+        name = 'qh-research'
+        sid = $researchSid.Value
+    })
+    $state.created_identities = @($createdIdentities)
+    [IO.File]::WriteAllText($statePath, ($state | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
     $phase = 'PRIVILEGE_CHECK'
     Assert-UnprivilegedLocalUser $custodianSid
     Assert-UnprivilegedLocalUser $researchSid
@@ -267,6 +281,11 @@ try {
     $phase = 'DISABLE_IDENTITIES'
     Disable-LocalUser -Name 'qh-oos-custodian'
     Disable-LocalUser -Name 'qh-research'
+    $disabledCustodian = Get-GovernedLocalUser 'qh-oos-custodian'
+    $disabledResearch = Get-GovernedLocalUser 'qh-research'
+    if ($disabledCustodian.Enabled -or $disabledResearch.Enabled) {
+        throw 'Governed identities could not be proven disabled.'
+    }
     $result.identities_disabled_after_verification = $true
     [pscustomobject]$result | ConvertTo-Json -Depth 10 -Compress
 } catch {
@@ -274,7 +293,7 @@ try {
     $failurePhase = $phase
     if (Test-Path -LiteralPath $statePath) {
         try {
-            & $rollbackScript -StatePath $statePath -Apply
+            & $rollbackScript -StatePath $statePath -Apply -Confirm:$false
         } catch {
             $failureRecord = $_
             $failurePhase = 'ROLLBACK'

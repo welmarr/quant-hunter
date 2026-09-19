@@ -62,6 +62,23 @@ function Test-Item10bAuditTarget {
     return $false
 }
 
+function Resolve-Item10bAuditTargetKind {
+    param(
+        [Parameter(Mandatory = $true)][string]$Observed,
+        [Parameter(Mandatory = $true)][Collections.IDictionary]$Expected
+    )
+
+    foreach ($entry in $Expected.GetEnumerator()) {
+        if ((ConvertTo-Item10bAuditTarget $Observed).Equals(
+            (ConvertTo-Item10bAuditTarget ([string]$entry.Value)),
+            [StringComparison]::OrdinalIgnoreCase
+        )) {
+            return [string]$entry.Key
+        }
+    }
+    return $null
+}
+
 function ConvertTo-Item10bNormalizedAuditEvent {
     param([Parameter(Mandatory = $true, ValueFromPipeline = $true)][object]$EventRecord)
 
@@ -97,14 +114,19 @@ function Test-Item10bAuditEvidence {
     if ($WindowStart -gt $WindowEnd) {
         throw 'The governed audit window is invalid.'
     }
-    $researchTargets = @(
-        $VaultPath,
-        $FixturePath,
-        (Join-Item10bAuditTarget $VaultPath 'forbidden-create.txt')
-    )
-    $custodianTargets = @($FixturePath, $ReleasedPath)
+    $researchTargets = [ordered]@{
+        VAULT_ROOT = $VaultPath
+        SEALED_FIXTURE = $FixturePath
+        FORBIDDEN_CREATE = (Join-Item10bAuditTarget $VaultPath 'forbidden-create.txt')
+    }
+    $custodianTargets = [ordered]@{
+        SEALED_FIXTURE = $FixturePath
+        RELEASED_FIXTURE = $ReleasedPath
+    }
     $researchDenial = $false
     $custodianActivity = $false
+    $researchEvent = $null
+    $custodianEvent = $null
 
     foreach ($event in $Events) {
         try {
@@ -123,28 +145,52 @@ function Test-Item10bAuditEvidence {
         }
         $isFailure = ($keywords -band $script:Item10bAuditFailureKeyword) -ne 0
         $isSuccess = ($keywords -band $script:Item10bAuditSuccessKeyword) -ne 0
+        $researchTargetKind = Resolve-Item10bAuditTargetKind `
+            ([string]$event.object_name) $researchTargets
+        $custodianTargetKind = Resolve-Item10bAuditTargetKind `
+            ([string]$event.object_name) $custodianTargets
         if (
             [int]$event.event_id -eq 4656 -and
             $isFailure -and
             -not $isSuccess -and
             (Test-Item10bAuditSid ([string]$event.subject_user_sid) $ExpectedResearchSid) -and
-            (Test-Item10bAuditTarget ([string]$event.object_name) $researchTargets)
+            $null -ne $researchTargetKind
         ) {
             $researchDenial = $true
+            if ($null -eq $researchEvent) {
+                $researchEvent = [ordered]@{
+                    event_id = 4656
+                    outcome = 'FAILURE'
+                    subject_user_sid = [string]$event.subject_user_sid
+                    object_kind = $researchTargetKind
+                    occurred_at = $occurredAt.ToUniversalTime().ToString('o').Replace('+00:00', 'Z')
+                }
+            }
         }
         if (
             [int]$event.event_id -eq 4663 -and
             $isSuccess -and
             -not $isFailure -and
             (Test-Item10bAuditSid ([string]$event.subject_user_sid) $ExpectedCustodianSid) -and
-            (Test-Item10bAuditTarget ([string]$event.object_name) $custodianTargets)
+            $null -ne $custodianTargetKind
         ) {
             $custodianActivity = $true
+            if ($null -eq $custodianEvent) {
+                $custodianEvent = [ordered]@{
+                    event_id = 4663
+                    outcome = 'SUCCESS'
+                    subject_user_sid = [string]$event.subject_user_sid
+                    object_kind = $custodianTargetKind
+                    occurred_at = $occurredAt.ToUniversalTime().ToString('o').Replace('+00:00', 'Z')
+                }
+            }
         }
     }
 
     [pscustomobject]@{
         research_denial_observed = $researchDenial
         custodian_activity_observed = $custodianActivity
+        research_denial_event = $researchEvent
+        custodian_activity_event = $custodianEvent
     }
 }

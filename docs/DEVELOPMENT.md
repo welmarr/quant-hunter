@@ -1068,3 +1068,41 @@ suite passed 104 cases. The full pytest gate used the documented workspace-local
 The offline build produced the source and wheel distributions, and the package
 plus Item 10B module imported at version `0.1.0`. No dependency or lockfile
 change was made.
+
+### Item 10B live-evidence authority hardening correction
+
+The full-system static audit after PR #12 identified remaining live-authority
+defects before any owner host rerun. Effective release authorization compared
+only the custodian account leaf name, canonical evidence retained only boolean
+audit conclusions rather than the exact governed SIDs and normalized selected
+events, and retained evidence reload did not recheck those cross-field
+bindings. Post-setup Python validation/publication failures did not cover every
+unexpected exception with governed rollback. The setup-side rollback omitted
+an explicit noninteractive confirmation flag, account disabling was not read
+back, preflight did not fail on an unsuccessful Git worktree inventory, and
+rollback identity checks occurred after the first audit-policy mutation.
+
+The correction branch `fix/item10b-live-evidence-hardening` introduces the
+narrow v2 Windows host-evidence schema while retaining v1 history. It binds the
+effective custodian account and exact SID, distinct governed identity SIDs,
+normalized 4656 Failure and 4663 Success records, target classification, and
+event timestamps inside the retained verification window. The same bindings
+are rechecked during canonical evidence loading. Every post-setup authority
+failure invokes the exact marker/state-bound rollback; unexpected failures are
+reported only as bounded publication diagnostics. Rollback validates its exact
+state path and all current created-user SIDs before mutation, and both setup
+and Python invoke it noninteractively. Setup rereads both users after disabling
+them. The owner launcher defaults to the same governed v2 catalog it enforces.
+
+All new evidence is synthetic. No live setup, user, DACL, SACL, audit-policy,
+indexing, filesystem, BitLocker, real-data, or `HOST_ENFORCED` mutation was
+performed. RISK-017 remains `OPEN`, and the correction requires independent
+review and merge before the owner live-capture runbook may be used. Focused
+Item 10A/10B and storage-security proof passed 219 tests. The first full run
+passed all 837 tests but correctly failed the unchanged 90% gate at 89.97%; new
+hostile rollback/timestamp branch tests were added rather than lowering the
+threshold. The final locked run passed all 842 tests with 90.12% combined
+statement/branch coverage. Lock, Ruff format, Ruff lint, and strict mypy over
+49 source files also passed. The documented workspace-local `--basetemp`
+workaround was required because the host user-temp directory denies fixture
+enumeration.

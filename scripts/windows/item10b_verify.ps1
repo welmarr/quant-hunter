@@ -154,7 +154,7 @@ $researchAudit = [bool]$auditEvidence.research_denial_observed
 $custodianAudit = [bool]$auditEvidence.custodian_activity_observed
 
 $result = [ordered]@{
-    schema_version = '1.0.0'
+    schema_version = '2.0.0'
     verified_at = (Get-Date).ToUniversalTime().ToString('o').Replace('+00:00', 'Z')
     platform = 'WINDOWS'
     preflight_observations = [ordered]@{
@@ -184,6 +184,12 @@ $result = [ordered]@{
     evidence_path = [IO.Path]::GetFullPath($EvidencePath)
     custodian_identity = 'qh-oos-custodian'
     research_identity = 'qh-research'
+    identity_authority = [ordered]@{
+        custodian_sid = $CustodianSid.Value
+        research_sid = $ResearchSid.Value
+        custodian_unprivileged = $true
+        research_unprivileged = $true
+    }
     vault_dacl_checks = [ordered]@{
         inheritance_disabled = $vaultAcl.AreAccessRulesProtected
         allow_list_verified = (Test-Item10bExactSidSet $vaultRules @(
@@ -213,6 +219,12 @@ $result = [ordered]@{
         sacl_verified = $saclVerified
         research_denial_observed = $researchAudit
         custodian_activity_observed = $custodianAudit
+    }
+    audit_event_evidence = [ordered]@{
+        window_start = $startedAt.ToUniversalTime().ToString('o').Replace('+00:00', 'Z')
+        window_end = $endedAt.ToUniversalTime().ToString('o').Replace('+00:00', 'Z')
+        research_denial = $auditEvidence.research_denial_event
+        custodian_activity = $auditEvidence.custodian_activity_event
     }
     research_denial_checks = [ordered]@{
         directory_list_denied = [bool]$research.directory_list_denied

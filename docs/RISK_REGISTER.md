@@ -475,3 +475,18 @@ checkout and adds bounded operator diagnostics without weakening DEC-0036.
 This is corrective software evidence only. RISK-017 remains `OPEN` until a
 separately authorized capture produces complete live evidence and that evidence
 passes independent review. RISK-018 remains unchanged.
+
+The subsequent complete-system audit found that live release authorization and
+retained audit evidence needed stronger SID and event binding before another
+owner capture. Correction branch `fix/item10b-live-evidence-hardening` requires
+the exact runtime custodian SID, distinct retained custodian/research SIDs,
+normalized exact-SID 4656 Failure and 4663 Success records, governed target
+classification, and timestamps inside the retained verification window. These
+relationships are revalidated when canonical evidence is loaded. The branch
+also makes every post-setup authority failure use the governed rollback,
+prevalidates rollback identities before mutation, confirms disabled users by
+readback, and aligns the launcher with schema v2. Local software proof passed
+842 tests at 90.12% coverage, but this is neither independent review nor live
+host evidence. No host/security or BitLocker mutation occurred. RISK-017 stays
+`OPEN` pending correction review/merge, a successful owner-controlled live
+capture, and independent review of the resulting canonical evidence.

@@ -47,7 +47,10 @@ from quant_hunter.isolation import (
 )
 from quant_hunter.storage import ImmutableObjectStore, ObjectStoreError
 
-SCHEMA_DIRECTORY = Path(__file__).parents[1] / "schemas" / "v1"
+SCHEMA_DIRECTORY = Path(__file__).parents[1] / "schemas" / "v2"
+CUSTODIAN_SID = "S-1-5-21-111111111-222222222-333333333-1001"
+RESEARCH_SID = "S-1-5-21-111111111-222222222-333333333-1002"
+REAL_GOVERNED_ROLLBACK = WindowsHostBoundaryVerifier._run_governed_rollback
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +69,7 @@ def _execution_result(
 ) -> JsonRecord:
     candidate = candidate_root or profile.vault_root.parent
     return {
-        "schema_version": "1.0.0",
+        "schema_version": "2.0.0",
         "verified_at": "2026-09-11T06:00:00.000000001Z",
         "platform": "WINDOWS",
         "preflight_observations": {
@@ -96,6 +99,12 @@ def _execution_result(
         "evidence_path": str(profile.evidence_root),
         "custodian_identity": "qh-oos-custodian",
         "research_identity": "qh-research",
+        "identity_authority": {
+            "custodian_sid": CUSTODIAN_SID,
+            "research_sid": RESEARCH_SID,
+            "custodian_unprivileged": True,
+            "research_unprivileged": True,
+        },
         "vault_dacl_checks": {
             "inheritance_disabled": True,
             "allow_list_verified": True,
@@ -113,6 +122,24 @@ def _execution_result(
             "sacl_verified": True,
             "research_denial_observed": True,
             "custodian_activity_observed": True,
+        },
+        "audit_event_evidence": {
+            "window_start": "2026-09-11T05:59:59Z",
+            "window_end": "2026-09-11T06:00:01Z",
+            "research_denial": {
+                "event_id": 4656,
+                "outcome": "FAILURE",
+                "subject_user_sid": RESEARCH_SID,
+                "object_kind": "SEALED_FIXTURE",
+                "occurred_at": "2026-09-11T06:00:00Z",
+            },
+            "custodian_activity": {
+                "event_id": 4663,
+                "outcome": "SUCCESS",
+                "subject_user_sid": CUSTODIAN_SID,
+                "object_kind": "RELEASED_FIXTURE",
+                "occurred_at": "2026-09-11T06:00:00Z",
+            },
         },
         "research_denial_checks": {
             "directory_list_denied": True,
@@ -158,7 +185,7 @@ def _retained_evidence_record(
     preflight = deepcopy(cast(JsonRecord, result["preflight_observations"]))
     preflight.pop("candidate_root")
     record: JsonRecord = {
-        "schema_version": "1.0.0",
+        "schema_version": "2.0.0",
         "evidence_type": "WINDOWS_HOST_BOUNDARY",
         "evidence_mode": "HOST_ENFORCED",
         "preflight_observations": preflight,
@@ -176,6 +203,8 @@ def _retained_evidence_record(
         "vault_dacl_checks",
         "release_dacl_checks",
         "audit_checks",
+        "identity_authority",
+        "audit_event_evidence",
         "research_denial_checks",
         "custodian_access_checks",
         "released_artifact_checks",
@@ -229,8 +258,10 @@ def _build_host_harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Host
     monkeypatch.setattr(windows_host, "_is_elevated_administrator", lambda: True)
     monkeypatch.setattr(
         windows_host,
-        "_current_windows_account",
-        lambda: "SYNTHETIC-HOST\\qh-oos-custodian",
+        "_current_windows_identity",
+        lambda: SimpleNamespace(
+            account="SYNTHETIC-HOST\\qh-oos-custodian", sid=CUSTODIAN_SID
+        ),
     )
     evidence_path.write_bytes(canonicalize_json(_retained_evidence_record(profile)))
     evidence = verifier.load(evidence_path)
@@ -310,6 +341,20 @@ def test_host_evidence_tamper_and_profile_substitution_are_rejected(
         harness.evidence.verify()
     harness.evidence_path.write_bytes(canonicalize_json(original))
 
+    substituted = deepcopy(original)
+    research_event = cast(
+        JsonRecord,
+        cast(JsonRecord, substituted["audit_event_evidence"])["research_denial"],
+    )
+    research_event["subject_user_sid"] = "S-1-5-21-999999999-888888888-777777777-1002"
+    substituted["host_boundary_evidence_digest"] = host_boundary_evidence_digest(
+        substituted
+    )
+    harness.evidence_path.write_bytes(canonicalize_json(substituted))
+    with pytest.raises(HostBoundaryEvidenceError, match="identity SIDs"):
+        harness.verifier.load(harness.evidence_path)
+    harness.evidence_path.write_bytes(canonicalize_json(original))
+
     other_release = (tmp_path / "other-release").resolve()
     other_release.mkdir()
     wrong_profile = WindowsHostBoundaryProfile(
@@ -371,6 +416,11 @@ def _capture_verifier(
     monkeypatch.setattr(windows_host, "_is_windows_host", lambda: True)
     monkeypatch.setattr(windows_host, "_is_elevated_administrator", lambda: True)
     monkeypatch.setattr(windows_host, "_governed_repository_root", lambda: repository)
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_run_governed_rollback",
+        lambda self, observed_repository, observed_candidate: None,
+    )
     return (
         WindowsHostBoundaryVerifier(profile, SCHEMA_DIRECTORY),
         repository,
@@ -511,6 +561,30 @@ def test_capture_requires_windows_admin_explicit_setup_and_exclusive_output(
             "validation",
         ),
         (("audit_checks", "sacl_verified"), False, "validation"),
+        (
+            ("identity_authority", "custodian_sid"),
+            "S-1-5-21-999999999-888888888-777777777-1001",
+            "identity SIDs",
+        ),
+        (
+            (
+                "audit_event_evidence",
+                "research_denial",
+                "subject_user_sid",
+            ),
+            "S-1-5-21-999999999-888888888-777777777-1002",
+            "identity SIDs",
+        ),
+        (
+            ("audit_event_evidence", "research_denial", "occurred_at"),
+            "2026-09-11T06:00:02Z",
+            "verification window",
+        ),
+        (
+            ("identity_authority", "research_sid"),
+            CUSTODIAN_SID,
+            "identity SIDs",
+        ),
         (("indexing_excluded",), False, "validation"),
         (
             ("limitations",),
@@ -553,6 +627,131 @@ def test_failed_or_substituted_execution_cannot_yield_host_authority(
     assert not evidence_path.exists()
 
 
+def test_post_setup_validation_failure_runs_governed_rollback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Any failure after successful setup rolls back before authority is returned."""
+    verifier, repository, candidate, evidence_path = _capture_verifier(
+        tmp_path, monkeypatch
+    )
+    result = _execution_result(verifier.profile, candidate)
+    result["indexing_excluded"] = False
+    rollback_calls: list[tuple[Path, Path]] = []
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_run_governed_setup",
+        lambda self, observed_repository, observed_candidate: deepcopy(result),
+    )
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_run_governed_rollback",
+        lambda self, observed_repository, observed_candidate: rollback_calls.append(
+            (observed_repository, observed_candidate)
+        ),
+    )
+
+    with pytest.raises(HostBoundaryEvidenceError, match="validation"):
+        verifier.capture_live_evidence(
+            repository, candidate, evidence_path, authorize_setup=True
+        )
+
+    assert rollback_calls == [(repository, candidate)]
+    assert not evidence_path.exists()
+
+
+def test_unexpected_post_setup_failure_runs_rollback_and_stays_sanitized(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unexpected publication-path faults roll back without leaking internals."""
+    verifier, repository, candidate, evidence_path = _capture_verifier(
+        tmp_path, monkeypatch
+    )
+    result = _execution_result(verifier.profile, candidate)
+    rollback_calls: list[tuple[Path, Path]] = []
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_run_governed_setup",
+        lambda self, observed_repository, observed_candidate: deepcopy(result),
+    )
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_sanitized_record",
+        lambda self, observed_result, observed_candidate: (_ for _ in ()).throw(
+            RuntimeError("private path C:\\Users\\Private Owner\\secret.json")
+        ),
+    )
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_run_governed_rollback",
+        lambda self, observed_repository, observed_candidate: rollback_calls.append(
+            (observed_repository, observed_candidate)
+        ),
+    )
+
+    with pytest.raises(
+        HostBoundaryEvidenceError,
+        match="Post-setup validation or publication failed",
+    ) as captured:
+        verifier.capture_live_evidence(
+            repository, candidate, evidence_path, authorize_setup=True
+        )
+
+    assert captured.value.phase == "PUBLICATION"
+    assert "Private Owner" not in str(captured.value)
+    assert rollback_calls == [(repository, candidate)]
+    assert not evidence_path.exists()
+
+
+def test_post_setup_failure_reports_failed_governed_rollback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A rollback failure remains a bounded publication failure, never authority."""
+    verifier, repository, candidate, evidence_path = _capture_verifier(
+        tmp_path, monkeypatch
+    )
+    result = _execution_result(verifier.profile, candidate)
+    result["indexing_excluded"] = False
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_run_governed_setup",
+        lambda self, observed_repository, observed_candidate: deepcopy(result),
+    )
+    monkeypatch.setattr(
+        WindowsHostBoundaryVerifier,
+        "_run_governed_rollback",
+        lambda self, observed_repository, observed_candidate: (_ for _ in ()).throw(
+            HostBoundaryEvidenceError("private rollback detail")
+        ),
+    )
+
+    with pytest.raises(
+        HostBoundaryEvidenceError,
+        match="governed rollback could not complete",
+    ) as captured:
+        verifier.capture_live_evidence(
+            repository, candidate, evidence_path, authorize_setup=True
+        )
+
+    assert captured.value.phase == "PUBLICATION"
+    assert "private rollback detail" not in str(captured.value)
+    assert not evidence_path.exists()
+
+
+@pytest.mark.parametrize("value", [None, "not-a-timestamp", "2026-09-11T06:00:00"])
+def test_audit_timestamp_parser_rejects_missing_malformed_or_naive_values(
+    value: object,
+) -> None:
+    """Canonical audit authority requires an explicit parseable UTC offset."""
+    with pytest.raises(HostBoundaryEvidenceError, match="timestamp is invalid"):
+        WindowsHostBoundaryVerifier._parse_audit_timestamp(value)
+
+
+def test_identity_binding_requires_both_authority_sections() -> None:
+    """Missing identity or normalized event evidence fails closed."""
+    with pytest.raises(HostBoundaryEvidenceError, match="authority is missing"):
+        WindowsHostBoundaryVerifier._require_identity_binding({})
+
+
 def test_governed_runner_invokes_only_bundled_setup_and_parses_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -579,6 +778,36 @@ def test_governed_runner_invokes_only_bundled_setup_and_parses_stdout(
     assert "-Apply" in command
     assert "-Confirm:$false" in command
     assert all("password" not in argument.casefold() for argument in command)
+    assert observed["kwargs"]["capture_output"] is True
+
+
+def test_governed_rollback_invokes_only_bundled_marker_bound_script(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Post-setup recovery uses the checkout script and exact state path."""
+    verifier, repository, candidate, _ = _capture_verifier(tmp_path, monkeypatch)
+    script = repository / "scripts" / "windows" / "item10b_rollback.ps1"
+    script.parent.mkdir(parents=True)
+    script.write_text("# synthetic inert rollback", encoding="utf-8")
+    observed: dict[str, Any] = {}
+    monkeypatch.setattr(
+        cast(Any, windows_host).shutil, "which", lambda executable: "pwsh.exe"
+    )
+
+    def run(*args: Any, **kwargs: Any) -> SimpleNamespace:
+        observed["command"] = args[0]
+        observed["kwargs"] = kwargs
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    REAL_GOVERNED_ROLLBACK(verifier, repository, candidate)
+    command = observed["command"]
+    assert command[command.index("-File") + 1] == str(script)
+    assert command[command.index("-StatePath") + 1] == str(
+        candidate / "host-evidence" / "item10b-created-state.json"
+    )
+    assert "-Apply" in command
+    assert "-Confirm:$false" in command
     assert observed["kwargs"]["capture_output"] is True
 
 
@@ -731,15 +960,28 @@ def test_host_release_requires_effective_custodian_and_matching_release_root(
     """Host mode cannot be authorized by a research identity or another root."""
     harness = _build_host_harness(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        windows_host, "_current_windows_account", lambda: "HOST\\qh-research"
+        windows_host,
+        "_current_windows_identity",
+        lambda: SimpleNamespace(account="HOST\\qh-research", sid=RESEARCH_SID),
     )
-    with pytest.raises(HostIdentityError, match="effective custodian"):
+    with pytest.raises(HostIdentityError, match="custodian SID"):
         harness.service.authorize_release(harness.request, expected_ledger_head=None)
 
     monkeypatch.setattr(
         windows_host,
-        "_current_windows_account",
-        lambda: "HOST\\qh-oos-custodian",
+        "_current_windows_identity",
+        lambda: SimpleNamespace(
+            account="OTHERDOMAIN\\qh-oos-custodian",
+            sid="S-1-5-21-999999999-888888888-777777777-1001",
+        ),
+    )
+    with pytest.raises(HostIdentityError, match="custodian SID"):
+        harness.service.authorize_release(harness.request, expected_ledger_head=None)
+
+    monkeypatch.setattr(
+        windows_host,
+        "_current_windows_identity",
+        lambda: SimpleNamespace(account="HOST\\qh-oos-custodian", sid=CUSTODIAN_SID),
     )
     wrong_actor = replace(harness.request, actor="qh-research")
     with pytest.raises(HostIdentityError, match="actor"):
@@ -870,26 +1112,30 @@ def test_platform_identity_and_path_guards_fail_closed(
 
     monkeypatch.delenv("SystemRoot", raising=False)
     with pytest.raises(HostIdentityError, match="system root"):
-        module._current_windows_account()
+        module._current_windows_identity()
     monkeypatch.setenv("SystemRoot", str(tmp_path))
     monkeypatch.setattr(
         subprocess,
         "run",
-        lambda *args, **kwargs: SimpleNamespace(stdout="HOST\\qh-oos-custodian\n"),
+        lambda *args, **kwargs: SimpleNamespace(
+            stdout=f'"HOST\\qh-oos-custodian","{CUSTODIAN_SID}"\n'
+        ),
     )
-    assert module._current_windows_account() == "HOST\\qh-oos-custodian"
+    identity = module._current_windows_identity()
+    assert identity.account == "HOST\\qh-oos-custodian"
+    assert identity.sid == CUSTODIAN_SID
     monkeypatch.setattr(
         subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout="")
     )
-    with pytest.raises(HostIdentityError, match="empty"):
-        module._current_windows_account()
+    with pytest.raises(HostIdentityError, match="malformed"):
+        module._current_windows_identity()
 
     def process_failure(*args: object, **kwargs: object) -> object:
         raise OSError("synthetic process failure")
 
     monkeypatch.setattr(subprocess, "run", process_failure)
     with pytest.raises(HostIdentityError, match="determine"):
-        module._current_windows_account()
+        module._current_windows_identity()
 
     assert module._is_link_like(tmp_path / "absent") is False
     monkeypatch.setattr(module, "_is_link_like", lambda path: True)

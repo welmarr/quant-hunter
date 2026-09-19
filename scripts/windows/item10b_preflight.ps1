@@ -83,6 +83,9 @@ $worktrees = [Collections.Generic.List[string]]::new()
 $worktrees.Add($repository)
 try {
     $gitLines = & git -C $repository worktree list --porcelain 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $gitLines) {
+        throw 'Git worktree inventory failed.'
+    }
     foreach ($line in $gitLines) {
         if ($line.StartsWith('worktree ')) {
             $worktrees.Add((Resolve-DirectPath $line.Substring(9) 'Git worktree'))

@@ -27,3 +27,10 @@ key, vintage identity, all four temporal columns, revision statuses, eligibility
 and vintage-selection rules, fail-closed ambiguity policy, and deterministic
 output ordering. Selection audit evidence is canonical and digest-bound; it does
 not create a second dataset-record vocabulary.
+
+`schemas/v2/` is a deliberately narrow Item 10B migration retained alongside
+v1. It contains the Windows host-boundary evidence contract used before the
+first canonical live capture. Version 2 adds retained exact custodian/research
+SIDs and normalized 4656 Failure / 4663 Success event evidence, including the
+governed time window and target classification. Other Stage 1 schemas remain on
+v1; no v1 record is rewritten.

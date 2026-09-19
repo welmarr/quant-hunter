@@ -77,6 +77,7 @@ live-trading capability exists.
 - Record every proposed or actual project cost in [`docs/BUDGET_LEDGER.md`](docs/BUDGET_LEDGER.md).
 - Use [`docs/ROADMAP.md`](docs/ROADMAP.md) for stage gates and [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md) for specification coverage.
 - Use [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for the pinned toolchain, setup commands, CI constraints, and preflight evidence.
+- Use [`docs/ITEM10B_LIVE_CAPTURE_RUNBOOK.md`](docs/ITEM10B_LIVE_CAPTURE_RUNBOOK.md) only after the Item 10B implementation is independently reviewed and merged; it contains the owner live-capture, rollback, evidence-audit, and closure packets.
 
 ## Development Commands
 

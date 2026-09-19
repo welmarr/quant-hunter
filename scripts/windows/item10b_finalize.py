@@ -24,7 +24,7 @@ from quant_hunter.isolation import (  # noqa: E402 - checkout binding precedes i
 def _execute(arguments: argparse.Namespace) -> str:
     """Run the sole governed capture path after checkout binding succeeds."""
     requested_repository = arguments.repository_root.resolve()
-    governed_schema_directory = (_LAUNCHER_REPOSITORY_ROOT / "schemas" / "v1").resolve()
+    governed_schema_directory = (_LAUNCHER_REPOSITORY_ROOT / "schemas" / "v2").resolve()
     requested_schema_directory = arguments.schema_directory.resolve()
     if requested_repository != _LAUNCHER_REPOSITORY_ROOT:
         raise HostBoundaryEvidenceError(
@@ -65,7 +65,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--schema-directory",
         type=Path,
-        default=_LAUNCHER_REPOSITORY_ROOT / "schemas" / "v1",
+        default=_LAUNCHER_REPOSITORY_ROOT / "schemas" / "v2",
     )
     arguments = parser.parse_args(argv)
     try:

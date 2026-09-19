@@ -90,6 +90,13 @@ def test_repository_binding_failure_is_sanitized_before_host_setup(
     assert not evidence.exists()
 
 
+def test_default_schema_is_the_governed_v2_catalog() -> None:
+    """The owner command defaults to the same schema catalog enforced at runtime."""
+    source = LAUNCHER.read_text(encoding="utf-8")
+    assert 'default=_LAUNCHER_REPOSITORY_ROOT / "schemas" / "v2"' in source
+    assert 'default=_LAUNCHER_REPOSITORY_ROOT / "schemas" / "v1"' not in source
+
+
 def test_schema_override_cannot_spoof_governed_checkout(tmp_path: Path) -> None:
     """Caller-controlled schemas cannot weaken the checkout-bound validation path."""
     completed = subprocess.run(  # noqa: S603 - fixed interpreter and governed launcher

@@ -8,6 +8,7 @@ compromised operating system remain outside the Stage 1 threat model.
 
 from __future__ import annotations
 
+import csv
 import ctypes
 import os
 import re
@@ -16,6 +17,7 @@ import subprocess
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Final, Protocol, cast
 
@@ -133,9 +135,11 @@ _EXECUTION_RESULT_FIELDS: Final = {
     "evidence_path",
     "custodian_identity",
     "research_identity",
+    "identity_authority",
     "vault_dacl_checks",
     "release_dacl_checks",
     "audit_checks",
+    "audit_event_evidence",
     "research_denial_checks",
     "custodian_access_checks",
     "released_artifact_checks",
@@ -181,6 +185,14 @@ class HostBoundaryEvidenceError(WindowsHostBoundaryError):
 
 class HostIdentityError(WindowsHostBoundaryError):
     """The effective operating-system identity lacks release authority."""
+
+
+@dataclass(frozen=True, slots=True)
+class _WindowsIdentity:
+    """Effective Windows account and immutable SID observed from one command."""
+
+    account: str
+    sid: str
 
 
 class _FrozenAuthority(Protocol):
@@ -253,7 +265,7 @@ def _is_elevated_administrator() -> bool:
     return bool(windll.shell32.IsUserAnAdmin())
 
 
-def _current_windows_account() -> str:
+def _current_windows_identity() -> _WindowsIdentity:
     _require_windows_host()
     system_root = os.environ.get("SystemRoot")
     if not system_root:
@@ -261,7 +273,7 @@ def _current_windows_account() -> str:
     executable = Path(system_root) / "System32" / "whoami.exe"
     try:
         result = subprocess.run(  # noqa: S603 - absolute Windows system binary
-            [str(executable)],
+            [str(executable), "/user", "/fo", "csv", "/nh"],
             check=True,
             capture_output=True,
             text=True,
@@ -271,10 +283,16 @@ def _current_windows_account() -> str:
         raise HostIdentityError(
             "Cannot determine the effective Windows identity"
         ) from error
-    account = result.stdout.strip()
-    if not account:
-        raise HostIdentityError("Effective Windows identity is empty")
-    return account
+    try:
+        rows = [row for row in csv.reader(result.stdout.splitlines()) if row]
+    except csv.Error as error:
+        raise HostIdentityError("Effective Windows identity is malformed") from error
+    if len(rows) != 1 or len(rows[0]) != 2:
+        raise HostIdentityError("Effective Windows identity is malformed")
+    account, sid = (value.strip() for value in rows[0])
+    if not account or re.fullmatch(r"S-[0-9]+(?:-[0-9]+)+", sid) is None:
+        raise HostIdentityError("Effective Windows identity is malformed")
+    return _WindowsIdentity(account=account, sid=sid)
 
 
 def _account_leaf(account: str) -> str:
@@ -552,6 +570,11 @@ class VerifiedWindowsHostBoundaryEvidence:
     def custodian_role(self) -> str:
         return cast(str, self._record["custodian_role"])
 
+    @property
+    def custodian_sid(self) -> str:
+        identity = cast(JsonRecord, self._record["identity_authority"])
+        return cast(str, identity["custodian_sid"])
+
     def verify(self) -> JsonRecord:
         """Re-read and revalidate the protected canonical evidence file."""
         observed = self._verifier._load_verified_record(self._path)
@@ -632,15 +655,32 @@ class WindowsHostBoundaryVerifier:
             result = self._run_governed_setup(repository, candidate)
         except HostBoundaryEvidenceError as error:
             raise HostBoundaryEvidenceError(str(error), phase="SETUP") from error
-        self._require_execution_binding(result, candidate)
-        record = self._sanitized_record(result, candidate)
-        record["host_boundary_evidence_digest"] = host_boundary_evidence_digest(record)
         try:
+            self._require_execution_binding(result, candidate)
+            record = self._sanitized_record(result, candidate)
+            record["host_boundary_evidence_digest"] = host_boundary_evidence_digest(
+                record
+            )
             self._validate_record(record)
             self._exclusive_publish(output_file, canonicalize_json(record))
             return self.load(evidence_path)
-        except HostBoundaryEvidenceError as error:
-            raise HostBoundaryEvidenceError(str(error), phase="PUBLICATION") from error
+        except Exception as error:
+            try:
+                self._run_governed_rollback(repository, candidate)
+            except HostBoundaryEvidenceError as rollback_error:
+                raise HostBoundaryEvidenceError(
+                    "Post-setup validation failed and governed rollback could not "
+                    "complete",
+                    phase="PUBLICATION",
+                ) from rollback_error
+            if isinstance(error, HostBoundaryEvidenceError):
+                raise HostBoundaryEvidenceError(
+                    str(error), phase="PUBLICATION"
+                ) from error
+            raise HostBoundaryEvidenceError(
+                "Post-setup validation or publication failed",
+                phase="PUBLICATION",
+            ) from error
 
     def _run_governed_setup(
         self, repository_root: Path, candidate_root: Path
@@ -699,6 +739,51 @@ class WindowsHostBoundaryVerifier:
             )
         return parsed
 
+    def _run_governed_rollback(
+        self, repository_root: Path, candidate_root: Path
+    ) -> None:
+        """Run only the marker-bound rollback after a post-setup failure."""
+        rollback_script = _require_within(
+            repository_root / "scripts" / "windows" / "item10b_rollback.ps1",
+            repository_root,
+            "governed rollback script",
+        )
+        if _is_link_like(rollback_script) or not rollback_script.is_file():
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B rollback script is unavailable"
+            )
+        state_path = candidate_root / "host-evidence" / "item10b-created-state.json"
+        powershell = shutil.which("pwsh.exe") or shutil.which("pwsh")
+        if powershell is None:
+            raise HostBoundaryEvidenceError("PowerShell 7 is unavailable for rollback")
+        try:
+            completed = subprocess.run(  # noqa: S603 - governed local script
+                [
+                    powershell,
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-File",
+                    str(rollback_script),
+                    "-StatePath",
+                    str(state_path),
+                    "-Apply",
+                    "-Confirm:$false",
+                ],
+                cwd=repository_root,
+                check=False,
+                capture_output=True,
+                timeout=300,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B rollback could not complete"
+            ) from error
+        if completed.returncode != 0:
+            raise HostBoundaryEvidenceError(
+                "Governed Item 10B rollback did not complete successfully"
+            )
+
     def load(self, evidence_path: Path) -> VerifiedWindowsHostBoundaryEvidence:
         """Load protected canonical evidence into the typed authority boundary."""
         _require_windows_host()
@@ -753,6 +838,7 @@ class WindowsHostBoundaryVerifier:
             raise HostBoundaryEvidenceError(
                 "Host-boundary evidence failed governed validation"
             ) from error
+        self._require_identity_binding(record)
 
     def _require_candidate_profile(self, candidate_root: Path) -> None:
         expected = {
@@ -779,6 +865,7 @@ class WindowsHostBoundaryVerifier:
                 "Governed host execution contains forbidden credential material"
             ) from error
         self._require_result_paths(result)
+        self._require_identity_binding(result)
         preflight = result.get("preflight_observations")
         if not isinstance(preflight, dict) or set(preflight) != (
             _PREFLIGHT_OBSERVATION_FIELDS
@@ -795,6 +882,65 @@ class WindowsHostBoundaryVerifier:
             raise HostBoundaryEvidenceError(
                 "Preflight observations belong to a different candidate root"
             )
+
+    @staticmethod
+    def _require_identity_binding(result: Mapping[str, JsonValue]) -> None:
+        identity = result.get("identity_authority")
+        audit = result.get("audit_event_evidence")
+        if not isinstance(identity, dict) or not isinstance(audit, dict):
+            raise HostBoundaryEvidenceError(
+                "Governed identity or audit authority is missing"
+            )
+        custodian_sid = identity.get("custodian_sid")
+        research_sid = identity.get("research_sid")
+        research_event = audit.get("research_denial")
+        custodian_event = audit.get("custodian_activity")
+        if (
+            not isinstance(custodian_sid, str)
+            or not isinstance(research_sid, str)
+            or custodian_sid.casefold() == research_sid.casefold()
+            or not isinstance(research_event, dict)
+            or not isinstance(custodian_event, dict)
+            or research_event.get("subject_user_sid") != research_sid
+            or custodian_event.get("subject_user_sid") != custodian_sid
+        ):
+            raise HostBoundaryEvidenceError(
+                "Audit events do not match the governed identity SIDs"
+            )
+        window_start = WindowsHostBoundaryVerifier._parse_audit_timestamp(
+            audit.get("window_start")
+        )
+        window_end = WindowsHostBoundaryVerifier._parse_audit_timestamp(
+            audit.get("window_end")
+        )
+        research_at = WindowsHostBoundaryVerifier._parse_audit_timestamp(
+            research_event.get("occurred_at")
+        )
+        custodian_at = WindowsHostBoundaryVerifier._parse_audit_timestamp(
+            custodian_event.get("occurred_at")
+        )
+        if (
+            window_start > window_end
+            or not window_start <= research_at <= window_end
+            or not window_start <= custodian_at <= window_end
+        ):
+            raise HostBoundaryEvidenceError(
+                "Audit events fall outside the governed verification window"
+            )
+
+    @staticmethod
+    def _parse_audit_timestamp(value: object) -> datetime:
+        if not isinstance(value, str):
+            raise HostBoundaryEvidenceError("Audit event timestamp is invalid")
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise HostBoundaryEvidenceError(
+                "Audit event timestamp is invalid"
+            ) from error
+        if parsed.tzinfo is None:
+            raise HostBoundaryEvidenceError("Audit event timestamp is invalid")
+        return parsed
 
     def _require_result_paths(self, result: Mapping[str, JsonValue]) -> None:
         expected = {
@@ -828,6 +974,8 @@ class WindowsHostBoundaryVerifier:
             "vault_dacl_checks",
             "release_dacl_checks",
             "audit_checks",
+            "identity_authority",
+            "audit_event_evidence",
             "research_denial_checks",
             "custodian_access_checks",
             "released_artifact_checks",
@@ -839,7 +987,7 @@ class WindowsHostBoundaryVerifier:
             "limitations",
         )
         record: JsonRecord = {
-            "schema_version": "1.0.0",
+            "schema_version": "2.0.0",
             "evidence_type": "WINDOWS_HOST_BOUNDARY",
             "evidence_mode": EnforcementMode.HOST_ENFORCED.value,
             "preflight_observations": deepcopy(result["preflight_observations"]),
@@ -988,13 +1136,16 @@ class WindowsHostReleaseService:
         """Recheck host, FROZEN, binding, and artifact evidence before append."""
         _require_windows_host()
         host_record = request.host_boundary_evidence.verify()
-        current_account = _current_windows_account()
+        current_identity = _current_windows_identity()
         if (
-            _account_leaf(current_account)
+            _account_leaf(current_identity.account)
             != request.host_boundary_evidence.custodian_role
+            or not current_identity.sid.casefold().startswith("s-")
+            or current_identity.sid.casefold()
+            != request.host_boundary_evidence.custodian_sid.casefold()
         ):
             raise HostIdentityError(
-                "HOST_ENFORCED release requires the effective custodian identity"
+                "HOST_ENFORCED release requires the exact effective custodian SID"
             )
         if request.actor != request.host_boundary_evidence.custodian_role:
             raise HostIdentityError("Release actor must identify the custodian role")

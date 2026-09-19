@@ -25,6 +25,37 @@ if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf) -or
     (Get-Content -LiteralPath $markerPath -Raw) -ne $state.marker) {
     throw 'Rollback target lacks the exact batch-created marker.'
 }
+$resolvedState = [IO.Path]::GetFullPath($StatePath)
+$expectedState = [IO.Path]::GetFullPath(
+    (Join-Path $root 'host-evidence\item10b-created-state.json')
+)
+if (-not $resolvedState.Equals($expectedState, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Rollback state is not the exact governed state path.'
+}
+$identitySids = @{}
+foreach ($identity in @($state.created_identities)) {
+    $name = [string]$identity.name
+    $sid = [string]$identity.sid
+    if ($name -notin @('qh-oos-custodian', 'qh-research') -or
+        $sid -notmatch '^S-[0-9]+(?:-[0-9]+)+$') {
+        throw 'Rollback state contains invalid identity authority.'
+    }
+    $identitySids[$name] = $sid
+}
+$usersToRemove = @()
+foreach ($name in @($state.created_users)) {
+    if ($name -notin @('qh-oos-custodian', 'qh-research')) {
+        throw 'Rollback state contains an unexpected identity.'
+    }
+    $user = Get-LocalUser -Name $name -ErrorAction SilentlyContinue
+    if ($null -ne $user) {
+        if (-not $identitySids.ContainsKey($name) -or
+            $user.SID.Value -ne $identitySids[$name]) {
+            throw 'Rollback identity SID no longer matches the created authority.'
+        }
+        $usersToRemove += $name
+    }
+}
 if (-not $PSCmdlet.ShouldProcess($root, 'Roll back only Item 10B-created resources')) {
     return
 }
@@ -34,18 +65,9 @@ $failure = if ([bool]$state.audit_failure_before) { 'enable' } else { 'disable' 
 & "$env:SystemRoot\System32\auditpol.exe" /set /subcategory:'File System' /success:$success /failure:$failure | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Original File System audit policy could not be restored.' }
 
-foreach ($name in @($state.created_users)) {
-    if ($name -notin @('qh-oos-custodian', 'qh-research')) {
-        throw 'Rollback state contains an unexpected identity.'
-    }
-    if (Get-LocalUser -Name $name -ErrorAction SilentlyContinue) {
-        Remove-LocalUser -Name $name
-    }
+foreach ($name in $usersToRemove) {
+    Remove-LocalUser -Name $name
 }
 if ([bool]$state.created_root) {
-    $resolvedState = [IO.Path]::GetFullPath($StatePath)
-    if (-not $resolvedState.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-        throw 'Rollback state is outside its exact target boundary.'
-    }
     Remove-Item -LiteralPath $root -Recurse -Force
 }
