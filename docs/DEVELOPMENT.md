@@ -1068,3 +1068,23 @@ suite passed 104 cases. The full pytest gate used the documented workspace-local
 The offline build produced the source and wheel distributions, and the package
 plus Item 10B module imported at version `0.1.0`. No dependency or lockfile
 change was made.
+
+### PR #12 governed-binding and diagnostic-sanitization closure
+
+Independent review identified and corrected three operator-diagnostic issues on
+the same PR #12 branch: generic secret labels and complete Windows paths with
+spaces, environment-value substring corruption, and overbroad standalone
+environment-value redaction. The final sanitizer redacts actual environment
+material only in explicit `environment=` / `env=` contexts or when an actual
+environment key is paired with its exact value, while credential-shaped
+environment keys remain fail-closed and ordinary prose remains stable across CI
+environments.
+
+PR #12 final head `a4587ef3f9d550cf08b3b879f07cc177591986f8`
+merged on `main` at `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`.
+Post-merge Quality #51 passed on that exact commit on Ubuntu and Windows. The
+final local correction gate passed all 829 tests with 90.17% combined
+statement/branch coverage. No live setup, host/security mutation, BitLocker
+change, real sealed-data access, or canonical `HOST_ENFORCED` evidence occurred.
+Item 10B remains `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED` pending the
+separately authorized successful live capture and independent evidence review.

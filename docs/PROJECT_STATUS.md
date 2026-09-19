@@ -1,180 +1,85 @@
 # Quant Hunter Project Status
 
-## CURRENT RESUME STATE
+## Current Stage and Item
 
-| Field | Value |
-|---|---|
-| PROJECT | Quant Hunter |
-| LAST VERIFIED DATE | 2026-09-12 |
-| LAST VERIFIED IMPLEMENTATION MAIN | `27a81e9374e97566789f1a61000312d64b91a563` |
-| CURRENT STAGE | Stage 1B — Foundation Implementation |
+- **Current stage:** Stage 1B — Foundation Implementation.
+- **Current item:** Item 10B.
+- **Canonical status:** `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED`.
 
-The stored SHA is the verified PR #9 post-merge implementation checkpoint. It is
-not a substitute for checking current Git. Every resume must obtain the current
-branch and HEAD directly from Git, then reconcile this file against that state
-and the available review evidence. Do not update this field speculatively with
-the future merge SHA of this file's own change.
+## Software State
 
-## COMPLETED
+- Item 10A is complete, independently reviewed, merged, and post-merge CI green.
+- PR #12 merged the governed repository/runtime binding correction and the
+  operator-diagnostic sanitization corrections into `main` at
+  `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`.
+- Post-merge Quality #51 completed successfully on that exact `main` commit on
+  Ubuntu and Windows.
+- The elevated owner read-only binding proof passed before PR #12 merged.
+- No canonical `HOST_ENFORCED` evidence exists. Software tests, CI, and the
+  read-only proof do not replace the separately gated live host evidence.
+- BitLocker must not be changed by the Item 10B workflow.
 
-- Stage 0
-- Stage 1A
-- Stage 1B Items 1–10A
+## Open Material Risks
 
-## LAST COMPLETED ITEM
+- **RISK-017:** the real sealed-OOS host boundary remains unproven until a
+  successful governed live capture is independently reviewed.
+- **RISK-018:** registry concurrency and stale/crashed/orphan lock recovery
+  remain open for Item 12.
+- **RISK-021:** Month-1 aggregate spend and remaining headroom are unknown; no
+  paid action is authorized.
+- **RISK-023:** repository visibility, intellectual-property, and licensed-data
+  policy must be decided before Stage 2.
+- **RISK-024:** effective protection of `main` must be established and verified
+  before Stage 2.
 
-Item 10A — software release core and synthetic security contracts is `COMPLETE /
-INDEPENDENT REVIEW PASSED / MERGED / POST-MERGE CI GREEN`. Its reviewed branch
-head is `0892bfdb9231053e8896867facb8fc3de47ebf8e`; it is merged on main at
-`20851f262041cda1fe26844032f298b2a1531ffd`. Post-merge Quality #36 succeeded on
-Ubuntu and Windows with 694 tests on each platform and 90.11% combined
-statement/branch coverage on Ubuntu.
+The complete authoritative inventory and retained evidence are in
+`RISK_REGISTER.md`. Local deferred-work drafts are consolidated in
+`PENDING_ISSUES_DRAFT.md`; they are not implementation authority and no GitHub
+Issue is created merely by their presence.
 
-## CURRENT ITEM
+## Next Durable Technical Gate
 
-Item 10B — real Windows host-enforced sealed-OOS boundary is `TOOLING MERGED /
-LIVE HOST EVIDENCE BLOCKED`. The final PR #9 head
-`8efa0f5d874c3306ea1cd1c5078ddf35c508c305` is merged on main at
-`27a81e9374e97566789f1a61000312d64b91a563`. Final pre-merge Quality #41 and
-post-merge Quality #42 passed all 783 tests on Ubuntu and Windows; Ubuntu
-combined statement/branch coverage was 90.09%. The PR #9 software/security
-correction is closed. Governed DACL/SACL creation and verification use actual
-local-user SIDs, denied research access requires 4656 Audit Failure from the
-exact research SID, performed custodian access requires 4663 Audit Success from
-the exact custodian SID, and the pure ACL classifier is provider-independent.
-DEC-0036 still permits authority creation only through one governed executed
-preflight/setup/verification flow.
+The next technical gate is a separately authorized, successful Item 10B live
+`HOST_ENFORCED` capture followed by independent evidence review. Item 10 cannot
+close and Item 11 cannot begin before that gate passes. The capture must preserve
+the accepted exact-SID DACL/SACL authority, 4656 Failure / 4663 Success audit
+semantics, provider-independent classification, and DEC-0036 single executed
+authority path. It must use only synthetic fixtures and must not change
+BitLocker.
 
-The owner then ran an elevated preflight against a separate fixed NTFS target.
-It passed with BitLocker On/FullyEncrypted, no path or identity conflict, and no
-sync overlap; unreadable backup configuration remains residual risk. The
-authorized setup failed closed after creating both governed accounts and before
-the audit-policy or effective-identity phases. Security events showed account
-creation, enablement, change, and rollback deletion (4720/4722/4738/4726), with
-no 4719 audit-policy change and no governed 4656/4663 evidence. Rollback removed
-the users and batch-created root, restored File System auditing to No Auditing,
-and left BitLocker unchanged. No canonical `HOST_ENFORCED` evidence exists.
+After Items 10B–13 close, Stage 1 still requires its exit integration gate: at
+least one synthetic end-to-end tracer must complete the governed
+`DRAFT → REGISTERED → FROZEN → RUNNING → EVALUATED → DECIDED` lifecycle with
+retained evidence and independent review before Stage 1 is complete or Stage 2
+can unlock.
 
-A fresh elevated owner-host read-only preflight against `D:\QuantHunterOOS`
-then passed with zero blockers. It confirmed an elevated administrator, a fixed
-local NTFS volume with BitLocker On/FullyEncrypted, repository/worktree and
-profile/cache/temp exclusion, no consumer-sync overlap, absent governed `qh-*`
-identities, an absent candidate path, and original File System auditing set to
-No Auditing. Windows Search was running. Backup configuration remained
-unreadable and is retained as residual risk. This preflight is not
-`HOST_ENFORCED` authority and created none.
-
-On 2026-09-12, the owner invoked the governed live-capture launcher from the
-verified checkout at `c350c26bc619677e479602559c054a22363c1aba`. It failed at
-the repository-binding comparison before governed setup because runtime import
-provenance was inferred from the imported module location rather than anchored
-by the launcher checkout. The attempt did not create accounts, paths, ACLs,
-SACLs, audit-policy changes, or canonical evidence, and it did not change
-BitLocker. The corrective branch `fix/item10b-governed-repo-binding` anchors the
-runtime and schemas to the launcher checkout, preserves the runtime's
-independent equality check, and sanitizes bounded operator failures. It requires
-independent review and merge before any separately authorized live rerun.
-
-## PLANNED DECOMPOSITION
-
-Item 10 is planned as:
-
-- **10A — software release core and synthetic security contracts.**
-- **10B — real Windows host-enforced boundary.**
-
-Item 10A implements only software and synthetic evidence. Item 10B now provides
-the typed host-evidence, conditional release-event, host-release-service, and
-inert-by-default Windows script tooling. Raw mappings and report files have no
-supported authority-creation path; retained canonical evidence remains
-loadable for audit. The live boundary remains blocked
-until an elevated rerun proves a fully protected fixed NTFS volume and every
-DACL, SACL/audit, effective-identity, indexing, sync, backup, and controlled
-release condition. Full Item 10 is not complete.
-
-## AFTER ITEM 10
-
-- Item 11 — Production Separation
-- Item 12 — Reproducibility Audit
-- Item 13 — Stage 1B Closeout
-
-## OPEN RISKS
-
-- **RISK-017:** the real sealed-OOS host boundary and its residual administrator,
-  backup, sync, and indexing exposure remain open. Item 10B code and scripts do
-  not replace the missing live evidence.
-- **RISK-018:** registry concurrency, filesystem redirection, and stale/crashed
-  lock recovery remain open. The intermittent Windows `.allocation.lock`
-  timeout observed during PR #5 must be investigated during Item 12 even if it
-  never occurs again.
-- **RISK-023:** repository visibility, licensed data, and future proprietary
-  research disclosure require review before Stage 2.
-- **RISK-024:** main branch protection must be established and verified before
-  Stage 2.
-
-The complete authoritative risk inventory and evidence are in
-`docs/RISK_REGISTER.md`.
-
-## BUDGET
+## Budget
 
 - Month-1 cap: USD 400.
 - OpenAI Codex credits: USD 10 `SPENT`.
-- ChatGPT Pro: purchased; exact charge, tax, proration, Plus credit, service
-  allocation, and renewal terms remain `UNKNOWN`.
-- Aggregate Month-1 spend and remaining headroom: `UNKNOWN`.
+- ChatGPT Pro charge details, aggregate Month-1 spend, and remaining headroom:
+  `UNKNOWN`.
 - No new paid action is authorized.
 
-`docs/BUDGET_LEDGER.md` is the canonical aggregate budget record.
+`BUDGET_LEDGER.md` is the canonical aggregate budget record.
 
-## GIT WORKFLOW
+## Resume Protocol
 
-For an explicitly authorized Quant Hunter batch, Codex may run the normal
-non-destructive Git operations needed for that batch: status, diff, log, fetch,
-fast-forward-only pull when needed, branch switch or creation, add, commit,
-push, and upstream setup. Command-local author identity is permitted when
-needed. This bounded authority does not permit merging into `main` without
-owner authorization, force-pushing, hard reset, destructive clean, published
-history rewriting, rebasing published reviewed history, branch or tag deletion,
-or bypassing failed checks.
+1. Read `../AGENTS.md`, `WORKING_PROTOCOL.md`, this file, and
+   `REGRESSION_GUARD.md`.
+2. Verify current Git and live GitHub evidence; repository and GitHub evidence
+   outrank conversational memory.
+3. Inspect open material GitHub Issues and reconcile them with the durable
+   authorities and the active local draft backlog.
+4. Read `ROADMAP.md`, `DECISIONS.md`, `RISK_REGISTER.md`, and the documents
+   governing the next authorized gate.
+5. Stop and reconcile any conflict rather than guessing.
 
-The owner remains required for final merge authorization, stage transitions,
-host or security mutations, new spending, intentional scientific-invariant
-changes, and architecture changes arising from failed independent review.
+## Status Update Rule
 
-When a Codex task executes any Git command, its final response must contain
-`### Git Actions Executed` and report every successful or failed command on one
-line in this exact structure:
-`<number>. <exact command> | <READ-ONLY|LOCAL WRITE|REMOTE WRITE> | <purpose> | Result: <concise result>`.
-
-## RESUME PROTOCOL
-
-A future agent must:
-
-1. Read `AGENTS.md`.
-2. Read `docs/WORKING_PROTOCOL.md`.
-3. Read this file.
-4. Verify the current Git HEAD, branch, and worktree.
-5. Inspect open material GitHub Issues and reconcile them with the repository
-   authorities.
-6. Read `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/RISK_REGISTER.md`, and the
-   governing documents for the next item.
-7. Reconcile this current-state summary against actual repository and review
-   evidence.
-8. Stop and reconcile rather than guess if the evidence conflicts.
-9. Resume with independent review of `fix/item10b-governed-repo-binding`. After
-   that correction is accepted and merged, Item 10B may continue only through a
-   separately authorized elevated owner-host governed capture against
-   `D:\QuantHunterOOS`. Preserve the exact-SID DACL/SACL authority, 4656 Failure
-   / 4663 Success semantics, provider-independent classifier, and DEC-0036
-   single executed authority path. Do not change BitLocker. The passed read-only
-   preflight and failed repository-binding attempt are not `HOST_ENFORCED`
-   evidence; Item 10B remains blocked until complete live evidence is captured
-   and independently reviewed.
-10. Complete the required pre-step checkpoint before any later item.
-
-## STATUS UPDATE RULE
-
-Update this file in every merge that materially changes the current stage, item
-status, reviewed or merged authority, next authorized work, material open risks,
-budget facts, or resume point. Keep it concise and current. Historical reasoning
-and evidence belong in Git, `docs/DECISIONS.md`, `docs/RISK_REGISTER.md`,
-`docs/DEVELOPMENT.md`, and pull-request records.
+Update this snapshot when a governed change materially changes the current
+stage, item status, implementation authority, next technical gate, material
+risks, budget facts, or resume point. Keep transient branch, open-PR, review-wait,
+and comparison-URL state in GitHub rather than this file. Historical reasoning
+and evidence belong in Git, `DECISIONS.md`, `RISK_REGISTER.md`,
+`DEVELOPMENT.md`, and pull-request records.

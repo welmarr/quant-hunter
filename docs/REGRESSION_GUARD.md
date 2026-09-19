@@ -75,6 +75,14 @@ protection.
 | REG-F03 | `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED` | A `HOST_ENFORCED` release requires typed canonical evidence created by one governed executed Windows preflight/setup/verification flow, exact Item 8 FROZEN authority, the verified release root and artifact, and the same global one-way exposure ledger. Raw mappings, JSON documents, and arbitrary report files cannot create authority. Governed DACL/SACL authority and its verification bind to actual local-user SIDs, plus well-known SYSTEM and Administrators SIDs; effective login uses a runtime machine-qualified name without persisting it. The real Windows research identity must be unable to list, read, create, write, delete, own, or change ACLs on the sealed vault before release. Denial audit evidence requires a 4656 Audit Failure from that exact research SID; performed custodian activity requires a 4663 Audit Success from that exact custodian SID in the same verification window. Display names are diagnostic only. | DEC-0006; DEC-0035–DEC-0036; RISK-017; Roadmap Item 10B | Hostile schema/service/raw-promotion/audit-classification tests and inert-by-default scripts exist. PR #9 closed the exact-SID and provider-independence software correction; final and post-merge Ubuntu/Windows quality gates passed. A fresh elevated read-only preflight passed with zero blockers for `D:\QuantHunterOOS` on the already protected fixed NTFS volume, but it created no authority. Still required: a separately authorized successful elevated governed capture proving exact preflight binding, effective two-identity SID-based DACL/SACL, exact-SID live audit events, backup/sync/index evidence, denial, and controlled release, followed by independent review of the resulting `HOST_ENFORCED` evidence. | Item 10 and Stage 1B cannot pass. |
 | REG-F04 | `PLANNED / NOT YET ENFORCED` | Package and dependency boundaries prevent research code from importing broker, live-order, credential, deployment, or self-promotion capability. | RISK-010; Roadmap Item 11 | Dedicated import/dependency graph and prohibited-entry-point tests | Item 11 and Stage 1B cannot pass. |
 
+PR #12 merged the REG-F03 governed repository/runtime binding and bounded
+operator-diagnostic sanitization corrections on `main` at
+`e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`; post-merge Quality #51 passed on
+that exact commit on Ubuntu and Windows. The passed owner read-only binding
+proof, software tests, and CI create no canonical `HOST_ENFORCED` evidence.
+REG-F03 therefore remains `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED` pending
+the separately authorized successful live capture and independent review.
+
 ## Maintenance Rule
 
 Update this catalog whenever a reviewed change creates, strengthens, supersedes,

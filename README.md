@@ -52,9 +52,13 @@ the sole supported public exposure writer; the ledger remains the structural
 read/verification primitive. Item 10B real Windows host enforcement is
 `TOOLING MERGED / LIVE HOST EVIDENCE BLOCKED`: PR #9's exact-SID and
 provider-independent classifier correction is merged with green pre-merge and
-post-merge Ubuntu/Windows CI. A fresh elevated read-only preflight passed
+post-merge Ubuntu/Windows CI. PR #12 subsequently merged the governed
+repository/runtime binding and operator-diagnostic sanitization corrections on
+`main` at `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`; post-merge Quality #51
+passed on that exact commit on Ubuntu and Windows. A fresh elevated read-only preflight passed
 for `D:\QuantHunterOOS` on the already encrypted fixed NTFS volume, but that
-preflight is not `HOST_ENFORCED` authority; the governed live capture and
+preflight and the passed owner read-only binding proof are not `HOST_ENFORCED`
+authority; the governed live capture and
 independent review remain required.
 No real data, connector, executed experiment,
 trading strategy, quantitative algorithm, broker connection, backtest engine,
@@ -65,8 +69,9 @@ live-trading capability exists.
 
 - Start with [`AGENTS.md`](AGENTS.md) for non-negotiable operating rules.
 - Use [`docs/WORKING_PROTOCOL.md`](docs/WORKING_PROTOCOL.md) for the permanent Nova, Codex, owner, GitHub, merge, command, checkpoint, and continuity workflow.
-- Resume from [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md), then apply the reviewed invariants in [`docs/REGRESSION_GUARD.md`](docs/REGRESSION_GUARD.md).
+- Resume from [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md), then apply the reviewed invariants in [`docs/REGRESSION_GUARD.md`](docs/REGRESSION_GUARD.md). [`docs/SESSION_LOG.md`](docs/SESSION_LOG.md) is only an optional major-checkpoint index.
 - Use [`docs/ISSUE_GOVERNANCE.md`](docs/ISSUE_GOVERNANCE.md) for material deferred-work tracking and closure rules.
+- Use [`docs/PENDING_ISSUES_DRAFT.md`](docs/PENDING_ISSUES_DRAFT.md) as the sole active local draft backlog for owner-reviewable Issues that have not been created in GitHub; drafts create no implementation authority.
 - Read [`docs/PROJECT_CHARTER.md`](docs/PROJECT_CHARTER.md) for mission, scope, and success criteria.
 - Use [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the planned modular boundaries.
 - Follow [`docs/RESEARCH_METHODOLOGY.md`](docs/RESEARCH_METHODOLOGY.md) and [`docs/VALIDATION_STANDARD.md`](docs/VALIDATION_STANDARD.md) for research design and evaluation.
