@@ -221,8 +221,11 @@ def test_unknown_diagnostic_redacts_quoted_windows_path_with_spaces() -> None:
     assert "Private Owner" not in diagnostic
 
 
-def test_unknown_diagnostic_redacts_multiple_secrets_and_path_together() -> None:
+def test_unknown_diagnostic_redacts_multiple_secrets_and_path_together(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """One hostile exception cannot leak any of its independent sensitive values."""
+    monkeypatch.setenv("ITEM10B_CI_COMMON_VALUE", "main")
     path = r"C:\Users\Private Owner\Documents\secret file.json"
     diagnostic = item10b_capture_failure_diagnostic(
         RuntimeError(
@@ -245,6 +248,39 @@ def test_unknown_diagnostic_redacts_multiple_secrets_and_path_together() -> None
         "Traceback",
     ):
         assert forbidden not in diagnostic
+
+
+def test_environment_redaction_requires_a_complete_value_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A common environment value is redacted alone, never inside safe prose."""
+    monkeypatch.setenv("ITEM10B_CI_COMMON_VALUE", "main")
+    diagnostic = item10b_capture_failure_diagnostic(
+        RuntimeError(
+            "Selected branch=main; governed retry remains available; "
+            "main validation context"
+        )
+    )
+    assert "branch=<REDACTED_ENV>" in diagnostic
+    assert "governed retry remains available" in diagnostic
+    assert "<REDACTED_ENV> validation context" in diagnostic
+    assert "re<REDACTED_ENV>s" not in diagnostic
+
+
+def test_long_private_environment_value_remains_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Boundary awareness does not weaken redaction of a private environment value."""
+    private_value = "opaque-private-environment-value-7391"
+    monkeypatch.setenv("ITEM10B_CI_PRIVATE_VALUE", private_value)
+    diagnostic = item10b_capture_failure_diagnostic(
+        RuntimeError(
+            f"Cannot continue; environment={private_value}; safe context remains"
+        )
+    )
+    assert private_value not in diagnostic
+    assert "environment=<REDACTED_ENV>" in diagnostic
+    assert "safe context remains" in diagnostic
 
 
 def test_unknown_diagnostic_strips_controls_preserves_meaning_and_is_bounded() -> None:

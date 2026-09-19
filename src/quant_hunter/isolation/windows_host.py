@@ -116,6 +116,7 @@ _UNQUOTED_ABSOLUTE_PATH_RE: Final = re.compile(
 _UNSAFE_OBJECT_REPR_RE: Final = re.compile(
     r"<[^>\r\n]{0,200}(?:object at 0x[0-9A-Fa-f]+|repr)[^>\r\n]*>"
 )
+_ENVIRONMENT_VALUE_BOUNDARY: Final = r"[\w./\\-]"
 _EXECUTION_RESULT_FIELDS: Final = {
     "schema_version",
     "verified_at",
@@ -297,7 +298,12 @@ def _sanitize_operator_reason(value: object, fallback: str) -> str:
         reverse=True,
     )
     for environment_value in environment_values:
-        text = text.replace(environment_value, "<REDACTED_ENV>")
+        bounded_value = re.compile(
+            rf"(?<!{_ENVIRONMENT_VALUE_BOUNDARY})"
+            rf"{re.escape(environment_value)}"
+            rf"(?!{_ENVIRONMENT_VALUE_BOUNDARY})"
+        )
+        text = bounded_value.sub("<REDACTED_ENV>", text)
     text = " ".join(text.split()).strip(" :-")
     return (text or fallback)[:_SETUP_REASON_MAX_CHARS]
 
