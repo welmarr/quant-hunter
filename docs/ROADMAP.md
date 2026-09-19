@@ -76,6 +76,10 @@ through a separate explicit batch authorization:
 ## Stage 2 — Algorithm Discovery, Canonical Implementation, and Pattern Lab
 
 Stage 2 may begin only after the Stage 1 controls and exit gate are satisfied.
+In addition, at least one synthetic tracer-bullet experiment must have completed
+the full governed `DRAFT → REGISTERED → FROZEN → RUNNING → EVALUATED → DECIDED`
+lifecycle with retained end-to-end evidence. Stage 1B completion alone cannot
+waive this Stage 2 entry criterion.
 
 ### Stage 2A — Algorithm Discovery Program
 

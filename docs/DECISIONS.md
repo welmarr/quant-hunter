@@ -540,3 +540,45 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** DEC-0035; RISK-017; REG-F01–REG-F03; `windows-host-boundary-evidence.schema.json`; `isolation/windows_host.py`; `scripts/windows/item10b_preflight.ps1`; `scripts/windows/item10b_setup.ps1`; `scripts/windows/item10b_verify.ps1`; `scripts/windows/item10b_finalize.py`; `tests/test_windows_host.py`; and `tests/test_windows_host_scripts.py`.
 - **Supersedes / superseded by:** Corrects DEC-0035's implementation authority path without rewriting its host design, threat model, or blocked evidence status. It does not complete Item 10, close RISK-017, authorize real data, or start Item 11.
 - **Owner and approver:** Project owner through the explicitly authorized Stage 1B Item 10B narrow independent-review fix dated 2026-09-11.
+
+### DEC-0037 — Make Versioned Repository Files the Exclusive Reviewer-Session Continuity Authority
+
+- **Date:** 2026-09-18
+- **Status:** ACCEPTED
+- **Scope:** methodology / process / project continuity
+- **Context:** Nova performs independent review in a separate product and cannot rely on prior chat history. Product-generated memory is not guaranteed to be shared, durable, regionally available, or independently auditable. The reviewer also needs one mandatory evidence-first response structure, while Codex batches need a durable PR-package handoff rule.
+- **Decision:** Continuity across Nova review sessions is enforced exclusively through versioned repository files and live GitHub evidence. `PROJECT_STATUS.md` is a short, fully rewritten snapshot in a fixed order; `SESSION_LOG.md` is an append-only manual index of review sessions; and `WORKING_PROTOCOL.md` contains the fixed reviewer bootstrap and mandatory Nova response structure. No chat product's generated memory is project authority. This explicitly includes Codex's machine-local `~/.codex/memories/` layer, which is outside the Git-as-ground-truth model, not independently auditable, and not available in all regions. Nova selects `Astra` or `Sol` and a reasoning/effort level for each next Codex batch using the mandatory response format. Nova's `#CASEPASSED` verdict and PR package are evidence-based recommendations, never merge authorization. The owner remains the sole creator of pull requests, sole merge authorizer, and sole merge executor. Every batch produces exactly one PR on its own branch; a `#CASEFAILED` correction cycle remains on the same branch and PR until `#CASEPASSED`; the next authorized batch starts a new branch and PR.
+- **Alternatives considered:** Conversation continuity and product memory are convenient but not durable authority. A historical `PROJECT_STATUS.md` would duplicate Git, decisions, risks, and the session log. Allowing Nova or Codex to create or merge PRs by default would replace the owner's explicit gate.
+- **Scientific/statistical consequences:** No validation rule or scientific invariant changes. Evidence sufficiency becomes an explicit prerequisite to every reviewer verdict, reducing the chance that a stale memory or undocumented prior session is mistaken for current proof.
+- **Reproducibility and cost consequences:** A future reviewer can reconstruct state from repository files plus live GitHub facts. The change adds only Markdown documentation, no dependency, service, infrastructure, data access, paid commitment, or incremental direct cost.
+- **References:** `AGENTS.md`; `docs/WORKING_PROTOCOL.md`; `docs/PROJECT_STATUS.md`; `docs/SESSION_LOG.md`; DEC-0029; DEC-0030; DEC-0034.
+- **Supersedes / superseded by:** Refines the session-continuity and owner-authorization portions of DEC-0029 and DEC-0030 without changing scientific, Git-history, or host-security authority.
+- **Owner and approver:** Project owner through the explicitly authorized continuity protocol, Nova response structure, and external-review backlog registration batch dated 2026-09-18.
+
+### DEC-0038 — Defer the Synthetic Tracer Experiment but Require It Before Stage 2
+
+- **Date:** 2026-09-18
+- **Status:** DEFERRED — OWNER DECISION
+- **Scope:** methodology / integration validation / stage gating
+- **Context:** External review observed that the individual experiment-lifecycle and V0–V9 contracts have extensive synthetic tests, but no experiment has traversed the full `DRAFT → REGISTERED → FROZEN → RUNNING → EVALUATED → DECIDED` path as one retained end-to-end workflow. A tracer-bullet experiment was recommended before Stage 1B closeout.
+- **Decision:** Defer the tracer-bullet experiment and finish the already ordered Stage 1B work first. Deferral does not waive the integration evidence: Stage 2 must not begin until at least one synthetic experiment has completed the entire governed lifecycle with retained, independently reviewable evidence. `ROADMAP.md` carries this additional Stage 2 entry criterion.
+- **Alternatives considered:** Running the tracer immediately would interrupt the current Item 10B → Item 11 → Item 12 → Item 13 sequence. Omitting it entirely would let separate component tests substitute for proof of the integrated research workflow.
+- **Scientific/statistical consequences:** No result or validation claim is created now. The future tracer uses synthetic data and does not authorize a trading strategy. It must test authority binding, evidence retention, lifecycle transitions, V0–V9 disposition, and deterministic reconstruction as an integrated path.
+- **Reproducibility and cost consequences:** The deferred work should reuse existing local synthetic foundations and incur no paid data or service. Any discovered defect requires a separately authorized correction and full regression review.
+- **References:** `docs/ROADMAP.md` Stage 2 gate; `docs/EXPERIMENT_LEDGER.md`; `docs/VALIDATION_STANDARD.md`; REG-008–REG-018; tracer-bullet Issue draft in `docs/PENDING_ISSUES_DRAFT.md`.
+- **Supersedes / superseded by:** Adds a Stage 2 prerequisite without reopening the reviewed Item 8 or Item 9 contracts and without changing the current Stage 1B item order.
+- **Owner and approver:** Project owner through the explicitly authorized external-review backlog registration batch dated 2026-09-18.
+
+### DEC-0039 — Defer Container or Sandbox Isolation Until Its Risk Trigger
+
+- **Date:** 2026-09-18
+- **Status:** DEFERRED — OWNER DECISION
+- **Scope:** security / architecture / development operations
+- **Context:** External review proposed container or sandbox isolation for Codex and research workflows. The current repository contains no real data, credentials, live connections, broker authority, or production execution capability. Introducing Docker or a comparable boundary now would add operational and reproducibility complexity before the threat model requires it.
+- **Decision:** Defer container or sandbox isolation. Revisit the control at Stage 1B Item 11, or immediately before introducing any real data connector or broker credential, whichever occurs first. The future review must compare OS identities, virtual environments, containers, virtual machines, or separate hosts against the actual assets, network access, secrets, filesystem permissions, reproducibility benefit, and maintenance cost. Deferral does not authorize real credentials or connectors before that review.
+- **Alternatives considered:** Immediate containerization may improve isolation but adds a second environment, image lifecycle, filesystem/network configuration, and platform differences without current sensitive assets. Never revisiting isolation would ignore the material change in threat surface once real connectors or credentials exist.
+- **Scientific/statistical consequences:** No research or validation rule changes. Future isolation must not weaken deterministic environments, provenance, or sealed-OOS controls.
+- **Reproducibility and cost consequences:** Current incremental direct cost is USD 0. Any future tool, hosted service, or infrastructure remains subject to the budget ledger and explicit owner approval.
+- **References:** RISK-010; RISK-011; REG-019; REG-F04; `docs/ARCHITECTURE.md`; `docs/ROADMAP.md` Item 11; isolation Issue draft in `docs/PENDING_ISSUES_DRAFT.md`.
+- **Supersedes / superseded by:** Records a timed deferral only. It does not decide the future isolation technology or weaken the Item 11 production-separation gate.
+- **Owner and approver:** Project owner through the explicitly authorized external-review backlog registration batch dated 2026-09-18.

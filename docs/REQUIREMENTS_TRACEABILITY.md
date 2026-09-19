@@ -52,10 +52,16 @@ The user's 20 explicit operating rules are retained verbatim in substance as the
 | Requirement | Governing home |
 |---|---|
 | A future conversation, Codex session, or agent can recover the current reviewed resume point from repository evidence. | `AGENTS.md`; `PROJECT_STATUS.md`; DEC-0029 |
+| Nova session continuity is reconstructed only from repository and GitHub evidence; local assistant-memory files, including `~/.codex/memories/`, are not project authority. | `WORKING_PROTOCOL.md`; `PROJECT_STATUS.md`; `SESSION_LOG.md`; DEC-0037 |
+| Every Nova review response follows the fixed evidence-first structure and ends with exactly `#CASEPASSED` or `#CASEFAILED`. | `WORKING_PROTOCOL.md`; DEC-0037 |
 | Every material batch preserves prior reviewed scientific, security, reproducibility, identity, and authority invariants through the full regression and review sequence. | `AGENTS.md`; `REGRESSION_GUARD.md`; DEC-0029 |
 | Current status may be updated without rewriting historical decisions, risks, development evidence, or Git history. | `PROJECT_STATUS.md`; `DECISIONS.md`; `RISK_REGISTER.md`; DEC-0029 |
 | Material deferred work is tracked operationally without replacing durable repository authority or bypassing a current-batch blocker. | `ISSUE_GOVERNANCE.md`; `.github/ISSUE_TEMPLATE/material-deferred-work.yml`; DEC-0034 |
 | Issue closure requires stated acceptance criteria, regression evidence, and reconciliation of affected durable authorities. | `ISSUE_GOVERNANCE.md`; `AGENTS.md`; DEC-0034 |
+| Only the owner creates and merges pull requests; each authorized batch uses one PR, a failed review cycle stays on that branch and PR, and the next passed batch starts a new branch and PR. | `WORKING_PROTOCOL.md`; DEC-0037 |
+| External-review findings awaiting owner or Nova submission are retained as complete local Issue drafts without creating remote tracker authority. | `PENDING_ISSUES_DRAFT.md`; `ISSUE_GOVERNANCE.md`; `RISK_REGISTER.md` |
+| A synthetic end-to-end lifecycle tracer remains deferred until Stage 1B is complete but is mandatory before Stage 2 begins. | `ROADMAP.md`; `PENDING_ISSUES_DRAFT.md`; DEC-0038 |
+| Container or sandbox isolation is reconsidered at Item 11 or before the first real connector or credential, whichever occurs first. | `PENDING_ISSUES_DRAFT.md`; `RISK_REGISTER.md`; DEC-0039 |
 
 ## Stage 1B Item 10A Sealed-OOS Software Mapping
 

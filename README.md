@@ -65,8 +65,9 @@ live-trading capability exists.
 
 - Start with [`AGENTS.md`](AGENTS.md) for non-negotiable operating rules.
 - Use [`docs/WORKING_PROTOCOL.md`](docs/WORKING_PROTOCOL.md) for the permanent Nova, Codex, owner, GitHub, merge, command, checkpoint, and continuity workflow.
-- Resume from [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md), then apply the reviewed invariants in [`docs/REGRESSION_GUARD.md`](docs/REGRESSION_GUARD.md).
+- Resume from [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md), consult the review index in [`docs/SESSION_LOG.md`](docs/SESSION_LOG.md), then apply the reviewed invariants in [`docs/REGRESSION_GUARD.md`](docs/REGRESSION_GUARD.md).
 - Use [`docs/ISSUE_GOVERNANCE.md`](docs/ISSUE_GOVERNANCE.md) for material deferred-work tracking and closure rules.
+- Use [`docs/PENDING_ISSUES_DRAFT.md`](docs/PENDING_ISSUES_DRAFT.md) for owner-reviewable local Issue drafts that have not been created in GitHub.
 - Read [`docs/PROJECT_CHARTER.md`](docs/PROJECT_CHARTER.md) for mission, scope, and success criteria.
 - Use [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the planned modular boundaries.
 - Follow [`docs/RESEARCH_METHODOLOGY.md`](docs/RESEARCH_METHODOLOGY.md) and [`docs/VALIDATION_STANDARD.md`](docs/VALIDATION_STANDARD.md) for research design and evaluation.

@@ -37,6 +37,33 @@ Every operational risk record must include ID, cause and consequence, likelihood
 
 Stop and record a decision when a control cannot be satisfied, a sealed dataset may have been exposed, provenance is incomplete, a result depends on unavailable proprietary data, a credential may have leaked, or a purchase is proposed. Scientific or safety controls may not be waived for schedule pressure.
 
+## External-Review Backlog Registration — 2026-09-18
+
+Independent read-only reviewers supplied the findings below as advisory input.
+They are not accepted fixes, architecture changes, or authorization. Existing
+risks remain the durable risk authority; complete local Issue-format drafts are
+in `docs/PENDING_ISSUES_DRAFT.md`. Per owner instruction, this batch creates no
+GitHub Issues. A GitHub-plugin duplicate check found no open Issues.
+
+| External finding | Existing durable coverage | Registration outcome |
+|---|---|---|
+| Month-1 aggregate spend and headroom are unknown. | RISK-013; RISK-021; DEC-0010; `BUDGET_LEDGER.md` | Existing exact risk coverage; local Issue draft added. |
+| Public visibility may expose future proprietary or licensed work. | RISK-011; RISK-023 | Existing exact risk coverage; local Issue draft added. |
+| No experiment has traversed the complete governed lifecycle. | RISK-015; REG-008–REG-018; Items 8–10 | DEC-0038 defers a synthetic tracer but makes it a Stage 2 gate; local Issue draft added. |
+| Item 10B remains unproven after two failed-closed attempts; alternative isolation was proposed. | RISK-017; REG-F03; DEC-0035–DEC-0036 | Existing exact host risk; alternative remains an unaccepted hypothesis in the local draft. |
+| Literal counting of every AI prompt/retry may be unworkable at scale. | RISK-002; REG-011; AGENTS rule 5 | Existing multiple-testing risk; methodology question registered locally without relaxing the rule. |
+| `main` is not proven protected. | RISK-024 | Existing exact risk coverage; local Issue draft added. |
+| Corporate-action and survivorship handling lacks an operational plan. | RISK-003; RISK-005; RISK-012; RISK-015 | General risk coverage exists; dedicated local Issue draft added for the missing pre-ingestion design. |
+| No executable market-microstructure or execution-simulation plan exists. | RISK-006; RISK-012; DEC-0027; REG-015–REG-017 | Existing realism coverage; dedicated future-plan draft added without authorizing an engine. |
+| Registry concurrency and abandoned-lock recovery remain unresolved. | RISK-018; REG-003 | Existing exact risk coverage and prior draft; consolidated local Issue draft added. |
+| Float tolerance was proposed for reproducibility drift. | RISK-019; REG-004–REG-005 | Existing exact-identity risk; draft distinguishes scientific tolerance from exact digest equality. |
+| File-backed registries may not scale to thousands of experiments. | RISK-018; RISK-020 | Future architectural debt only; local benchmark/migration-trigger draft added. |
+| Container or sandbox isolation was proposed. | RISK-010; RISK-011; REG-019; REG-F04 | DEC-0039 defers the control to Item 11 or the first real connector/credential; local Issue draft added. |
+
+No current-batch correctness failure is converted into a pass by this
+registration. RISK-017, RISK-018, RISK-021, RISK-023, and RISK-024 retain their
+existing gates and statuses.
+
 ## Batch 3A Evidence
 
 On 2026-09-05, temporary synthetic tests implemented and exercised the
