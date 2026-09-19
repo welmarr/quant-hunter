@@ -34,8 +34,8 @@ from quant_hunter.provenance.hashing import (
 )
 from quant_hunter.storage import ImmutableObjectStore
 from quant_hunter.storage.security import (
-    SENSITIVE_TEXT,
     SensitiveMetadataError,
+    redact_secret_text,
     reject_secret_text_values,
 )
 
@@ -99,6 +99,15 @@ _RECOVERY_MATERIAL_RE: Final = re.compile(
 _SAFE_EXCEPTION_TYPE_RE: Final = re.compile(r"[A-Za-z0-9_.+]{1,120}")
 _QUOTED_ABSOLUTE_PATH_RE: Final = re.compile(
     r"(['\"])(?:(?:[A-Za-z]:[\\/])|(?:\\\\)|/)[^'\"\r\n]+\1"
+)
+_UNQUOTED_WINDOWS_FILE_PATH_RE: Final = re.compile(
+    r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|\\\\)"
+    r"(?:[^<>:\"/\\|?*\r\n,;]+[\\/])*"
+    r"[^<>:\"/\\|?*\r\n,;]*\.[A-Za-z0-9]{1,16}"
+    r"(?=$|[\s,;:)\]])"
+)
+_UNQUOTED_WINDOWS_PATH_TO_DELIMITER_RE: Final = re.compile(
+    r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|\\\\)[^,;\r\n]+(?=\s*(?:[,;]|$))"
 )
 _UNQUOTED_ABSOLUTE_PATH_RE: Final = re.compile(
     r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/][^\s,;]+|\\\\[^\s,;]+|"
@@ -272,8 +281,10 @@ def _sanitize_operator_reason(value: object, fallback: str) -> str:
     text = "".join(character for character in text if character.isprintable())
     text = " ".join(text.split())
     text = _RECOVERY_MATERIAL_RE.sub(r"\1[REDACTED]", text)
-    text = SENSITIVE_TEXT.sub("[REDACTED]", text)
+    text = redact_secret_text(text)
     text = _QUOTED_ABSOLUTE_PATH_RE.sub("<REDACTED_PATH>", text)
+    text = _UNQUOTED_WINDOWS_FILE_PATH_RE.sub("<REDACTED_PATH>", text)
+    text = _UNQUOTED_WINDOWS_PATH_TO_DELIMITER_RE.sub("<REDACTED_PATH>", text)
     text = _UNQUOTED_ABSOLUTE_PATH_RE.sub("<REDACTED_PATH>", text)
     text = _UNSAFE_OBJECT_REPR_RE.sub("<REDACTED_OBJECT>", text)
     environment_values = sorted(

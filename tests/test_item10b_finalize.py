@@ -149,6 +149,122 @@ def test_repository_failure_diagnostic_redacts_real_windows_paths() -> None:
     assert "private-owner" not in diagnostic
 
 
+@pytest.mark.parametrize(
+    "label",
+    [
+        "password",
+        "passwd",
+        "token",
+        "secret",
+        "credential",
+        "api_key",
+        "api-key",
+        "access_key",
+        "private_key",
+        "client_secret",
+        "client-secret",
+    ],
+)
+@pytest.mark.parametrize("separator", ["=", ": "])
+def test_unknown_diagnostic_redacts_generic_secret_value(
+    label: str, separator: str
+) -> None:
+    """Generic secret assignments retain context but never expose their value."""
+    sensitive_value = f"hidden-{label.replace('_', '-')}"
+    diagnostic = item10b_capture_failure_diagnostic(
+        RuntimeError(
+            f"Authentication failed; {label}{separator}{sensitive_value}; retry denied"
+        )
+    )
+    assert "phase=UNEXPECTED" in diagnostic
+    assert "type=RuntimeError" in diagnostic
+    assert "Authentication failed" in diagnostic
+    assert "retry denied" in diagnostic
+    assert f"{label}{separator}[REDACTED]" in diagnostic
+    assert sensitive_value not in diagnostic
+    assert "Traceback" not in diagnostic
+
+
+@pytest.mark.parametrize(
+    ("path", "forbidden_fragments"),
+    [
+        (
+            r"C:\Users\Private Owner\Documents\secret file.json",
+            ("Private Owner", r"Owner\Documents\secret file.json"),
+        ),
+        (
+            r"D:\Some Folder\Nested Folder\file.txt",
+            ("Some Folder", r"Folder\Nested Folder\file.txt"),
+        ),
+    ],
+)
+def test_unknown_diagnostic_redacts_unquoted_windows_path_with_spaces(
+    path: str, forbidden_fragments: tuple[str, ...]
+) -> None:
+    """An unquoted absolute Windows path is removed as one complete value."""
+    diagnostic = item10b_capture_failure_diagnostic(
+        OSError(f"Cannot open {path}; file inspection failed")
+    )
+    assert "Cannot open <REDACTED_PATH>; file inspection failed" in diagnostic
+    assert path not in diagnostic
+    assert all(fragment not in diagnostic for fragment in forbidden_fragments)
+
+
+def test_unknown_diagnostic_redacts_quoted_windows_path_with_spaces() -> None:
+    """Quoted user-profile paths are removed without losing the error meaning."""
+    path = r"C:\Users\Private Owner\Documents\secret file.json"
+    diagnostic = item10b_capture_failure_diagnostic(
+        OSError(f'Cannot read "{path}"; access was denied')
+    )
+    assert "Cannot read <REDACTED_PATH>; access was denied" in diagnostic
+    assert path not in diagnostic
+    assert "Private Owner" not in diagnostic
+
+
+def test_unknown_diagnostic_redacts_multiple_secrets_and_path_together() -> None:
+    """One hostile exception cannot leak any of its independent sensitive values."""
+    path = r"C:\Users\Private Owner\Documents\secret file.json"
+    diagnostic = item10b_capture_failure_diagnostic(
+        RuntimeError(
+            f"Upload failed for {path}; password=alpha-value; token: beta-value; "
+            "access_key=gamma-value; governed retry remains available"
+        )
+    )
+    assert "Upload failed for <REDACTED_PATH>" in diagnostic
+    assert "governed retry remains available" in diagnostic
+    assert "password=[REDACTED]" in diagnostic
+    assert "token: [REDACTED]" in diagnostic
+    assert "access_key=[REDACTED]" in diagnostic
+    for forbidden in (
+        path,
+        "Private Owner",
+        r"Owner\Documents\secret file.json",
+        "alpha-value",
+        "beta-value",
+        "gamma-value",
+        "Traceback",
+    ):
+        assert forbidden not in diagnostic
+
+
+def test_unknown_diagnostic_strips_controls_preserves_meaning_and_is_bounded() -> None:
+    """Unknown failures retain safe meaning after control stripping and truncation."""
+    diagnostic = item10b_capture_failure_diagnostic(
+        RuntimeError(
+            "\x1b[31mUseful governed validation failed\x1b[0m\x00\x07; "
+            f"detail={'x' * 2000}"
+        )
+    )
+    assert "Useful governed validation failed" in diagnostic
+    assert "phase=UNEXPECTED" in diagnostic
+    assert "type=RuntimeError" in diagnostic
+    assert "Traceback" not in diagnostic
+    assert "\x1b" not in diagnostic
+    assert "\x00" not in diagnostic
+    assert "\x07" not in diagnostic
+    assert len(diagnostic) <= 512
+
+
 def test_unexpected_launcher_failure_keeps_meaning_but_redacts_and_bounds(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
