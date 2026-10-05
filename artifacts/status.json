@@ -2,82 +2,107 @@
   "mission": "Quant Hunter V0",
   "status": "IN_PROGRESS",
   "date": "2026-10-05",
-  "reference_commit": "7346cf4f79ca5897777c0118f8cf4c2292be929e",
+  "reference_commit": "c43d7c763177f62bf52cb8ef4ff81c01aa0c570a",
+  "reference_semantics": "Parent commit plus uncommitted first executable slice; exact code snapshots retained per experiment",
   "branch": "version-0",
   "host_evidence": "BLOCKED_EXTERNAL",
   "data_mode": "SYNTHETIC",
   "features": [
     {
       "name": "Native launch and first backtest",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Running native application and verified UI oracle; clean-clone launch pending"
     },
     {
       "name": "Owner/researcher/reader authentication",
-      "status": "NOT_STARTED"
+      "status": "PASS",
+      "evidence": "Local role boundaries verified by API and real browser; additional account administration remains future work"
     },
     {
       "name": "CSV/Parquet immutable import",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Implementation underway in isolated agent checkout; not yet exposed"
     },
     {
       "name": "22-source catalogue and priority connectors",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Catalogue and first public clients underway; not yet exposed"
     },
     {
       "name": "Instrument registry and PIT quality",
-      "status": "NOT_STARTED"
+      "status": "NOT_STARTED",
+      "evidence": "Foundation PIT controls retained; full application integration pending"
     },
     {
       "name": "Paper library and ten sourced CRP implementations",
-      "status": "NOT_STARTED"
+      "status": "NOT_STARTED",
+      "evidence": "No empirical reproductions claimed"
     },
     {
       "name": "Fifteen PatternLab families",
-      "status": "NOT_STARTED"
+      "status": "NOT_STARTED",
+      "evidence": "Complete mission scope retained"
     },
     {
       "name": "Bounded multi-scale pattern search and benchmarks",
-      "status": "NOT_STARTED"
+      "status": "NOT_STARTED",
+      "evidence": "Complete mission scope retained"
     },
     {
       "name": "Equity/FX accounting and costs",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Synthetic Decimal momentum, next-bar bid/ask, commission, slippage and financing; broader market conventions pending"
     },
     {
       "name": "Governed experiments and chronological validation",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Item 8 freeze/attempt/evidence integration verified; full validation workflows pending"
     },
     {
       "name": "Portfolio and ensemble/meta-model baseline",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Individual actual run portfolio view only; no aggregate/ensemble implementation"
     },
     {
       "name": "Persistent local paper execution and risk",
-      "status": "NOT_STARTED"
+      "status": "NOT_STARTED",
+      "evidence": "Live trading disabled; continuous paper engine remains required"
     },
     {
       "name": "Paper broker adapters and contract tests",
-      "status": "NOT_STARTED"
+      "status": "NOT_STARTED",
+      "evidence": "External credentials absent; offline client implementation remains required"
     },
     {
       "name": "Local notifications and optional Telegram",
-      "status": "NOT_STARTED"
+      "status": "NOT_STARTED",
+      "evidence": "No external messages sent"
     },
     {
       "name": "Worker restart/cancellation/recovery",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Single leased worker, queued cancellation and interrupted-attempt preservation verified; complete job operations pending"
     },
     {
       "name": "Security and failure tests",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Auth/CSRF/origin/ownership/worker/immutable-evidence checks executed; broader threat and fault suite pending"
     },
     {
       "name": "Backup/restore and clean-clone proof",
-      "status": "NOT_STARTED"
+      "status": "NOT_STARTED",
+      "evidence": "Git backup verified; runtime restoration not yet implemented"
     },
     {
       "name": "Responsive UI, browser evidence and status",
-      "status": "NOT_STARTED"
+      "status": "IN_PROGRESS",
+      "evidence": "Six functional views verified at desktop/mobile/tablet; later modules pending"
     }
-  ]
+  ],
+  "tests": {
+    "final_regression": "PASS: 950 tests, zero skips, one warning, 90.74% branch coverage in 417.58 seconds",
+    "browser": "PASS: 19 assertions, no uncaught JavaScript errors",
+    "lint_types_build": "PASS",
+    "empirical_validation": "NONE"
+  }
 }

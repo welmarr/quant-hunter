@@ -8,6 +8,15 @@ and `v0/RESUME.md`. The clean prior checkout was saved and remotely verified as
 The same commit starts version-0. Main and the saved branch must remain unchanged.
 V0 implementation is IN_PROGRESS; no complete product claim is made.
 
+The first executable slice now has a native loopback UI, local owner/researcher/
+reader accounts, an asynchronous worker, Decimal equity/FX synthetic simulation,
+and immutable Item 8 experiments. A real-browser workflow demonstrated the
+10,008 USD accounting oracle and authorization boundaries. The corrected full
+gate passed 950 tests with zero skips, one warning and 90.74% branch coverage;
+the real browser passed 19 assertions. See `v0/TEST_REPORT.md` for exact evidence and prior
+failures. CSV/Parquet imports and source management are the next implementation
+work. All remaining mission scope stays in `v0/REQUIREMENTS.md`.
+
 Remote main was verified at `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2` (PR #12),
 with successful post-merge Quality #51. PR #13 is open and unmerged. There are no
 open GitHub Issues as of this inspection; historical issue drafts have no remote

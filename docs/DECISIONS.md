@@ -561,3 +561,33 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** DEC-0035; RISK-017; REG-F01–REG-F03; `windows-host-boundary-evidence.schema.json`; `isolation/windows_host.py`; `scripts/windows/item10b_preflight.ps1`; `scripts/windows/item10b_setup.ps1`; `scripts/windows/item10b_verify.ps1`; `scripts/windows/item10b_finalize.py`; `tests/test_windows_host.py`; and `tests/test_windows_host_scripts.py`.
 - **Supersedes / superseded by:** Corrects DEC-0035's implementation authority path without rewriting its host design, threat model, or blocked evidence status. It does not complete Item 10, close RISK-017, authorize real data, or start Item 11.
 - **Owner and approver:** Project owner through the explicitly authorized Stage 1B Item 10B narrow independent-review fix dated 2026-09-11.
+
+### DEC-0038 — Bounded Synthetic V0 Application and Numerical Evidence
+
+- **Date:** 2026-10-05
+- **Status:** ACCEPTED for the explicitly authorized V0 implementation scope.
+- **Scope:** application architecture / reproducibility / simulation conventions.
+- **Decision:** Add a loopback-only native FastAPI/SQLite application with a single
+  leased worker. SQLite owns operational jobs and authentication only. Existing
+  Item 8 APIs own experiment registration, freezing, attempts and evidence. Record
+  the Git parent and an immutable snapshot of actual source bytes separately.
+  Demonstration results remain INCONCLUSIVE and cannot promote themselves.
+- **Numerical conventions:** Decimal precision 38, HALF_EVEN, causal closed-bar
+  long/flat momentum, strictly later next-opening BUY at ask and SELL at bid,
+  explicit commissions/adverse slippage/ACT-365 financing. Full fills and cash
+  funding are synthetic assumptions. No calendar, corporate-action, liquidity,
+  short-sale or cross-currency completeness is claimed. Unsupported behavior is
+  rejected. Final inventory is marked, not silently liquidated. These conventions
+  were chosen before evaluating the fixed accounting oracle, not fitted to returns.
+- **Alternatives considered:** A second application experiment ledger would split
+  scientific authority. A UI with fixed display metrics would not execute the
+  requested workflow. Claiming historical validity from a four-bar fixture would
+  manufacture evidence.
+- **Consequences:** Failed/interrupted attempts are preserved without automatic
+  replay; each submitted manual or AI variant receives a new experiment under the
+  same evidence family. Runtime data, accounts and test artifacts remain ignored
+  on D:. No sealed source path, real broker, new paid account or host mutation is
+  introduced. RISK-017 and independent-review requirements remain open.
+- **References:** DEC-0037; `v0/DECISIONS.md` V0-D03/D04;
+  `v0/TEST_REPORT.md`; REG-001–020; `tests/test_v0_*.py`.
+- **Owner and approver:** Owner's explicit continuous V0 mission, 2026-10-05.

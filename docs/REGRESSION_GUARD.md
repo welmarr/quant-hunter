@@ -25,6 +25,12 @@ change requires an accepted decision and explicit independent review.
 
 ## Implemented and Reviewed Invariants
 
+V0's 2026-10-05 application overlay reuses the invariant implementations below.
+Its synthetic loopback slice and agent cross-review are recorded in
+`v0/TEST_REPORT.md`. That evidence does not change the independent-review status
+of this catalog or establish the outstanding real-host gate. V0 has not changed
+the canonical lifecycle, registry, sealed-release, or schema implementations.
+
 | ID | Invariant | Authority / governing decision | Primary implementation | Primary tests | Regression evidence required | Failure consequence |
 |---|---|---|---|---|---|---|
 | REG-001 | Raw provider bytes are immutable; corrections never overwrite them. | AGENTS rules 8 and 16; DEC-0015; `DATA_ARCHITECTURE.md` | `storage/objects.py`, `storage/raw.py` | `test_object_store.py`, `test_raw_capture.py` | Exact-byte identity, exclusive publication, correction, corruption, and no-overwrite hostile cases plus full gate | Raw evidence and every dependent result are inadmissible. |

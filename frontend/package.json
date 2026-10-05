@@ -1,0 +1,15 @@
+{
+  "name": "quant-hunter-workstation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local, dependency-free Quant Hunter workstation UI",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:browser": "node browser-smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0",
+    "typescript": "5.9.3"
+  }
+}

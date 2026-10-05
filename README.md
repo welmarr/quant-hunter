@@ -1,5 +1,12 @@
 # Quant Hunter
 
+The owner-authorized V0 is being built on `version-0`. The preserved pre-V0
+branch is `work-before-v0`; neither it nor main is an integration target.
+See [V0 quickstart](docs/v0/QUICKSTART.md), [current resume](docs/v0/RESUME.md),
+and the [complete requirement inventory](docs/v0/REQUIREMENTS.md).
+The first native UI is a synthetic software demonstration; the complete V0,
+empirical validation and real host-security gate are not declared delivered.
+
 Quant Hunter is a planned quantitative-research and market-discovery platform. Its purpose is to reproduce established research, test hypotheses under strict point-in-time and out-of-sample controls, and eventually evaluate distinct strategy families without manufacturing attractive results.
 
 ## Current Status

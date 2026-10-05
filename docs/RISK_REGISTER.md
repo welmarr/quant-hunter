@@ -2,6 +2,14 @@
 
 ## Governance
 
+2026-10-05 V0 overlay: the loopback application is synthetic software evidence,
+not closure of RISK-001–024. No live credentials, external account or paid service
+was introduced. Real host evidence (RISK-017), Windows registry stress closure
+(RISK-018), public disclosure governance (RISK-023) and main protection
+(RISK-024) remain open. The remote issue inspection found no published open
+Issues; existing local drafts are not equivalent to remote tracking. Ongoing
+V0 requirements are not represented as resolved or deferred by this checkpoint.
+
 Review this register at each stage gate and whenever evidence, scope, cost, or controls change. Use permanent IDs; retain closed risks. Link mitigations to decisions, experiments, data sources, and tests. `OPEN` means the risk requires active control, not that work is authorized.
 
 Every operational risk record must include ID, cause and consequence, likelihood, impact/severity, owner, controls, early-warning indicators, linked decisions/experiments/sources/tests, target and next-review dates, residual risk, status, and closure evidence. The summary entries below are the planning baseline; their detailed fields must be assigned during Stage 1B and before its exit gate. Scientific governance owns RISK-001–009, RISK-014–016, and RISK-019; data governance co-owns RISK-004–005, RISK-012, RISK-014, and RISK-019; architecture/security owns RISK-010–011, RISK-015, RISK-017–020, and RISK-022–024; and project budget governance owns RISK-013 and RISK-021. All open risks are next reviewed at Stage 1B closeout.

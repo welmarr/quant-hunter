@@ -4,17 +4,40 @@ Date: 2026-10-05. Status: IN_PROGRESS; V0 is not delivered.
 
 Working and integration branch: `version-0` (tracking `origin/version-0`).
 Immutable saved branch: `work-before-v0`, locally/remotely verified at
-`7346cf4f79ca5897777c0118f8cf4c2292be929e`.
-Leave it and main unchanged. Never force-push, delete user work or rewrite history.
+`7346cf4f79ca5897777c0118f8cf4c2292be929e`. Leave it and main unchanged.
+Never force-push, delete user work or rewrite history.
 
 Read MISSION.md, REQUIREMENTS.md, DECISIONS.md and the canonical repository
-authorities. Recheck Git and open Issues/PRs, then continue the executable vertical
-slice. The prior hardening commit is software work, not independently reviewed
-host evidence. RISK-017 and the Stage 1 host gate remain open.
+authorities. Reconcile Git and open Issues/PRs. Host evidence and the Stage 1
+gate remain open; the synthetic application does not change that authority.
 
-Next: baseline quality gate, deterministic simulation/accounting, a local UI and
-governed experiment integration. Keep all data and caches on D:. Do not perform
-large Docker builds while C: storage/VHD placement remains unsuitable/unverified.
+The first executable slice implements local authentication/roles, a loopback
+web UI, a single worker with persistent jobs and safe interruption handling,
+Decimal equity/FX demonstrations, and real Item 8 preregistration/freeze/attempt/
+result evidence. The actual source snapshot is immutable, including dirty code.
+Six UI views are functional. The real browser verified the accounting oracle,
+authorization boundaries, errors and responsive layouts. See TEST_REPORT.md for
+the corrected full-gate status and honest failures, and QUICKSTART.md to launch.
+
+Next active work: immutable CSV/Parquet imports with provenance and quality;
+the 22-source catalogue and complete first bounded public-data clients; Sources
+and Data UI integration. Agent worktrees are preserved under
+`.tools/v0-worktrees/{lifecycle,simulation,ui}`. Root is the sole integrator.
+Do not overwrite those uncommitted files or claim they are integrated without
+copy/review/testing. Continuous paper execution, ten CRPs, fifteen PatternLab
+families, notifications, portfolio/meta-model workflows, full recovery and
+clean-clone proof are still required. No historical research is validated.
+
+Use the ignored `.local/v0` for owner runtime and `.tools` for caches/temporary
+files on D:. `.local/v0-browser` is a separate test instance; private test login
+state lives in `.local/v0-browser-private`. Do not commit either. Browser proof
+artifacts are in `.local/v0-proof` and `.local/v0-proof-final`.
+
+Do not perform large Docker builds while C: storage/VHD placement remains
+unsuitable/unverified. The normal process sandbox launcher fails with an ACL
+setup error; reviewed command-local escalation has run authorized commands
+without changing host ACL/security settings. No new spending occurred.
 
 Each coherent capability must be tested, documented, committed and pushed on
-version-0. Remaining mission requirements cannot be relabeled complete.
+version-0. Remaining requirements cannot be relabeled complete. Continue the
+mission; this checkpoint is not a stop-after-batch instruction.

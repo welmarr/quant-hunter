@@ -35,3 +35,31 @@ The UI must state SYNTHETIC and empirically unvalidated. Confirmatory evaluation
 and live broker authority remain blocked. Unsupported market/cost behavior is
 rejected, never silently approximated. Every later capability gets its actual
 status in REQUIREMENTS and FEATURE_MATRIX before any completion claim.
+
+## V0-D04 — Native application and numerical conventions
+
+FastAPI and Uvicorn provide the loopback API and server, with locked dependencies.
+SQLite holds only users, hashed sessions and operational jobs. Item 8 alone owns
+scientific lifecycle and attempt accounting. A single process lease and worker
+avoid concurrent application writers. Interrupted jobs never silently replay;
+retained Item 8 evidence is finalized or marked failed, preserving each attempt.
+Actual source bytes (base64 in an immutable snapshot), lockfile, environment,
+configuration, synthetic dataset and result hashes permit precise attribution.
+
+The initial deterministic long/flat rule compares closed marks to the registered
+lookback, then executes at the next strictly later opening quote (buy ask, sell
+bid). Decimal precision is 38 with ROUND_HALF_EVEN. Full fills, cash funding,
+unadjusted synthetic marks, no exchange calendar, and no corporate actions are
+explicit limitations. Every commission, adverse slippage and ACT/365 financing
+assumption is supplied. Spread is already reflected in execution cash, and is
+not subtracted twice. Final positions are marked, never fictitiously liquidated.
+
+Manual/AI parameter choices receive new experiments in the same evidence family.
+All demonstration results are INCONCLUSIVE; there is no automated scientific
+decision or promotion. These tests prove software arithmetic, not market returns.
+
+Primary software references consulted 2026-10-05:
+[FastAPI](https://fastapi.tiangolo.com/tutorial/) and
+[TypeScript](https://www.typescriptlang.org/docs/handbook/intro.html).
+No paid service or additional account was used. Hosted CI's existing public,
+standard-runner profile now also runs on version-0 pushes.
