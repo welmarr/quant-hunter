@@ -40,7 +40,7 @@
     },
     "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
     "status": {
-      "enum": ["PROPOSED", "RESEARCH", "VALIDATED", "REJECTED", "RETIRED", "SUPERSEDED"]
+      "enum": ["PROPOSED", "RESEARCH", "VALIDATED", "REJECTED", "RETIRED", "SUPERSEDED", "SOFTWARE_ONLY"]
     },
     "name": {"type": "string", "minLength": 1},
     "hypothesis": {"type": "string", "minLength": 1},
@@ -72,13 +72,37 @@
       "uniqueItems": true
     },
     "discovery_dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
-    "validation_dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
-    "sealed_dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
+    "validation_dataset_id": {"oneOf": [{"type": "null"}, {"$ref": "common.schema.json#/$defs/dataset_id"}]},
+    "sealed_dataset_id": {"oneOf": [{"type": "null"}, {"$ref": "common.schema.json#/$defs/dataset_id"}]},
+    "evidence_mode": {"const": "SYNTHETIC"},
+    "empirical_validation": {"const": "UNVALIDATED"},
+    "missing_validation_reason": {"type": "string", "minLength": 1, "maxLength": 2000, "pattern": "\\S"},
     "candidate_count": {"type": "integer", "minimum": 1},
     "outcome_definition": {"type": "string", "minLength": 1},
     "owner": {"type": "string", "minLength": 1}
   },
   "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "SOFTWARE_ONLY"}}, "required": ["status"]},
+      "then": {
+        "required": ["evidence_mode", "empirical_validation", "missing_validation_reason"],
+        "properties": {
+          "validation_dataset_id": {"type": "null"},
+          "sealed_dataset_id": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {
+          "validation_dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"},
+          "sealed_dataset_id": {"$ref": "common.schema.json#/$defs/dataset_id"}
+        },
+        "not": {"anyOf": [
+          {"required": ["evidence_mode"]},
+          {"required": ["empirical_validation"]},
+          {"required": ["missing_validation_reason"]}
+        ]}
+      }
+    },
     {
       "if": {"properties": {"revision": {"const": 1}}},
       "then": {"properties": {"previous_revision_digest": {"type": "null"}}},

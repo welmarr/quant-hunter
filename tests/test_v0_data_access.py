@@ -165,7 +165,9 @@ def test_interrupted_operations_are_retained_never_replayed_and_admission_bounde
     assert backend.calls == 0
     with service.state.connection() as db:
         db.executemany(
-            "INSERT INTO data_operations VALUES(?,?,'IMPORT',NULL,0,'FAILED',NULL,NULL)",
+            "INSERT INTO data_operations "
+            "(id,owner_id,kind,catalogue_id,created,status,result,error) "
+            "VALUES(?,?,'IMPORT',NULL,0,'FAILED',NULL,NULL)",
             [(f"synthetic-op-{n}", owner.id) for n in range(998)],
         )
     with pytest.raises(AccessError, match="quota reached"):

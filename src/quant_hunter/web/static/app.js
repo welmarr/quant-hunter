@@ -22,7 +22,7 @@ let datasetRequest = 0;
 let datasetsLoading = false;
 let view = parseView();
 let draft = { market: "EQUITY", initial_cash: "10000", quantity: "10", lookback: 1, commission: "1", slippage_bps: "0", annual_financing_rate: "0" };
-const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", publications: "Publications", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
+const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", publications: "Publications", quality: "Data quality", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
 const paths = {
     overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
     sources: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
@@ -101,7 +101,7 @@ function metadataText(value) {
 }
 function parseView() {
     const hash = window.location.hash.slice(1);
-    return ["overview", "sources", "data", "markets", "backtests", "studies", "publications", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
+    return ["overview", "sources", "data", "markets", "backtests", "studies", "publications", "quality", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
 }
 function navigate(next) {
     if (view === next && document.getElementById("workspace-view")) {
@@ -132,7 +132,7 @@ class ApiError extends Error {
 async function api(path, payload) {
     const requestingUser = session.user?.id;
     const controller = new AbortController();
-    const timeout = /^\/publications(?:\/|$)/.test(path) || /^\/sources\/[^/]+\/probe$/.test(path) ? 30000 : 15000;
+    const timeout = /^\/quality(?:\/|$)/.test(path) ? 120000 : /^\/publications(?:\/|$)/.test(path) || /^\/sources\/[^/]+\/probe$/.test(path) ? 30000 : 15000;
     const timer = window.setTimeout(() => controller.abort(), timeout);
     try {
         const headers = { Accept: "application/json" };
@@ -393,7 +393,7 @@ function renderView(focus = false) {
         region.append(heading("Connecting to your local installation", viewNames[view], "Loading the current account's workspace…"));
         return;
     }
-    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, publications: region => { region.append(publicationView()); }, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
+    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, publications: region => { region.append(publicationView()); }, quality: region => { region.append(qualityView()); }, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
     views[view](region);
     if (focus) {
         const title = region.querySelector("h1");
@@ -2306,4 +2306,266 @@ function publicationView() {
         void loadReferences();
     } });
     return region;
+}
+function qualityView() {
+    const region = el("div");
+    region.id = "quality-workspace";
+    const epoch = pageEpoch, owner = session.user?.id;
+    const valid = () => epoch === pageEpoch && owner === session.user?.id && region.isConnected;
+    let offset = 0, selectionRequest = 0, listRequest = 0;
+    const chosen = new Map();
+    const collection = panel("Verified dataset versions", "Every selection retains exact data, quality, instrument and calendar receipts.");
+    const detail = el("div");
+    detail.id = "quality-detail";
+    const selections = panel("Partition selections", "Ordered, compatible owned partitions; gaps remain visible.");
+    const operations = panel("Quality operations", "Failed and interrupted imports remain in your private history.");
+    const feedback = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    const selectionCount = el("p", "muted", "0 selected partitions");
+    const purpose = selectField("Selection purpose", "quality_purpose", [
+        { value: "PATTERN_CAUSAL", text: "PatternLab causal software input" },
+        { value: "RESEARCH_CAUSAL", text: "Chronological research software input" },
+        { value: "EXPLORATORY_INSPECTION", text: "Exploratory inspection" },
+    ], "PATTERN_CAUSAL");
+    const compose = button("Preserve selected partition manifest", () => { void combine(); }, "secondary");
+    const reset = button("Clear selected partitions", () => { chosen.clear(); selectionCount.textContent = "0 selected partitions"; void load(); }, "tertiary");
+    region.append(heading("Data admission", "Inspect the evidence behind each dataset.", "Map columns and units explicitly, preserve row dispositions, then select exact versions for further work."), notice("Synthetic inputs test software. Historical inputs remain exploratory until availability, revisions and metadata support causal use. A completed import is not scientific approval."), feedback);
+    if (session.user?.role === "owner") {
+        const demo = button("Create two synthetic quality datasets", () => { void seed(); }, "secondary");
+        async function seed() {
+            demo.disabled = true;
+            try {
+                await api("/quality/demo", {});
+                if (!valid())
+                    return;
+                offset = 0;
+                await load();
+                feedback.replaceChildren(notice("Two generated XNYS minute datasets retained. Select each separately for one-instrument analysis."));
+            }
+            catch (error) {
+                if (valid())
+                    feedback.replaceChildren(notice(readableError(error), "error"));
+            }
+            finally {
+                demo.disabled = false;
+            }
+        }
+        region.append(demo);
+    }
+    if (session.user?.role !== "reader")
+        region.append(qualityUpload(valid, async () => { offset = 0; await load(); }));
+    region.append(collection.box);
+    if (session.user?.role !== "reader")
+        region.append(el("div", "form-actions", purpose.box, compose, reset), selectionCount);
+    region.append(detail, selections.box, operations.box);
+    async function combine() {
+        compose.disabled = true;
+        try {
+            if (!chosen.size)
+                throw new Error("Select at least one dataset version.");
+            const parents = [...chosen.values()].sort((a, b) => a.bounds.start.localeCompare(b.bounds.start)).map(item => ({ dataset_id: item.dataset_id, record_digest: item.record_digest, quality_report_digest: item.quality_report_digest }));
+            const result = await api("/quality/selections", { parents, purpose: purpose.input.value });
+            if (!valid())
+                return;
+            feedback.replaceChildren(notice(`Retained selection ${result.manifest_digest}. ${result.total_rows.toLocaleString()} rows; causal software eligibility: ${result.causal_eligible ? "yes" : "no"}.`));
+            chosen.clear();
+            selectionCount.textContent = "0 selected partitions";
+            await load();
+        }
+        catch (error) {
+            if (valid())
+                feedback.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            compose.disabled = false;
+        }
+    }
+    async function load() {
+        const request = ++listRequest;
+        try {
+            const [result, manifests, history] = await Promise.all([
+                api(`/quality/datasets?limit=25&offset=${offset}`),
+                api("/quality/selections"),
+                api("/quality/operations"),
+            ]);
+            if (!valid() || request !== listRequest)
+                return;
+            collection.body.replaceChildren(result.datasets.length ? table(["Select", "Dataset", "Instrument", "Rows", "Evidence", "Admission"], result.datasets.map(item => {
+                const box = el("input");
+                box.type = "checkbox";
+                box.checked = chosen.has(item.dataset_id);
+                box.disabled = session.user?.role === "reader";
+                box.setAttribute("aria-label", `Select ${item.dataset_id}`);
+                box.addEventListener("change", () => { if (box.checked)
+                    chosen.set(item.dataset_id, item);
+                else
+                    chosen.delete(item.dataset_id); selectionCount.textContent = `${chosen.size} selected partitions`; });
+                return [box, button(shortId(item.dataset_id), () => { void select(item.dataset_id); }, "link-button"), shortId(item.instrument_id), item.row_count.toLocaleString(), badge(item.evidence_mode), badge(item.admission === "NOT_FRESH_ADMISSION" ? "INSPECT TO VERIFY" : item.admission)];
+            }), "Owned quality dataset versions") : empty("No mapped datasets on this page", "Create the synthetic demonstration or import a bounded source partition."));
+            const previous = button("Previous quality datasets", () => { offset = Math.max(0, offset - 25); void load(); }, "secondary");
+            previous.disabled = offset === 0;
+            const next = button("Next quality datasets", () => { offset += 25; void load(); }, "secondary");
+            next.disabled = result.datasets.length < 25 || offset >= 975;
+            collection.body.append(el("div", "form-actions", previous, next));
+            selections.body.replaceChildren(manifests.selections.length ? table(["Manifest", "Rows", "Parents", "Causal software input", "Evidence"], manifests.selections.map(item => [
+                el("details", "data-disclosure", el("summary", "", shortId(item.manifest_digest)), el("pre", "json-view", JSON.stringify(item, null, 2))), item.total_rows.toLocaleString(), item.parent_snapshots.length, item.inspection ? "Reverified when selected for work" : item.causal_eligible ? "Eligible under declared software profile" : "Unavailable", item.evidence_mode,
+            ]), "Owned immutable partition selections") : empty("No saved partition selections", "Choose compatible dataset versions in chronological order."));
+            operations.body.replaceChildren(history.operations.length ? table(["Operation", "State", "Failure evidence"], history.operations.map(item => [item.kind, statusBadge(item.status), metadataText(item.error)]), "Private quality operation history") : el("p", "muted", "No quality operations yet."));
+        }
+        catch (error) {
+            if (valid() && request === listRequest)
+                collection.body.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    async function select(id) {
+        const request = ++selectionRequest;
+        try {
+            const value = await api(`/quality/datasets/${encodeURIComponent(id)}`);
+            if (!valid() || request !== selectionRequest)
+                return;
+            const report = panel("Quality report and provenance", value.dataset_id, badge(value.admission));
+            report.body.append(el("p", "", `${value.row_count.toLocaleString()} rows · ${value.bounds.start} through ${value.bounds.end}`), el("p", "", value.reasons.join(" · ") || "No additional quality reasons recorded."), el("details", "data-disclosure", el("summary", "", "Inspect complete quality, mapping and identity evidence"), el("pre", "json-view", JSON.stringify(value, null, 2))));
+            if (session.user?.role !== "reader") {
+                const timeframe = selectField("Aggregation timeframe", "quality_timeframe", ["1m", "5m", "1h", "5h"].map(text => ({ value: text, text })), "5m");
+                const partial = selectField("Partial session tail", "quality_partial", [{ value: "DROP", text: "Drop partial bars" }, { value: "INCLUDE_CLOSED_SHORT_SESSION_TAIL", text: "Include closed short session tail explicitly" }], "DROP");
+                const asOf = field("Knowledge cutoff for this aggregation (UTC ISO)", "quality_as_of", new Date().toISOString(), { hint: "Bars and instrument metadata must both be available at this time. Current metadata is not treated as historically known." });
+                const aggregateFeedback = el("div");
+                aggregateFeedback.setAttribute("aria-live", "polite");
+                const aggregate = button("Create immutable aggregate", () => { void run(); }, "secondary");
+                async function run() {
+                    aggregate.disabled = true;
+                    try {
+                        const result = await api(`/quality/datasets/${encodeURIComponent(id)}/aggregate`, { record_digest: value.record_digest, quality_report_digest: value.quality_report_digest, timeframe: timeframe.input.value, partial_policy: partial.input.value, as_of: asOf.input.value });
+                        if (!valid() || request !== selectionRequest)
+                            return;
+                        await load();
+                        await select(result.dataset_id);
+                    }
+                    catch (error) {
+                        if (valid() && request === selectionRequest)
+                            aggregateFeedback.replaceChildren(notice(readableError(error), "error"));
+                    }
+                    finally {
+                        aggregate.disabled = false;
+                    }
+                }
+                report.body.append(notice("Calendar anchors and complete-bar availability are retained in the aggregate. Existing source bytes stay unchanged."), timeframe.box, partial.box, asOf.box, aggregate, aggregateFeedback);
+            }
+            detail.replaceChildren(report.box);
+        }
+        catch (error) {
+            if (valid() && request === selectionRequest)
+                detail.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    queueMicrotask(() => { void load(); });
+    return region;
+}
+function qualityUpload(valid, saved) {
+    const section = el("details", "data-disclosure", el("summary", "", "Import mapped CSV / Parquet partitions"));
+    const form = el("form");
+    form.id = "quality-upload";
+    const files = field("Source partitions (each at most 2 MB)", "quality_files", "", { type: "file" });
+    files.input.accept = ".csv,.parquet,.pq";
+    files.input.multiple = true;
+    const instrumentId = field("Canonical instrument ID", "quality_instrument", "", { hint: "Choose an exact instrument revision from Markets." });
+    const instrumentDigest = field("Instrument revision digest", "quality_instrument_digest", "");
+    const instrumentPicker = selectField("Use a registered instrument revision", "quality_registered_instrument", [{ value: "", text: "Choose a loaded instrument" }], "");
+    const symbol = field("Symbol in these partitions", "quality_symbol", "");
+    const market = selectField("Asset class", "quality_market", [{ value: "EQUITY", text: "Equity" }, { value: "FX_SPOT", text: "Spot FX" }], "EQUITY");
+    const base = field("Base currency", "quality_base", "USD"), quote = field("Quote / price currency", "quality_quote", "USD");
+    const quantity = field("Declared quantity step", "quality_quantity", "1");
+    const start = field("Calendar start", "quality_calendar_start", "2025-01-06", { type: "date" }), end = field("Calendar end", "quality_calendar_end", "2025-01-07", { type: "date" });
+    const source = field("Source name", "quality_source", ""), license = field("Declared license / access permission", "quality_license", "");
+    const mode = selectField("Evidence mode", "quality_mode", [{ value: "HISTORICAL", text: "Historical source, exploratory admission" }, { value: "SYNTHETIC", text: "Synthetic software fixture" }], "HISTORICAL");
+    const zone = selectField("Timestamp interpretation", "quality_timezone", ["OFFSET_REQUIRED", "UTC", "America/New_York"].map(text => ({ value: text, text })), "OFFSET_REQUIRED");
+    const scale = selectField("Price scale multiplier", "quality_scale", ["1", "0.01", "0.0001"].map(text => ({ value: text, text })), "1");
+    const volume = selectField("Volume units", "quality_volume", ["UNITS", "LOTS"].map(text => ({ value: text, text })), "UNITS");
+    const policy = selectField("Invalid-row policy", "quality_policy", [{ value: "REJECT_DATASET", text: "Reject dataset with retained failure evidence" }, { value: "EXCLUDE_WITH_REPORT", text: "Exclude invalid rows with explicit dispositions" }], "REJECT_DATASET");
+    const revision = selectField("Revision information", "quality_revision", ["REQUIRED_UNKNOWN", "KNOWN", "SYNTHETIC_NOT_APPLICABLE"].map(text => ({ value: text, text })), "REQUIRED_UNKNOWN");
+    const mapping = el("fieldset", "form-grid");
+    mapping.append(el("legend", "", "Explicit target → source column mapping"));
+    const names = ["open_at", "close_at", "open", "high", "low", "close", "available_at", "revision_time", "open_bid", "open_ask", "volume"];
+    const mapped = names.map((name, i) => ({ name, ...field(`${name} source column${i >= 6 ? " (optional)" : ""}`, `quality_map_${name}`, i < 6 ? name : "", { required: i < 6 }) }));
+    mapped.forEach(item => mapping.append(item.box));
+    const feedback = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    let instruments = [];
+    const reloadInstruments = button("Load registered instrument revisions", () => { void loadInstruments(); }, "tertiary");
+    async function loadInstruments() {
+        reloadInstruments.disabled = true;
+        try {
+            const result = await api("/instruments?limit=50&offset=0");
+            if (!valid())
+                return;
+            instruments = result.instruments;
+            instrumentPicker.input.replaceChildren(new Option("Choose a loaded instrument (first 50)", ""), ...instruments.map(item => new Option(`${item.record.instrument.symbols.at(-1)?.symbol ?? item.record.instrument_id} · ${shortId(item.record.instrument_id)}`, item.record.instrument_id)));
+        }
+        catch (error) {
+            if (valid())
+                feedback.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            reloadInstruments.disabled = false;
+        }
+    }
+    instrumentPicker.input.addEventListener("change", () => {
+        const item = instruments.find(row => row.record.instrument_id === instrumentPicker.input.value);
+        if (!item)
+            return;
+        const metadata = item.record.instrument;
+        instrumentId.input.value = item.record.instrument_id;
+        instrumentDigest.input.value = item.digest;
+        symbol.input.value = metadata.symbols.at(-1)?.symbol ?? "";
+        market.input.value = metadata.asset_class === "FX_SPOT" ? "FX_SPOT" : "EQUITY";
+        base.input.value = metadata.base_currency;
+        quote.input.value = metadata.quote_currency;
+        quantity.input.value = metadata.lot_size;
+        if (metadata.asset_class === "ETF")
+            feedback.replaceChildren(notice("Mapped imports currently require EQUITY or FX_SPOT metadata; ETF is not supported by this import profile.", "error"));
+    });
+    const submit = el("button", "button secondary", "Import partitions sequentially");
+    submit.type = "submit";
+    form.append(notice("Each file is a separate immutable dataset and failure record. No silent sorting, imputation, timezone inference or historical timing upgrade. A batch stops on its first failure; earlier imports remain saved."), files.box, instrumentPicker.box, reloadInstruments, el("div", "form-grid", instrumentId.box, instrumentDigest.box, symbol.box, market.box, base.box, quote.box, quantity.box, start.box, end.box, source.box, license.box, mode.box, zone.box, scale.box, volume.box, policy.box, revision.box), mapping, submit, feedback);
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submit.disabled = true;
+        let completed = 0;
+        try {
+            const selected = Array.from(files.input.files ?? []);
+            if (!selected.length || selected.length > 1024 || selected.some(file => file.size < 1 || file.size > 2_000_000 || !/\.(csv|parquet|pq)$/i.test(file.name)))
+                throw new Error("Choose 1–1024 CSV/Parquet partitions, each 1 byte to 2 MB.");
+            // Capture form state once; later edits cannot silently change a running batch.
+            const common = {
+                instrument_id: instrumentId.input.value.trim(), instrument_revision_digest: instrumentDigest.input.value.trim(), calendar_start: start.input.value, calendar_end: end.input.value,
+                metadata: { source_name: source.input.value.trim(), declared_license: license.input.value.trim(), evidence_mode: mode.input.value, instrument: { symbol: symbol.input.value.trim(), asset_class: market.input.value, base_currency: base.input.value.trim().toUpperCase(), quote_currency: quote.input.value.trim().toUpperCase(), quantity_step: quantity.input.value } },
+                mapping: { columns: Object.fromEntries(mapped.filter(item => item.input.value.trim()).map(item => [item.name, item.input.value.trim()])), timezone: zone.input.value, price_scale: scale.input.value, price_currency: quote.input.value.trim().toUpperCase(), volume_unit: volume.input.value, reject_policy: policy.input.value, revision_mode: revision.input.value },
+            };
+            for (const file of selected) {
+                if (!valid())
+                    return;
+                const content = await base64File(file);
+                if (!valid())
+                    return;
+                await api("/quality/datasets", { ...common, file_format: /\.csv$/i.test(file.name) ? "CSV" : "PARQUET", content_base64: content });
+                completed += 1;
+                if (!valid())
+                    return;
+                feedback.replaceChildren(notice(`${completed} of ${selected.length} partitions saved. Current source: ${file.name}`));
+            }
+            files.input.value = "";
+            await saved();
+        }
+        catch (error) {
+            if (valid()) {
+                feedback.replaceChildren(notice(`${readableError(error)} ${completed} earlier partitions remain saved. Inspect operation history before retrying an uncertain request.`, "error"));
+                await saved();
+            }
+        }
+        finally {
+            submit.disabled = false;
+        }
+    });
+    section.append(form);
+    return section;
 }

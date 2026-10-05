@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
+from quant_hunter.web.admission import resource_counts
+
 Role = Literal["owner", "researcher", "reader"]
 
 
@@ -177,9 +179,7 @@ class AppState:
         job_id = secrets.token_hex(16)
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
-            pending = db.execute(
-                "SELECT COUNT(*) FROM jobs WHERE status IN ('QUEUED','RUNNING')"
-            ).fetchone()[0]
+            _, pending = resource_counts(db)
             if pending >= 8:
                 raise AccessError("Queue is full; wait for a job to finish")
             db.execute(
@@ -218,6 +218,8 @@ class AppState:
     def claim(self) -> Job | None:
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
+            if resource_counts(db)[0] >= 2:
+                return None
             row = db.execute(
                 "SELECT * FROM jobs WHERE status='QUEUED' ORDER BY rowid LIMIT 1"
             ).fetchone()

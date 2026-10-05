@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import cast
 
 from quant_hunter.config import JsonRecord, JsonValue, canonicalize_json
+from quant_hunter.data_quality import QualityService
 from quant_hunter.imports import ImportService
 from quant_hunter.lab import LabService
 from quant_hunter.markets.registry import InstrumentRegistry
@@ -25,6 +26,7 @@ from quant_hunter.storage import ImmutableObjectStore
 from quant_hunter.web.connections import Connections, SourceRouter, default_private_root
 from quant_hunter.web.data_access import DataAccess
 from quant_hunter.web.publication_access import PublicationAccess
+from quant_hunter.web.quality_access import QualityAccess
 from quant_hunter.web.state import AppState
 
 
@@ -148,6 +150,18 @@ class Runtime:
                 environment_digest=self.lab.environment_digest,
             ),
             capacity=self.data._capacity,
+        )
+        self.quality = QualityAccess(
+            self.state,
+            QualityService(
+                self.lab.registry,
+                self.lab.objects,
+                repository / "schemas" / "v1",
+                code_revision,
+                self.lab.environment_digest,
+            ),
+            self.data,
+            self.instruments,
         )
 
     def recover(self) -> None:

@@ -35,8 +35,18 @@ The private publication product now passes its full local gate: 2,327 tests,
 one platform skip, one existing warning, 93.19% coverage and 135 unchanged
 source hashes. Desktop/mobile browser proof passed 12 checks; an earlier
 publication snapshot restored 780 archive-managed files exactly in a distinct
-runtime. The next saved publication commit still requires hosted CI.
-Pattern/paper and quality product integration remains unfinished. See `v0/TEST_REPORT.md` for exact scope,
+runtime. Publication checkpoint3c88f81 failed an existing vault parallel-writer
+case in Ubuntu CI; the retained failure and correction are in
+`v0/VAULT_CI_CORRECTION.md`. Saved correctionb13af539bc02897e54786a5525aa41ddb6fdca5c
+is verified on origin/version-0. Exact run37310346592 passed both platforms:
+2,329tests each, one platform skip, one existing warning; Ubuntu93.03%coverage.
+Quality product integration passed10real browser checks on both source/restored
+instances, including private access, multi-file import, aggregation and390px layout.
+The final quality/shared-admission/core gate passed2,608tests,one platform skip,
+one existing warning,92.95%coverage, with all225captured hashes unchanged.
+Actual quality restoration matched1,012managed files. This new checkpoint still
+requires commit/push and exact hosted CI; Pattern/paper/validation/notification
+product integrations remain separate unfinished work. See `v0/TEST_REPORT.md` for exact scope,
 failures and evidence. The remaining mission remains required in
 `v0/REQUIREMENTS.md`. No empirical or host gate is
 closed by these software checks.

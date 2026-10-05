@@ -32,6 +32,8 @@ from quant_hunter.web.connections import Connections
 from quant_hunter.web.data_access import DataAccess
 from quant_hunter.web.publication_access import PublicationAccess
 from quant_hunter.web.publication_routes import install_publication_routes
+from quant_hunter.web.quality_access import QualityAccess
+from quant_hunter.web.quality_routes import install_quality_routes
 from quant_hunter.web.state import AccessError, AppState, Role, Session
 
 
@@ -177,11 +179,14 @@ class LocalBoundary:
             if scope["method"] == "POST"
             and (
                 scope["path"] == "/api/datasets"
+                or scope["path"] == "/api/quality/datasets"
                 or (
                     scope["path"].startswith("/api/sources/")
                     and scope["path"].endswith("/import")
                 )
             )
+            else 1_000_000
+            if scope["method"] == "POST" and scope["path"] == "/api/quality/selections"
             else 65536
         )
         chunks: list[bytes] = []
@@ -252,6 +257,7 @@ def create_app(
     connections: Connections | None = None,
     instruments: InstrumentRegistry | None = None,
     publications: PublicationAccess | None = None,
+    quality: QualityAccess | None = None,
 ) -> FastAPI:
     """Create app without starting jobs or loading any external provider."""
     from quant_hunter.web.worker import Worker
@@ -298,6 +304,7 @@ def create_app(
         return session
 
     install_publication_routes(app, authenticated, publications)
+    install_quality_routes(app, authenticated, quality)
 
     @app.exception_handler(AccessError)
     async def access_error(request: Request, exc: AccessError) -> JSONResponse:

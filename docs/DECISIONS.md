@@ -749,3 +749,93 @@ owned EXP links, reader403 and390px layout. Separate restoration reproduced780
 archive-managed files exactly. Agent review accepted ownership/async isolation and
 closed the reserve finding; complete regression and saved-commit CI remain gates.
 This decision establishes no host, licensing, historical or profitability claim.
+
+## DEC-0044 — Explicit quality admission and software-only Pattern identities
+
+Date:2026-10-05. Status: accepted for the owner's V0 software mission; complete
+product integration and full regression remain required before completion claims.
+
+Preserve exact immutable raw/mapped/aggregate datasets with separate physical,
+logical and lineage identities. Mapping declares columns, timezone, price scale,
+currency, volume units, exclusion policy and revision semantics. Invalid rows are
+never silently sorted, imputed or dropped. Unknown required historical timing
+blocks selection; sufficiently declared historical inputs remain exploratory,
+never upgraded to causal eligibility by structural checks. Canonical instrument
+revision and calendar rules are frozen and replayed with every selected receipt.
+Multi-file composition retains all owned parents, ordered bounds, explicit gaps
+and exact quality reports; it creates a manifest, not a fabricated collective
+dataset. Heavy mutation/replay work must enter existing shared resource admission.
+
+Chronological diagnostics reuse Item9 plans and exact RUNNING Item8 authority.
+Actual feature/label dependencies and receipt times determine fold membership;
+only eligible training labels reach a fit. The bounded fixed-length noncircular
+moving-block mean bootstrap uses uniform overlapping blocks, ceil/truncation to
+n, PCG64 with frozen seed and linear percentile endpoints. At least two full
+blocks and the preregistered minimum sample are required. No best-looking block
+or seed selection is allowed. The interval is not a p-value or evidence that
+dependent market returns satisfy the required stationarity/sample assumptions.
+Holm step-down adjustment is available only for a complete prespecified family
+of valid marginal p-values; exact Decimal products use a separate precision100
+context. Failed/missing trials remain counted and missing statistics make the
+correction inconclusive. References, precise variant, partial original-text
+reading and oracle limitations are recorded in v0/QUALITY_VALIDATION.md.
+
+Add a closed SOFTWARE_ONLY canonical PATTERN profile rather than inventing
+validation or sealed datasets. It requires a real discovery DATASET identity,
+SYNTHETIC evidence, UNVALIDATED empirical status, null validation/sealed IDs and a
+nonempty bounded missing-validation reason. Existing Pattern statuses retain
+their non-null DATASET requirements and forbid the software-only disclosures.
+Revision-chain and typed-ID constraints are unchanged. Independent exact-schema
+review passed22tests; combined schema/governed regression passed142tests.
+The profile cannot describe itself as VALIDATED. Product adapters must verify
+actual discovery provenance and private ownership; the schema alone cannot.
+
+Pattern corpus/search retains bounded Parquet shards, exact parent graphs,
+causal window/outcome availability and checkpoint chains. Approximate candidate
+filtering is labelled and measured against a small brute-force oracle. All
+fifteen method computations, parameter choices and null/sensitivity variants
+remain governed search exposure, not empirical approval. Independent review
+closed prepared-parameter, missing-selection, forged-outcome and checkpoint-chain
+findings before root integration. The corrected actual synthetic two-asset decade
+benchmark scanned4,734,600rows with measured peak RAM/disk in PATTERN_PRODUCT.md;
+that is software-scale evidence only. No historical data acquisition, host
+mutation, sealed-data access, production deployment or live-money authority is
+created by these adapters. Item8 remains the sole lifecycle/attempt authority.
+## DEC-0045 — Shared worker reservations without double counting
+
+Date:2026-10-05. Status:accepted operational correction within the authorized V0
+mission. Scientific lifecycle, attempts, stage gates and resource caps unchanged.
+
+Data, publication, generic worker and paper-step work must share two active slots
+and eight queued/reserved slots. Earlier data/publication admission could miss a
+simultaneously active generic worker or paper step. A worker and its single owned
+data-operation child now form one reservation through an additive nullable
+worker_job_id foreign key and unique active-child index. Only an actual current
+owner RUNNING job can supply the link. Missing, queued, completed, foreign-owner
+and duplicate links fail. Orphaned operations still count; recovery retains them
+as INTERRUPTED without replay. Existing records are preserved by migration.
+
+All admission decisions occur under the same BEGIN IMMEDIATE SQLite lock. Disk
+capacity scans run before that transaction so filesystem work cannot monopolize
+the claim lock. Paused/ambiguous paper sessions retain queue reservations but do
+not occupy an active computation slot. Queued generic jobs wait when two slots
+are occupied. No additional scientific identity or competing lifecycle is added.
+
+Real concurrent cross-service reservations, old-schema migration, foreign-key
+integrity, parent/child completion order, restart retention and stale roles are
+covered by test_v0_admission.py. Existing operational concurrency expectations now
+assert two simultaneous claims while preserving all eight queued records.
+Focused shared/data/web/runtime/publication regression passed77tests with one
+existing Starlette warning. Full regression and saved-commit CI remain required.
+
+Read-only full source verification also consumes these shared slots. Authenticated
+transient resource_readers reservations do not consume import or experiment
+attempt quotas; they release on exit and leased recovery removes stale readers.
+Only a verified actual owned RUNNING data operation can reuse its admitted slot.
+List pages verify immutable summary metadata and declare NOT_FRESH_ADMISSION;
+they cannot be treated as causal admission. Complete inspection and work replay
+the actual raw/mapped/aggregate graph. Metadata pages have an explicit2MiB bound
+and fail closed with a smaller-page instruction instead of hiding skipped rows.
+Independent review and15real-SQLite reader/shared-admission tests cover the
+cross-service bound, ownership, cleanup and recovery. No scientific lifecycle,
+historical admission, sealed release or host authority is inferred from a list.

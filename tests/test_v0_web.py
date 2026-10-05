@@ -246,14 +246,14 @@ def test_operational_queue_is_atomic_and_persistent(tmp_path: Path) -> None:
     with ThreadPoolExecutor(max_workers=4) as pool:
         claimed = list(pool.map(lambda _: state.claim(), range(10)))
     ids = [job.id for job in claimed if job]
-    assert sorted(ids) == sorted(job.id for job in jobs)
+    assert sorted(ids) == sorted(job.id for job in jobs[:2])
     reopened = AppState(state.path)
-    assert len(reopened.interrupted()) == 8
+    assert len(reopened.interrupted()) == 2
     reopened.bind(jobs[0].id, "EXP-reference")
     reopened.finish(jobs[0].id, error="WorkerInterrupted")
     assert reopened.job(user, jobs[0].id).error == "WorkerInterrupted"
     assert reopened.job(user, jobs[0].id).experiment_id == "EXP-reference"
-    assert len(reopened.interrupted()) == 7
+    assert len(reopened.interrupted()) == 1
     with pytest.raises(AccessError):
         reopened.cancel(user, jobs[0].id)
     queued = reopened.enqueue(user, {})

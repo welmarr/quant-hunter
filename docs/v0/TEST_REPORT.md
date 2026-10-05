@@ -488,3 +488,95 @@ Proof: `.local/v0-publication-proof/distribution-proof.json`; build log retained
 The first archive-inspection helper attempted to parse uv's one-byte `.gitignore`
 sentinel as a tar archive and failed; the corrected helper explicitly selects
 only `.whl` and `.tar.gz` outputs. No distribution contents were changed.
+## Quality product and shared admission checkpoint in progress
+
+The preceding saved vault correctionb13af539bc02897e54786a5525aa41ddb6fdca5c
+passed exact hosted run37310346592 on both platforms:2,329tests each, one platform
+skip, one existing warning, Ubuntu93.03%coverage. Earlier failed publication CI
+remains recorded in VAULT_CI_CORRECTION.md and has not been relabeled successful.
+
+Current quality mapping/checks/aggregation/partition-selection and chronological
+statistics cores preserve canonical source/instrument/availability identities.
+Root integrated core regression passed188tests with warnings as errors. Closed
+SOFTWARE_ONLY Pattern schema passed22focused and142combined schema/registry
+tests. Actual historical admission remains blocked/exploratory according to its
+retained timing declarations; synthetic software eligibility grants no empirical
+or sealed authority. DEC-0044 records the conventions and exact method limits.
+
+Quality API/UI browser proof at
+`.local/v0-quality-pattern-proof/browser-bounded/quality-proof.json` passed10checks,
+3screenshots,zero browser errors andzero external requests. It exercises owner
+demo creation, incompatible-instrument rejection retained as FAILED, exact owned
+selection manifests, five-minute48-bar aggregation from240source rows, stale409,
+two real CSV uploads with explicit mapping, chronological48-row composition,
+390px layout and reader/foreign-owner denial. Generated inputs are SYNTHETIC.
+
+Retained earlier browser failures include readiness deadline, an invalid2025
+knowledge cutoff for instrument metadata created in2026, mobile notice overflow,
+and a15-second frontend timeout while the admitted operation completed. The
+corrected cutoff uses current calculation time; the underlying PIT guard remains
+intact. Quality requests have an explicit120-second frontend bound, and actual
+timings are retained. Failed operations are never silently replayed. The corrected
+core also maps unavailable instrument metadata to a stable bounded rejection.
+
+Shared operational admission now uses DEC-0045. Focused regression passed77tests,
+one existing Starlette warning,218.09seconds; strict mypy passed190files. A narrow
+paper reconciliation probe independently reproduced a third-active-slot defect;
+the author corrected it and passed68paper-workflow tests plus15central-helper
+regressions in isolation. That paper adapter is not yet root-integrated.
+
+Actual private quality backup restored1,012managed files, matching every digest
+and database counts in a distinct `.local/v0-quality-restored` runtime. Source
+`.local/v0-publication-restored` is retained. Archive SHA-256:
+`ec4255f33080569046ec506446217e0c18a94597468a117af4ef8a169d632984`.
+Counts:7users,40jobs,9ordinary dataset ownerships,47data operations,4publication
+ownerships,35publication operations,14quality ownerships. Proof is
+`.local/v0-quality-pattern-proof/restore-proof.json`. After verified child shutdown,
+the parent exited too; a redundant parent-stop guard rejected its missing PID.
+No unrelated process was stopped; backup then succeeded after confirming both
+task server processes had exited. Restored browser then passed10checks with
+3screenshots,zero browser errors andzero external requests. Final frozen-reader
+browser proof also passed the same10checks,3screenshots andzero errors/requests
+at `browser-final-readers/quality-proof.json`. The final full gate is running;
+its completion must be recorded separately, never inferred from progress.
+
+Quality list review found that list requests replayed full raw/Parquet parents.
+Corrected lists verify bounded immutable metadata only and declare
+NOT_FRESH_ADMISSION. Full inspection/work verifies actual source graphs within
+the shared two-slot/eight-reservation boundary. Every transient reader releases
+its slot on exit; leased startup clears interrupted readers. A 2MiB summary page
+limit fails closed with a reduce-limit instruction; it never silently skips rows.
+Standalone admission checks passed15tests in6.68seconds with warnings as errors;
+independent review repeated15passes. The first test collection failed due to an
+imported legacy TestClient warning and is retained; the corrected fixture uses a
+real SQLite state directly without suppressing the warning.
+
+Actual metadata-list timing changed from12requests with median16057.69ms and
+maximum21178.33ms to13requests with median272.64ms andmaximum2961.39ms. These are
+observed local browser timings, not service guarantees. The quality adapter and
+validation isolated combined regression passed81tests, then4explicit page-cap
+regressions; product validation is not yet root-integrated.
+
+Final quality distribution proof: wheel132members SHA-256
+`11b58ef63687fbc7238e574380863bf81e38e5f20a3a746fc6f5bda2b8ee9982`;
+source archive308members SHA-256
+`cbefc9b80c205f60a9bd07df050b108d9e4853ef58cf5f5f218073f8ba146eac`.
+Nine required source/static modules match byte for byte. Both distributions
+exclude private runtime/data/vaults, `.git`, `.local`, `.tools`, `.venv`, caches
+and node_modules. Evidence: `distribution-proof.json` under the quality proof
+root. uv emitted an in-project-cache warning; actual member inspection verified
+those caches are excluded. Lock, Ruff,191-file format,190-source mypy,
+TypeScript and production frontend build checks passed before source freezing.
+
+Final frozen quality gate completed2026-10-05T14:13:08Z: **2,608passed,
+one POSIX-only skip,one existing Starlette warning,92.95% combined coverage,
+2,141.38seconds**. All225 captured source/test/schema/config/frontend hashes
+remained unchanged. Command:
+`.venv\Scripts\python.exe -m pytest tests -q --cov=quant_hunter --cov-branch --cov-report=term-missing --junitxml=.local/v0-quality-pattern-proof/full.xml --basetemp=.tools/v0-tmp/quality-full-frozen`.
+`full-gate-result.json`, `full-source-manifest.json`, `full.txt`, `full.xml` and
+`full.coverage` preserve the executed proof. This checkpoint includes quality
+UI/API, shared admission, chronological numerical cores and Pattern corpus/product
+cores; it does not include the still-isolated Pattern/validation/paper/notification
+product adapters or owner-administration drafts. Independent review covered
+quality/reader/admission and Pattern core graph controls. Saved-commit hosted CI
+is still required after push; no local result is substituted for that run.

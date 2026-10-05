@@ -306,3 +306,16 @@ an entire research domain empirically validated. Full regression, PAPER generic
 reference correction, native TLS startup correction and subsequent owned
 publication/pattern/paper workflows remain in progress. All 246 requirement IDs
 are retained; later requirements are not removed to fit a checkpoint.
+
+## Quality and bounded research-core evidence update (2026-10-05)
+
+Explicit mappings, actual immutable raw/mapped/aggregate graphs, canonical
+instrument timing, owned chronological partition selections and Data quality
+UI/API now have10actual browser assertions on a distinct restored instance.
+Recovery matched1,012archive-managed files. The complete frozen suite passed
+2,608tests,one platform skip,one existing warning,92.95%coverage with225unchanged
+source/config hashes. This progresses V0-012/013/016/020 and applicable data,
+quality, temporal-validation, recovery and software-test requirements. It does
+not complete the Pattern/paper/chronological product workflows, real historical
+validation or the mission. Isolated agent tests and interface drafts are not
+counted as delivered UI. Every original requirement remains in the matrix.

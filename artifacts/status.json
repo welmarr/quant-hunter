@@ -2,8 +2,8 @@
   "mission": "Quant Hunter V0",
   "status": "IN_PROGRESS",
   "date": "2026-10-05",
-  "reference_commit": "8c6eabb808fdb45115d91e2c2287c479623c96f7",
-  "reference_semantics": "Saved parent CI-only correction; publication product local gate passed; this new publication checkpoint must be pushed and exact hosted CI verified.",
+  "reference_commit": "b13af539bc02897e54786a5525aa41ddb6fdca5c",
+  "reference_semantics": "Saved parent with passing exact CI; new quality checkpoint local full gate passed, awaiting its own saved-commit hosted CI.",
   "branch": "version-0",
   "host_evidence": "BLOCKED_EXTERNAL",
   "data_mode": "SYNTHETIC backtests; separate HISTORICAL_REAL acquisition and uploader-declared imports",
@@ -21,7 +21,7 @@
     {
       "name": "CSV/Parquet immutable import",
       "status": "IN_PROGRESS",
-      "evidence": "Private UI/API imports, exact raw/normalized identities, corrections and hostile parsing verified; larger corpus, mappings and research integration remain required"
+      "evidence": "Private exact raw/mapped/aggregate versions, explicit mappings/timing/rights, multi-file chronological selections and 10 real quality browser checks; full root gate 2608 PASS. Historical causal eligibility remains blocked unless governed requirements are met."
     },
     {
       "name": "22-source catalogue and priority connectors",
@@ -31,7 +31,7 @@
     {
       "name": "Instrument registry and PIT quality",
       "status": "IN_PROGRESS",
-      "evidence": "Canonical UUIDv7 identity/history/CAS, owner writes, shared reference reads, XNYS/named-FX sessions and bounded causal aggregation integrated; imported-data aggregation workflow and historical metadata verification remain"
+      "evidence": "Canonical identity/history/CAS, XNYS/named-FX sessions, imported-data quality and bounded causal aggregation verified in UI/API. Historical metadata validation remains separate; unknown timing cannot enter causal work."
     },
     {
       "name": "Paper library and ten sourced CRP implementations",
@@ -41,12 +41,12 @@
     {
       "name": "Fifteen PatternLab families",
       "status": "IN_PROGRESS",
-      "evidence": "Fifteen classical computation families integrated with 69 focused tests and peer review; registered product workflows remain required."
+      "evidence": "Reviewed fifteen classical cores plus immutable corpus/product controls are root-integrated. Native registered Pattern workflow and model identities remain isolated pending integration."
     },
     {
       "name": "Bounded multi-scale pattern search and benchmarks",
       "status": "IN_PROGRESS",
-      "evidence": "Synthetic 2015–2024 schedules scanned 4,734,600 rows with bounded candidates; small-corpus exact/approximate recall retained. Persistent corpus/search UI remains required."
+      "evidence": "Persisted synthetic 2015-2024 corpora scanned 4,734,600 rows with exact parent/checkpoint evidence, bounded memory and measured approximate recall. Native search UI remains pending."
     },
     {
       "name": "Equity/FX accounting and costs",
@@ -56,7 +56,7 @@
     {
       "name": "Governed experiments and chronological validation",
       "status": "IN_PROGRESS",
-      "evidence": "Item 8 freeze/attempt/evidence integration verified; full validation workflows pending"
+      "evidence": "Existing Item8/Item9 and new train-only temporal/statistical cores pass the root gate. Native chronological jobs with permanent model/fit identities remain isolated."
     },
     {
       "name": "Portfolio and ensemble/meta-model baseline",
@@ -76,7 +76,7 @@
     {
       "name": "Local notifications and optional Telegram",
       "status": "IN_PROGRESS",
-      "evidence": "Isolated local inbox and disabled-by-default Telegram core independently pass 126 tests; private vault-purpose and product integration remain. No external messages sent."
+      "evidence": "Reviewed scoped-vault/local-inbox/Telegram adapter remains isolated; 228 focused passes, one platform skip, 95.97% coverage. Root UI/integration pending. Delivery disabled; no messages sent."
     },
     {
       "name": "Worker restart/cancellation/recovery",
@@ -91,7 +91,7 @@
     {
       "name": "Backup/restore and clean-clone proof",
       "status": "PASS",
-      "evidence": "Private archive restored to distinct runtime: 265 identical files/equal database counts and 32 restored-browser assertions; scope/limits in OPERATIONS.md"
+      "evidence": "Quality archive restored 1,012 exact managed files and matching SQLite counts to a distinct instance; restored/final browser passed 10 checks. Prior clean-clone launch remains separately evidenced; current next-module recovery still required."
     },
     {
       "name": "Responsive UI, browser evidence and status",
@@ -100,12 +100,12 @@
     }
   ],
   "tests": {
-    "final_regression": "PASS: 2327 tests, one platform skip, one existing warning, 93.19% coverage, 1162.32s; all135 source/config/frontend hashes unchanged; independent review closed.",
-    "browser": "PASS: publication corrected12checks/3screens/zeroerrors; separate restored11checks; exact780archive-managedfiles and SQLite integrity/counts match.",
-    "lint_types_build": "PASS: lock, Ruff, mypy, TypeScript; distribution verification in TEST_REPORT.md",
-    "hosted_ci": "PASS:8c6eabb run37304844386;2288tests perOS,oneplatformskip/onewarning,Ubuntu92.91%;Windows774.37s. Publication work not yetcovered.",
+    "final_regression": "PASS:2608 tests, one platform skip, one existing warning, 92.95% coverage, 2141.38s; all225 frozen source/test/schema/config/frontend hashes unchanged.",
+    "browser": "PASS:quality final/restored10checks,3screenshots,zero browser errors/external requests;1,012restoredfiles identical with matching SQLite counts.",
+    "lint_types_build": "PASS:offline lock,Ruff,191-file format,190-source mypy,TypeScript/build. Distribution verification retained.",
+    "hosted_ci": "PASS:b13af539 run37310346592;2329tests per OS,one skip/one warning,Ubuntu93.03%. New quality checkpoint exact CI pending.",
     "empirical_validation": "NONE",
-    "current_checkpoint": "PASS: 2327 tests, one platform skip, one existing warning, 93.19% coverage, 1162.32s; all135 source/config/frontend hashes unchanged; independent review closed.",
-    "current_browser": "PASS: publication corrected12checks/3screens/zeroerrors; separate restored11checks; exact780archive-managedfiles and SQLite integrity/counts match."
+    "current_checkpoint": "PASS:2608 tests, one platform skip, one existing warning, 92.95% coverage, 2141.38s; all225 frozen source/test/schema/config/frontend hashes unchanged.",
+    "current_browser": "PASS:quality final/restored10checks,3screenshots,zero browser errors/external requests;1,012restoredfiles identical with matching SQLite counts."
   }
 }

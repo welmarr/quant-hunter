@@ -22,6 +22,9 @@ All credential tests pass locally:51passed, one actual-POSIX skip on Windows,
 warnings as errors,3.02seconds. Two new regressions exercise a recreated valid
 journal and a recreated invalid directory. Existing persistent missing-file,
 permissions, concurrency, rotation and revoke tests remain. Ruff, formatting and
-strict mypy pass. The saved correction requires exact full hosted CI; the failed
-earlier run remains part of the evidence. This document makes no scientific or
-host-enforcement claim.
+strict mypy pass. Independent review passed its three focused hostile cases.
+Saved correctionb13af539bc02897e54786a5525aa41ddb6fdca5c is verified on origin.
+Exact hosted run37310346592 passed Windows(741.76s) and Ubuntu(315.86s):
+2,329tests each, one platform skip, one existing warning; Ubuntu93.03%coverage,
+218formatted files and161mypy files. The failed earlier run remains part of
+the evidence. This document makes no scientific or host-enforcement claim.

@@ -2,7 +2,7 @@
 
 Date: 2026-10-05. Status: IN_PROGRESS; V0 is not delivered.
 
-## Current resume authority — publication local gate passed
+## Current resume authority — quality local gate passed; checkpoint push next
 
 The latest publication product gate passed 2,327 tests, one platform skip,
 one existing warning, 93.19% coverage in 1,162.32 seconds. All 135 frozen
@@ -12,16 +12,27 @@ private data/caches are excluded. Desktop/mobile publication browser proof
 passed 12 checks; prior publication backup restored 780 managed files exactly.
 See TEST_REPORT.md for unsuccessful checks and corrections.
 
-Parent HEAD is 8c6eabb808fdb45115d91e2c2287c479623c96f7, verified on origin;
-its hosted run 37304844386 passed Windows and Ubuntu. Save/push this coherent
-publication checkpoint on version-0 and verify its exact CI. Do not infer the
-next commit from this documentation. Git remains the current commit authority.
+Saved HEADb13af539bc02897e54786a5525aa41ddb6fdca5c is verified on origin/version-0;
+its hosted run37310346592 passed Windows and Ubuntu:2,329tests each, one skip,
+one existing warning; Ubuntu93.03%. It corrects the earlier publication3c88f81
+Ubuntu parallel-vault-writer failure; retain VAULT_CI_CORRECTION.md. Protected
+backup/main tips remain unchanged. Git remains the current commit authority.
 
 Next: integrate independently reviewed quality/research-validation, Pattern
 corpus/product, notifications and paper engine in coherent product batches.
-Quality UI draft is `.tools/v0-drafts/quality-ui.ts`, strict TypeScript PASS.
-Quality API adapter is under independent isolated implementation/review;
-copy only its frozen owned files when ready. Pattern product's five hostile
+Quality API/UI are integrated. Actual browser-bounded/quality-proof.json passed
+10checks,3screenshots,zero browser errors/external requests; old timeout, cutoff
+and mobile failures are retained. Aggregation preserves instrument knowledge
+timing and now reports old-cutoff rejection explicitly. Shared resource admission
+now covers generic/data/publication/paper work and transient verified readers,
+with one linked job/data reservation and additive SQLite migration. The frozen
+full gate passed2,608tests,one platform skip,one existing warning,92.95%coverage
+in2,141.38seconds; all225hashes matched. Its manifest, log and result are under
+`.local/v0-quality-pattern-proof`. Commit/push this checkpoint and verify exact
+hosted CI before calling it remotely verified. Focused admission checks passed15tests, including
+independent review; quality summary pages are bounded metadata, explicitly not
+fresh admission, while inspection/selection replays complete source evidence.
+Pattern product's five hostile
 review findings are closed; corrected 137-test suite passes at91.55% new-layer
 coverage. Its actual disk two-asset synthetic decade benchmark scanned
 4,734,600 rows in49.71s, peak135,426,048bytes, disk207,704,648bytes.
@@ -34,11 +45,13 @@ root remains sole integrator/Git writer. Preserve all isolated work. Runtime
 paper recovery must protect only verified owned active EXP IDs from generic
 orphan failure; unknown operations must never silently replay. Paper state uses
 its separate `paper.sqlite3` and needs exact allowlisted backup integration.
-Notification purpose must never be mislabeled PAPER_OR_READ_ONLY; proposed
-separate scope design is `.tools/v0-drafts/notification-integration.md`.
+Notification purpose must never be mislabeled PAPER_OR_READ_ONLY. The scoped
+isolated adapter passed228tests,one platform skip,95.97%coverage; root integration
+remains pending. Root-owned interface drafts are under `.tools/v0-drafts`; they
+are not production workflows. Preserve pending agent model/protocol work.
 
-The current test server on8766 uses `.local/v0-publication-restored` with private
-root `D:\QuantHunterPrivate\v0-publication-restored-tests`. Recheck exact process
+The current test server on8766 uses `.local/v0-quality-restored` with private
+root `D:\QuantHunterPrivate\v0-quality-restored-tests`. Recheck exact process
 command lines and active operation/job counts before stopping it. Do not rely
 on old PIDs in the retained earlier notes below. The earlier full run was
 interrupted for review fixes; only corrected-full.txt/xml is the final gate.

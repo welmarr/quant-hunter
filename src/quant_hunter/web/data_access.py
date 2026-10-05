@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Literal, Protocol, cast
 
 from quant_hunter.config import JsonRecord, JsonValue
+from quant_hunter.web.admission import resource_counts
 from quant_hunter.web.state import AccessError, AppState, User
 
 
@@ -75,13 +76,34 @@ class DataAccess:
                     FOREIGN KEY(owner_id) REFERENCES users(id));
                 INSERT OR IGNORE INTO migrations VALUES (2);
             """)
+            db.execute("BEGIN IMMEDIATE")
+            if not any(
+                row[1] == "worker_job_id"
+                for row in db.execute("PRAGMA table_info(data_operations)")
+            ):
+                db.execute(
+                    "ALTER TABLE data_operations ADD COLUMN worker_job_id TEXT "
+                    "REFERENCES jobs(id)"
+                )
+            db.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS data_active_worker ON "
+                "data_operations(worker_job_id) WHERE status='RUNNING' "
+                "AND worker_job_id IS NOT NULL"
+            )
 
     def recover(self) -> None:
         with self.state.connection() as db:
+            db.execute("BEGIN IMMEDIATE")
             db.execute(
                 "UPDATE data_operations SET status='INTERRUPTED',"
                 "error='Interrupted; no automatic replay' WHERE status='RUNNING'"
             )
+            # Runtime calls recovery only after acquiring its exclusive lease.
+            # Read reservations are transient operational slots, never attempts.
+            if db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='resource_readers'"
+            ).fetchone():
+                db.execute("DELETE FROM resource_readers")
 
     def _capacity(self) -> None:
         usage = shutil.disk_usage(self.runtime)
@@ -97,7 +119,14 @@ class DataAccess:
         if total + 64_000_000 > 30_000_000_000:
             raise AccessError("Runtime size limit reached; owner review required")
 
-    def _begin(self, user: User, kind: str, catalogue_id: str | None = None) -> str:
+    def _begin(
+        self,
+        user: User,
+        kind: str,
+        catalogue_id: str | None = None,
+        *,
+        worker_job_id: str | None = None,
+    ) -> str:
         if user.role not in ("owner", "researcher"):
             raise AccessError("Researcher role required")
         self._capacity()
@@ -105,22 +134,31 @@ class DataAccess:
         operation_id = secrets.token_hex(16)
         with self.state.connection() as db:
             db.execute("BEGIN IMMEDIATE")
-            active = int(
-                db.execute(
-                    "SELECT COUNT(*) FROM data_operations WHERE status='RUNNING'"
-                ).fetchone()[0]
-            )
-            if db.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' "
-                "AND name='publication_operations'"
-            ).fetchone():
-                active += int(
+            actor = db.execute(
+                "SELECT role FROM users WHERE id=?", (user.id,)
+            ).fetchone()
+            if actor is None or actor[0] not in ("owner", "researcher"):
+                raise AccessError("Researcher role required")
+            if worker_job_id is not None:
+                if (
                     db.execute(
-                        "SELECT COUNT(*) FROM publication_operations WHERE status='RUNNING'"
-                    ).fetchone()[0]
-                )
-            if active >= 2:
+                        "SELECT 1 FROM jobs WHERE id=? AND owner_id=? AND status='RUNNING'",
+                        (worker_job_id, user.id),
+                    ).fetchone()
+                    is None
+                ):
+                    raise AccessError("Running owned worker reservation required")
+                if db.execute(
+                    "SELECT 1 FROM data_operations WHERE worker_job_id=? "
+                    "AND status='RUNNING'",
+                    (worker_job_id,),
+                ).fetchone():
+                    raise AccessError("Worker already has an active operation")
+            active, queued = resource_counts(db)
+            if active >= (3 if worker_job_id is not None else 2):
                 raise AccessError("Data operations busy; wait for completion")
+            if worker_job_id is None and queued >= 8:
+                raise AccessError("Queue is full; wait for a job to finish")
             # At most 2 GB raw imports under this initial profile. No automatic
             # deletion or widening of the mission's cumulative download bound.
             if db.execute("SELECT COUNT(*) FROM data_operations").fetchone()[0] >= 1000:
@@ -147,8 +185,10 @@ class DataAccess:
                         "BLS application quota reached: 25 probes per 24 hours"
                     )
             db.execute(
-                "INSERT INTO data_operations VALUES(?,?,?,?,?,'RUNNING',NULL,NULL)",
-                (operation_id, user.id, kind, catalogue_id, now),
+                "INSERT INTO data_operations "
+                "(id,owner_id,kind,catalogue_id,created,status,result,error,worker_job_id) "
+                "VALUES(?,?,?,?,?,'RUNNING',NULL,NULL,?)",
+                (operation_id, user.id, kind, catalogue_id, now, worker_job_id),
             )
         return operation_id
 

@@ -11,6 +11,7 @@ from typing import cast
 from quant_hunter.config import JsonRecord
 from quant_hunter.identity import StaleWriterError
 from quant_hunter.publications import PublicationError, PublicationService
+from quant_hunter.web.admission import resource_counts
 from quant_hunter.web.state import AccessError, AppState, User
 
 
@@ -73,26 +74,21 @@ class PublicationAccess:
     def _begin(self, user: User, kind: str, paper_id: str | None) -> str:
         if user.role not in ("owner", "researcher"):
             raise AccessError("Researcher role required")
+        self.capacity()
         operation = secrets.token_hex(16)
         with self.state.connection() as db:
             db.execute("BEGIN IMMEDIATE")
             # Admission and the cross-service count share the SQLite write lock.
-            self.capacity()
-            active = int(
-                db.execute(
-                    "SELECT COUNT(*) FROM publication_operations WHERE status='RUNNING'"
-                ).fetchone()[0]
-            )
-            if db.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='data_operations'"
-            ).fetchone():
-                active += int(
-                    db.execute(
-                        "SELECT COUNT(*) FROM data_operations WHERE status='RUNNING'"
-                    ).fetchone()[0]
-                )
+            actor = db.execute(
+                "SELECT role FROM users WHERE id=?", (user.id,)
+            ).fetchone()
+            if actor is None or actor[0] not in ("owner", "researcher"):
+                raise AccessError("Researcher role required")
+            active, queued = resource_counts(db)
             if active >= 2:
                 raise AccessError("Resource operations busy; wait for completion")
+            if queued >= 8:
+                raise AccessError("Queue is full; wait for a job to finish")
             if (
                 db.execute("SELECT COUNT(*) FROM publication_operations").fetchone()[0]
                 >= 500

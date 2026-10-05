@@ -44,6 +44,7 @@ def main() -> None:
             connections=runner.connections,
             instruments=runner.instruments,
             publications=runner.publications,
+            quality=runner.quality,
         )
         uvicorn.run(
             app, host="127.0.0.1", port=args.port, access_log=False, log_level="warning"

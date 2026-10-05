@@ -110,6 +110,21 @@ protection.
 
 ## Maintenance Rule
 
+V0 quality checkpoint cross-item review (2026-10-05) preserves REG-001–REG-020
+within their existing authority limits. Raw/mapped/aggregate evidence remains
+immutable and separately identified; exact source/instrument/calendar/availability
+receipts determine admission. Unknown historical availability cannot enter causal
+work. Metadata lists explicitly grant no fresh admission. Shared two-active/eight-
+reservation limits count generic/data/publication/paper work and verified readers,
+while one owned RUNNING parent and its child count once. Recovery retains failed
+operations; no attempt or scientific state is created by this operational helper.
+Closed SOFTWARE_ONLY Pattern identities cannot claim validation or sealed input.
+Chronological statistics reuse Item8/Item9; complete marginal p-values remain
+required for Holm and missing search evidence remains inconclusive. Independent
+core/adapter review and the complete unchanged225-hash gate passed2,608tests,
+one platform skip,one existing warning,92.95%coverage. Saved-commit hosted CI is
+separate and pending. This changes neither REG-F03/F04 nor the stage/host gates.
+
 V0 publication checkpoint cross-item review (2026-10-05) preserves REG-001–REG-014
 and the remaining applicable foundation invariants: source attachments and extracted
 text remain immutable, PAPER revisions use canonical CAS, EXP links require current
