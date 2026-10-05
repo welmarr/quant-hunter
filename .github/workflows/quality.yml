@@ -42,7 +42,9 @@ jobs:
   windows-compatibility:
     name: Windows compatibility
     runs-on: windows-2025
-    timeout-minutes: 10
+    # The expanded V0 suite exceeded the old cap with 1,596 passes and no failure.
+    # Retain every test; allow the complete compatibility suite to finish.
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
