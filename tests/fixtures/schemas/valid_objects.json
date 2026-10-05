@@ -14,7 +14,9 @@
     "provenance": {
       "source_ids": [],
       "dataset_ids": [],
-      "references": ["synthetic://artifact/fixture"],
+      "references": [
+        "synthetic://artifact/fixture"
+      ],
       "configuration_digest": null
     },
     "parent_digests": []
@@ -26,7 +28,9 @@
     "provider": "Synthetic Public Provider",
     "source_endpoint": "https://example.invalid/synthetic-payload",
     "request": {
-      "parameters": {"series": "SYNTHETIC"},
+      "parameters": {
+        "series": "SYNTHETIC"
+      },
       "reference": "synthetic-request-1"
     },
     "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -35,8 +39,12 @@
     "media_type": "application/octet-stream",
     "compression": "NONE",
     "ingestion_time": "2026-09-05T06:00:00Z",
-    "source_native_references": ["synthetic-series"],
-    "coverage_references": ["synthetic-window"],
+    "source_native_references": [
+      "synthetic-series"
+    ],
+    "coverage_references": [
+      "synthetic-window"
+    ],
     "retrieval_status": "SUCCEEDED",
     "quality_disposition": "PENDING",
     "warnings": [],
@@ -50,7 +58,9 @@
     "values": {
       "offline": true,
       "worker_count": 1,
-      "labels": ["synthetic"]
+      "labels": [
+        "synthetic"
+      ]
     }
   },
   "environment-manifest.schema.json": {
@@ -110,7 +120,9 @@
     },
     "price_nature": "NOT_APPLICABLE",
     "reliability": "deterministic synthetic fixture",
-    "limitations": ["not empirical data"],
+    "limitations": [
+      "not empirical data"
+    ],
     "owner": "test-suite"
   },
   "dataset-lineage-manifest.schema.json": {
@@ -186,8 +198,12 @@
       "code_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "environment_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     },
-    "source_ids": ["SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"],
-    "references": ["synthetic://lineage/reference"],
+    "source_ids": [
+      "SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"
+    ],
+    "references": [
+      "synthetic://lineage/reference"
+    ],
     "quality_disposition": "APPROVED"
   },
   "pit-selection-config.schema.json": {
@@ -196,7 +212,10 @@
     "as_of": "2026-09-05T12:00:00.000000001Z",
     "as_of_epoch_nanoseconds": "1788609600000000001",
     "availability_mode": "PUBLIC",
-    "observation_key_columns": ["series", "event_time"],
+    "observation_key_columns": [
+      "series",
+      "event_time"
+    ],
     "vintage_id_column": "vintage_id",
     "temporal_columns": {
       "event_time": "event_time",
@@ -223,7 +242,9 @@
     "previous_revision_digest": null,
     "created_at": "2026-09-05T06:00:00Z",
     "layer": "normalized",
-    "source_ids": ["SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"],
+    "source_ids": [
+      "SOURCE-01990f30-7f5e-7b34-9b21-3d74c513c841"
+    ],
     "coverage": {
       "start": "2020-01-01T00:00:00Z",
       "end": "2020-01-03T00:00:00Z"
@@ -239,7 +260,9 @@
     "provenance_lineage_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
     "logical_content_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
     "provenance": {
-      "parent_dataset_ids": ["DATASET-01990f30-7f5e-7b34-9b21-3d74c513c843"],
+      "parent_dataset_ids": [
+        "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c843"
+      ],
       "transformation": "synthetic normalization specification",
       "code_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "environment_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -377,12 +400,20 @@
     "hypothesis": "A deterministic synthetic motif can exercise metadata validation.",
     "algorithm_family": "synthetic motif",
     "definition": "Three labeled observations in a fixed order.",
-    "features": ["synthetic_feature"],
+    "features": [
+      "synthetic_feature"
+    ],
     "normalization_method": "identity",
     "similarity_metric": "exact equality",
-    "horizons": ["one interval"],
-    "markets": ["SYNTHETIC"],
-    "regimes": ["SYNTHETIC"],
+    "horizons": [
+      "one interval"
+    ],
+    "markets": [
+      "SYNTHETIC"
+    ],
+    "regimes": [
+      "SYNTHETIC"
+    ],
     "discovery_dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c842",
     "validation_dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c846",
     "sealed_dataset_id": "DATASET-01990f30-7f5e-7b34-9b21-3d74c513c847",
@@ -525,8 +556,12 @@
     "category": "INFRASTRUCTURE",
     "title": "Synthetic future prerequisite",
     "rationale": "Retains a meaningful deferred-work record shape.",
-    "provenance_uris": ["https://example.invalid/backlog-reference"],
-    "prerequisites": ["separate authorization"],
+    "provenance_uris": [
+      "https://example.invalid/backlog-reference"
+    ],
+    "prerequisites": [
+      "separate authorization"
+    ],
     "related_object_ids": [],
     "owner": "test-suite"
   },
@@ -668,5 +703,43 @@
       "Synthetic fixture evidence does not establish real market-data confidentiality."
     ],
     "host_boundary_evidence_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "instrument.schema.json": {
+    "schema_version": "1.0.0",
+    "instrument_id": "INSTRUMENT-019d265c-0000-7000-8000-000000000001",
+    "revision": 1,
+    "previous_revision_digest": null,
+    "recorded_at": "2026-10-05T00:00:00Z",
+    "reason": "Synthetic metadata fixture",
+    "evidence_mode": "SYNTHETIC",
+    "source_reference": "tests/fixtures/schemas/valid_objects.json",
+    "instrument": {
+      "instrument_id": "INSTRUMENT-019d265c-0000-7000-8000-000000000001",
+      "asset_class": "EQUITY",
+      "venue": "XNYS",
+      "base_currency": "USD",
+      "quote_currency": "USD",
+      "price_precision": 2,
+      "quantity_precision": 0,
+      "lot_size": "1",
+      "tick_size": "0.01",
+      "multiplier": "1",
+      "timezone": "America/New_York",
+      "calendar_id": "XNYS",
+      "activity": [
+        {
+          "start": "2024-01-01T00:00:00Z",
+          "end": null
+        }
+      ],
+      "symbols": [
+        {
+          "symbol": "TEST",
+          "start": "2024-01-01T00:00:00Z",
+          "end": null
+        }
+      ],
+      "status": "ACTIVE"
+    }
   }
 }

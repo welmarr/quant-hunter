@@ -20,11 +20,12 @@ let datasetRequest = 0;
 let datasetsLoading = false;
 let view = parseView();
 let draft = { market: "EQUITY", initial_cash: "10000", quantity: "10", lookback: 1, commission: "1", slippage_bps: "0", annual_financing_rate: "0" };
-const viewNames = { overview: "Overview", sources: "Sources", data: "Data", backtests: "Backtests", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
+const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
 const paths = {
     overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
     sources: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
     data: "M3 6a9 3 0 0 0 18 0 9 3 0 0 0-18 0 M3 6v12a9 3 0 0 0 18 0V6 M3 12a9 3 0 0 0 18 0",
+    markets: "M3 6h18v15H3z M3 10h18 M7 3v6 M17 3v6 M7 14h2 M13 14h4 M7 18h6",
     backtests: "M4 20V4 M4 20h17 M7 15l4-5 4 3 5-8",
     experiments: "M9 3h6 M10 3v7l-6 9a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2l-6-9V3 M8 15h8",
     portfolio: "M3 7h18v14H3z M8 7V3h8v4 M3 12h18 M10 12v3h4v-3",
@@ -97,7 +98,7 @@ function metadataText(value) {
 }
 function parseView() {
     const hash = window.location.hash.slice(1);
-    return ["overview", "sources", "data", "backtests", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
+    return ["overview", "sources", "data", "markets", "backtests", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
 }
 function navigate(next) {
     if (view === next && document.getElementById("workspace-view")) {
@@ -227,6 +228,7 @@ function selectField(label, name, choices, current) {
     return { box: el("div", "field", labelNode, input), input };
 }
 function renderAuth(message) {
+    clearPrivateInputs();
     pageEpoch += 1;
     detailEpoch += 1;
     stopPolling();
@@ -287,6 +289,7 @@ function renderAuth(message) {
     document.title = `${setup ? "Create owner" : "Sign in"} · Quant Hunter`;
 }
 function renderShell() {
+    clearPrivateInputs();
     const sidebar = el("aside", "sidebar");
     const toggle = button("", () => { const open = sidebar.classList.toggle("nav-open"); toggle.setAttribute("aria-expanded", String(open)); }, "menu-toggle", "menu");
     toggle.className = "menu-toggle";
@@ -367,6 +370,7 @@ async function logout() {
     }
 }
 function renderView(focus = false) {
+    clearPrivateInputs();
     const region = document.getElementById("workspace-view");
     if (!region || !session.user)
         return;
@@ -385,7 +389,7 @@ function renderView(focus = false) {
         region.append(heading("Connecting to your local installation", viewNames[view], "Loading the current account's workspace…"));
         return;
     }
-    const views = { overview: renderOverview, sources: renderSources, data: renderData, backtests: renderBacktests, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
+    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
     views[view](region);
     if (focus) {
         const title = region.querySelector("h1");
@@ -435,6 +439,8 @@ function renderSources(region) {
         if (pageEpoch !== epoch || !target.isConnected)
             return;
         const sources = response.sources;
+        let ownerConnections = null;
+        let connectionError = null;
         target.replaceChildren();
         const search = field("Search catalogue", "source_search", "", { type: "search", required: false, hint: "Search source names, markets, capabilities or implementation status." });
         search.box.classList.add("source-search");
@@ -464,12 +470,24 @@ function renderSources(region) {
                     }
                 }
                 catch { /* Invalid catalogue links are not made clickable. */ }
-                if (["SRC-04", "SRC-08"].includes(source.catalogue_id) && session.user?.role !== "reader") {
+                const requiresConfiguration = ["SRC-01", "SRC-02"].includes(source.catalogue_id);
+                const connection = ownerConnections?.find(item => item.catalogue_id === source.catalogue_id);
+                if (requiresConfiguration) {
+                    if (session.user?.role !== "owner")
+                        item.body.append(notice("An owner must configure and test this source. Private connection details are available only to owners."));
+                    else if (ownerConnections === null)
+                        item.body.append(notice(connectionError ?? "Loading private connection status…", connectionError ? "error" : ""));
+                    else
+                        item.body.append(el("div", "status-row probe-note", statusBadge(connection?.state ?? "NOT_CONFIGURED"), badge("EXTERNAL VALIDATION UNVERIFIED")), el("div", "form-actions", button("Manage private connection", () => navigate("settings"), "secondary compact", "settings")));
+                }
+                const configuredProbe = requiresConfiguration && session.user?.role === "owner" && connection?.state === "CONFIGURED";
+                if ((["SRC-04", "SRC-08"].includes(source.catalogue_id) && session.user?.role !== "reader") || configuredProbe) {
                     const probeResult = el("div");
-                    const probe = button("Probe public endpoint", () => {
+                    const label = configuredProbe ? "Test configured source" : "Probe public endpoint";
+                    const probe = button(label, () => {
                         probe.disabled = true;
                         probe.textContent = "Probing endpoint…";
-                        probeResult.replaceChildren(notice("A bounded public request is running. Its actual result or failure will be retained."));
+                        probeResult.replaceChildren(notice("A bounded provider request is running. Its actual result or failure will be retained."));
                         void api(`/sources/${encodeURIComponent(source.catalogue_id)}/probe`, {}).then(result => {
                             if (pageEpoch === epoch && probeResult.isConnected) {
                                 const outcome = record(result);
@@ -478,12 +496,12 @@ function renderSources(region) {
                         }).catch(error => { if (pageEpoch === epoch && probeResult.isConnected)
                             probeResult.replaceChildren(notice(readableError(error), "error")); }).finally(() => {
                             probe.disabled = false;
-                            probe.textContent = "Probe public endpoint";
+                            probe.textContent = label;
                             if (pageEpoch === epoch)
                                 void loadDataOperations(operations.body, epoch);
                         });
                     }, "secondary compact", "refresh");
-                    item.body.append(el("div", "form-actions", probe), el("p", "field-hint probe-note", "Makes one fixed, small public query. Limits: one probe per user per minute; BLS also has a persistent installation-wide daily quota. A successful probe does not verify full source coverage."), probeResult);
+                    item.body.append(el("div", "form-actions", probe), el("p", "field-hint probe-note", configuredProbe ? "Sends one bounded diagnostic using the private configuration. Saving alone never connects. A successful response does not verify full coverage, licensing, or historical timing." : "Makes one fixed, small public query. Limits: one probe per user per minute; BLS also has a persistent installation-wide daily quota. A successful probe does not verify full source coverage."), probeResult);
                 }
                 cards.append(item.box);
             });
@@ -494,6 +512,16 @@ function renderSources(region) {
         target.append(search.box, count, cards, operations.box);
         show();
         void loadDataOperations(operations.body, epoch);
+        if (session.user?.role === "owner")
+            void api("/connections").then(result => {
+                if (pageEpoch !== epoch || !target.isConnected)
+                    return;
+                ownerConnections = result.connections;
+                show();
+            }).catch(error => { if (pageEpoch === epoch && target.isConnected) {
+                connectionError = readableError(error);
+                show();
+            } });
     }).catch(error => { if (pageEpoch === epoch && target.isConnected)
         target.replaceChildren(notice(readableError(error), "error")); });
 }
@@ -740,6 +768,296 @@ function datasetForm(epoch) {
     return form;
 }
 function full(node) { node.classList.add("full-width"); return node; }
+function utcField(label, name, value, required = true) {
+    const result = field(label, name, value, { required, hint: "UTC timestamp ending in Z, for example 2025-01-01T00:00:00Z." });
+    result.input.pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z";
+    result.input.maxLength = 27;
+    return result;
+}
+function renderMarkets(region) {
+    const epoch = pageEpoch;
+    const creation = panel("Register an instrument", "Owner declarations create a stable identity before use");
+    const actions = el("div", "heading-actions", button("Refresh instruments", () => { void loadPage(0); }, "secondary", "refresh"));
+    if (session.user?.role === "owner")
+        actions.append(button("New instrument", () => { creation.box.scrollIntoView({ behavior: "smooth", block: "start" }); creation.box.querySelector("input")?.focus({ preventScroll: true }); }, "", "plus"));
+    region.append(heading("Identity and market time", "Markets", "Inspect shared instrument history and explicit trading-session rules.", actions), notice("Instrument metadata is shared with all authenticated users of this local installation. Only owners may create or correct it. Local recording time establishes when this app knew a declaration; it does not prove historical publication time or empirical validity."));
+    const registry = panel("Shared instrument registry", "Stable identifiers are distinct from tickers · 25 records per page");
+    registry.body.id = "instrument-list";
+    const calendar = panel("Trading sessions", "Query actual calendar rules for a bounded date range");
+    calendar.body.append(calendarForm(epoch));
+    region.append(el("div", "grid-two", registry.box, calendar.box));
+    const detail = el("div");
+    detail.id = "instrument-detail";
+    detail.append(empty("Inspect an instrument", "Select a stable identity to inspect its latest metadata, history and historical lookup."));
+    region.append(detail);
+    let request = 0;
+    const selected = (item) => { renderInstrumentDetail(detail, item, epoch, saved); };
+    const saved = (item) => { if (epoch !== pageEpoch)
+        return; selected(item); void loadPage(0); };
+    if (session.user?.role === "owner") {
+        creation.body.append(instrumentForm(epoch, saved));
+        region.append(creation.box);
+    }
+    else
+        region.append(notice("Your account can read shared instruments and calendars. An owner is required to register or correct metadata."));
+    async function loadPage(offset) {
+        const serial = ++request;
+        registry.body.setAttribute("aria-busy", "true");
+        registry.body.replaceChildren(el("p", "loading-message", "Loading shared instruments…"));
+        try {
+            const result = await api(`/instruments?limit=25&offset=${offset}`);
+            if (pageEpoch !== epoch || !registry.body.isConnected || serial !== request)
+                return;
+            registry.body.replaceChildren(el("p", "small muted", result.sharing));
+            if (!result.instruments.length)
+                registry.body.append(empty("No instruments on this page", offset ? "Return to the previous page to inspect earlier identities." : "An owner can register declared metadata below. No instruments are generated automatically."));
+            else
+                registry.body.append(table(["Identity / inspect", "Last symbol interval", "Class", "Revision", "Mode"], result.instruments.map(item => {
+                    const inspect = button(shortId(item.record.instrument_id), () => selected(item));
+                    inspect.className = "table-link";
+                    inspect.title = item.record.instrument_id;
+                    return [inspect, display(item.record.instrument.symbols.at(-1)?.symbol), item.record.instrument.asset_class, item.record.revision, badge(item.record.evidence_mode, item.record.evidence_mode === "SYNTHETIC" ? "synthetic" : "neutral")];
+                }), "Shared instrument identities", [3]));
+            const previous = button("Previous instruments", () => { void loadPage(Math.max(0, offset - 25)); }, "secondary compact");
+            previous.disabled = offset === 0;
+            const next = button("Next instruments", () => { void loadPage(offset + 25); }, "secondary compact");
+            next.disabled = result.instruments.length < 25 || offset >= 1000;
+            registry.body.append(el("p", "small muted", result.instruments.length ? `Showing records ${offset + 1}–${offset + result.instruments.length}. This endpoint does not report a total.` : "No records returned."), el("div", "form-actions", previous, next));
+        }
+        catch (error) {
+            if (pageEpoch === epoch && serial === request && registry.body.isConnected)
+                registry.body.replaceChildren(notice(readableError(error), "error"), button("Retry instruments", () => { void loadPage(offset); }, "secondary compact"));
+        }
+        finally {
+            if (serial === request)
+                registry.body.setAttribute("aria-busy", "false");
+        }
+    }
+    void loadPage(0);
+}
+function instrumentForm(epoch, saved) {
+    const form = el("form");
+    form.id = "instrument-create-form";
+    const symbol = field("Instrument ticker / pair", "instrument_symbol", "", { hint: "A ticker is a dated label, not the permanent identity. FX uses BASE/QUOTE." });
+    symbol.input.maxLength = 32;
+    symbol.input.pattern = "[A-Z0-9][A-Z0-9._\\/\\-]{0,31}";
+    const asset = selectField("Instrument asset class", "instrument_asset", [{ value: "EQUITY", text: "Cash equity · XNYS" }, { value: "ETF", text: "ETF · XNYS" }, { value: "FX_SPOT", text: "Spot FX · named OTC convention" }], "EQUITY");
+    const base = field("Instrument base currency", "instrument_base", "USD");
+    base.input.maxLength = 3;
+    base.input.pattern = "[A-Z]{3}";
+    const quote = field("Instrument quote currency", "instrument_quote", "USD");
+    quote.input.maxLength = 3;
+    quote.input.pattern = "[A-Z]{3}";
+    const price = field("Price decimal precision", "instrument_price_precision", "2", { type: "number", min: "0", max: "12", step: "1" });
+    const quantity = field("Quantity decimal precision", "instrument_quantity_precision", "0", { type: "number", min: "0", max: "12", step: "1" });
+    const lot = field("Lot size", "instrument_lot", "1");
+    lot.input.inputMode = "decimal";
+    lot.input.maxLength = 31;
+    const tick = field("Tick size", "instrument_tick", "0.01");
+    tick.input.inputMode = "decimal";
+    tick.input.maxLength = 31;
+    for (const input of [lot.input, tick.input])
+        input.pattern = "(?:0|[1-9][0-9]{0,17})(?:\\.[0-9]{1,12})?";
+    const beginning = utcField("Activity begins (UTC)", "instrument_start", `${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
+    const ending = utcField("Activity ends (UTC, optional)", "instrument_end", "", false);
+    const status = selectField("Declared instrument status", "instrument_status", [{ value: "ACTIVE", text: "Active" }, { value: "INACTIVE", text: "Inactive" }, { value: "DELISTED", text: "Delisted" }], "ACTIVE");
+    const evidence = selectField("Instrument evidence mode", "instrument_evidence", [{ value: "SYNTHETIC", text: "SYNTHETIC · test metadata" }, { value: "HISTORICAL_DECLARED", text: "HISTORICAL DECLARED · unverified" }], "SYNTHETIC");
+    const source = field("Instrument source reference", "instrument_source", "", { hint: "Identify the retained source supporting this declaration. No historical publication time is inferred." });
+    source.input.maxLength = 1000;
+    const reason = field("Registration reason", "instrument_reason", "Register declared instrument metadata");
+    reason.input.maxLength = 500;
+    const profile = el("p", "small muted");
+    function describe() { profile.textContent = asset.input.value === "FX_SPOT" ? "Profile: OTC_NY_17_CONVENTION · FX_NY_17 calendar · America/New_York · multiplier 1. Venue holidays and executable liquidity are unknown." : "Profile: XNYS regular cash sessions · America/New_York · multiplier 1. Extended trading and security-specific halts are not covered."; }
+    asset.input.addEventListener("change", () => { const fx = asset.input.value === "FX_SPOT"; base.input.value = fx ? "EUR" : "USD"; quote.input.value = "USD"; price.input.value = fx ? "4" : "2"; tick.input.value = fx ? "0.0001" : "0.01"; describe(); });
+    describe();
+    const submit = el("button", "button", "Register instrument");
+    submit.type = "submit";
+    const message = el("div", "notice");
+    message.hidden = true;
+    message.setAttribute("aria-live", "polite");
+    form.append(el("div", "form-grid", symbol.box, asset.box, base.box, quote.box, price.box, quantity.box, lot.box, tick.box, beginning.box, ending.box, status.box, evidence.box, full(source.box), full(reason.box)), profile, el("div", "form-actions", submit), message);
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submit.disabled = true;
+        message.hidden = true;
+        form.setAttribute("aria-busy", "true");
+        const fx = asset.input.value === "FX_SPOT";
+        const start = beginning.input.value;
+        const end = ending.input.value || null;
+        const instrument = { asset_class: asset.input.value, venue: fx ? "OTC_NY_17_CONVENTION" : "XNYS", base_currency: base.input.value, quote_currency: quote.input.value, price_precision: Number(price.input.value), quantity_precision: Number(quantity.input.value), lot_size: lot.input.value, tick_size: tick.input.value, multiplier: "1", timezone: "America/New_York", calendar_id: fx ? "FX_NY_17" : "XNYS", activity: [{ start, end }], symbols: [{ symbol: symbol.input.value.trim(), start, end }], status: status.input.value };
+        try {
+            const result = await api("/instruments", { instrument, reason: reason.input.value.trim(), evidence_mode: evidence.input.value, source_reference: source.input.value.trim() });
+            if (pageEpoch !== epoch || !form.isConnected)
+                return;
+            saved(result);
+            message.className = "notice success";
+            message.setAttribute("role", "status");
+            message.textContent = `Instrument registered: ${result.record.instrument_id}. The server recorded local knowledge time.`;
+            message.hidden = false;
+        }
+        catch (error) {
+            if (pageEpoch === epoch && form.isConnected) {
+                message.className = "notice error";
+                message.setAttribute("role", "alert");
+                message.textContent = readableError(error);
+                message.hidden = false;
+            }
+        }
+        finally {
+            submit.disabled = false;
+            form.setAttribute("aria-busy", "false");
+        }
+    });
+    return form;
+}
+function renderInstrumentDetail(target, item, epoch, saved) {
+    const snapshot = item.record;
+    const metadata = snapshot.instrument;
+    const reload = button("Reload latest instrument", () => { reload.disabled = true; void api(`/instruments/${encodeURIComponent(snapshot.instrument_id)}`).then(result => { if (pageEpoch === epoch && target.isConnected)
+        saved(result); }).catch(error => { if (pageEpoch === epoch && target.isConnected)
+        target.prepend(notice(readableError(error), "error")); }).finally(() => { reload.disabled = false; }); }, "secondary compact", "refresh");
+    const detail = panel("Instrument evidence", snapshot.instrument_id, reload);
+    const facts = el("dl", "definition-list");
+    [["Stable identity", snapshot.instrument_id], ["Canonical registry SHA-256", item.digest], ["Registry revision", String(snapshot.revision)], ["Retained revisions", String(item.revision_count)], ["Local recorded time", snapshot.recorded_at], ["Historical availability", item.historical_availability], ["Evidence mode", snapshot.evidence_mode], ["Source reference", snapshot.source_reference], ["Reason", snapshot.reason], ["Venue / calendar", `${metadata.venue} / ${metadata.calendar_id}`], ["Timezone", metadata.timezone], ["Tick / lot / multiplier", `${metadata.tick_size} / ${metadata.lot_size} / ${metadata.multiplier}`], ["Declared status", metadata.status]].forEach(([key, value]) => facts.append(el("dt", "", key), el("dd", key?.includes("SHA") || key?.includes("identity") ? "mono" : "", value)));
+    detail.body.append(facts, table(["Symbol", "Effective start (UTC)", "Effective end (exclusive)"], metadata.symbols.map(symbol => [symbol.symbol, symbol.start, symbol.end ?? "Open-ended declaration"]), "Instrument historical symbols"), el("details", "data-disclosure", el("summary", "", "Complete instrument registry record"), el("pre", "", JSON.stringify(item, null, 2))));
+    const lookup = panel("Historical metadata lookup", "Choose when the app knew the declaration and when the instrument was active");
+    lookup.body.append(instrumentAsOfForm(snapshot, epoch));
+    target.replaceChildren(detail.box, lookup.box);
+    if (session.user?.role === "owner" && metadata.asset_class !== "FX_SPOT") {
+        const correction = panel("Append a ticker correction", "Closes the last symbol interval and appends a new one under the same stable identity");
+        correction.body.append(instrumentCorrectionForm(item, epoch, saved));
+        target.append(correction.box);
+    }
+    else if (metadata.asset_class === "FX_SPOT")
+        target.append(notice("A different FX base/quote pair requires a new stable identity. This view does not rename currency pairs."));
+}
+function instrumentCorrectionForm(item, epoch, saved) {
+    const form = el("form");
+    form.id = "instrument-correction-form";
+    const current = item.record.instrument.symbols.at(-1);
+    const symbol = field("New historical ticker", "correction_symbol", "");
+    symbol.input.maxLength = 32;
+    symbol.input.pattern = "[A-Z0-9][A-Z0-9._\\/\\-]{0,31}";
+    const boundary = utcField("New ticker begins (UTC)", "correction_start", "");
+    const reason = field("Correction reason", "correction_reason", "");
+    reason.input.maxLength = 500;
+    const source = field("Correction source reference", "correction_source", item.record.source_reference);
+    source.input.maxLength = 1000;
+    const message = el("div", "notice");
+    message.hidden = true;
+    message.setAttribute("aria-live", "polite");
+    const submit = el("button", "button", "Append ticker correction");
+    submit.type = "submit";
+    form.append(notice(`The last declared ticker is ${current.symbol}, beginning ${current.start}. Prior records remain immutable. A concurrent change requires reloading the latest instrument.`), el("div", "form-grid", symbol.box, boundary.box, full(reason.box), full(source.box)), el("div", "form-actions", submit), message);
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submit.disabled = true;
+        message.hidden = true;
+        form.setAttribute("aria-busy", "true");
+        try {
+            const instant = Date.parse(boundary.input.value);
+            if (!Number.isFinite(instant) || instant <= Date.parse(current.start) || (current.end !== null && instant >= Date.parse(current.end)))
+                throw new Error("The new boundary must lie strictly inside the last symbol interval.");
+            if (symbol.input.value.trim() === current.symbol)
+                throw new Error("Enter a different ticker for the new interval.");
+            const { instrument_id: _identity, ...metadata } = item.record.instrument;
+            const instrument = { ...metadata, symbols: [...metadata.symbols.slice(0, -1), { ...current, end: boundary.input.value }, { symbol: symbol.input.value.trim(), start: boundary.input.value, end: current.end }] };
+            const result = await api(`/instruments/${encodeURIComponent(item.record.instrument_id)}`, { instrument, reason: reason.input.value.trim(), evidence_mode: item.record.evidence_mode, source_reference: source.input.value.trim(), expected_digest: item.digest });
+            if (pageEpoch !== epoch || !form.isConnected)
+                return;
+            saved(result);
+            announce(`Ticker correction recorded as revision ${result.record.revision}; the stable identity and previous revisions are retained.`);
+        }
+        catch (error) {
+            if (pageEpoch === epoch && form.isConnected) {
+                message.className = "notice error";
+                message.setAttribute("role", "alert");
+                message.textContent = readableError(error);
+                message.hidden = false;
+            }
+        }
+        finally {
+            submit.disabled = false;
+            form.setAttribute("aria-busy", "false");
+        }
+    });
+    return form;
+}
+function instrumentAsOfForm(snapshot, epoch) {
+    const form = el("form");
+    form.id = "instrument-asof-form";
+    const knowledge = utcField("Known by the app (UTC)", "instrument_knowledge", snapshot.recorded_at);
+    const effective = utcField("Effective instrument time (UTC)", "instrument_effective", new Date().toISOString());
+    const submit = el("button", "button secondary", "Look up historical metadata");
+    submit.type = "submit";
+    const result = el("div");
+    result.id = "instrument-asof-result";
+    result.setAttribute("aria-live", "polite");
+    form.append(el("div", "form-grid", knowledge.box, effective.box), el("div", "form-actions", submit), result);
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submit.disabled = true;
+        result.replaceChildren(el("p", "loading-message", "Resolving the retained metadata history…"));
+        try {
+            const query = new URLSearchParams({ knowledge_time: knowledge.input.value, effective_time: effective.input.value });
+            const response = await api(`/instruments/${encodeURIComponent(snapshot.instrument_id)}/as-of?${query}`);
+            if (pageEpoch !== epoch || !form.isConnected)
+                return;
+            result.replaceChildren(el("dl", "definition-list", el("dt", "", "Resolved symbol"), el("dd", "", response.symbol), el("dt", "", "Registry SHA-256"), el("dd", "mono", response.registry_digest), el("dt", "", "Availability authority"), el("dd", "", response.historical_availability)), el("details", "data-disclosure", el("summary", "", "Retained historical snapshot"), el("pre", "", JSON.stringify(response.record, null, 2))));
+        }
+        catch (error) {
+            if (pageEpoch === epoch && form.isConnected)
+                result.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            submit.disabled = false;
+        }
+    });
+    return form;
+}
+function calendarForm(epoch) {
+    const form = el("form");
+    form.id = "calendar-form";
+    const calendar = selectField("Market calendar", "calendar_id", [{ value: "XNYS", text: "XNYS · regular cash session" }, { value: "FX_NY_17", text: "FX · New York 17:00 convention" }], "XNYS");
+    const today = new Date().toISOString().slice(0, 10);
+    const start = field("Calendar start date", "calendar_start", today, { type: "date", min: "2000-01-01", max: "2035-12-31" });
+    const end = field("Calendar end date", "calendar_end", today, { type: "date", min: "2000-01-01", max: "2035-12-31" });
+    const submit = el("button", "button secondary", "Load trading sessions");
+    submit.type = "submit";
+    const output = el("div");
+    output.id = "calendar-result";
+    output.setAttribute("aria-live", "polite");
+    output.append(el("p", "small muted", "Choose a range, then query the calendar. Nothing is fetched or generated automatically."));
+    form.append(el("div", "form-grid", full(calendar.box), start.box, end.box), el("p", "field-hint", "At most 366 days per request, within 2000–2035. Rules do not establish historical publication time or security-specific halts."), el("div", "form-actions", submit), output);
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submit.disabled = true;
+        output.replaceChildren(el("p", "loading-message", "Loading the bounded calendar schedule…"));
+        try {
+            const query = new URLSearchParams({ start: start.input.value, end: end.input.value });
+            const response = await api(`/calendars/${calendar.input.value}?${query}`);
+            if (pageEpoch !== epoch || !form.isConnected)
+                return;
+            output.replaceChildren(notice(response.availability), el("dl", "definition-list", el("dt", "", "Calendar SHA-256"), el("dd", "mono", response.digest), el("dt", "", "Window anchor"), el("dd", "", response.schedule.anchor), el("dt", "", "Returned sessions"), el("dd", "", response.schedule.sessions.length)));
+            if (response.schedule.sessions.length)
+                output.append(table(["Session", "Open (UTC)", "Close (UTC)", "5h grid / tail"], response.schedule.sessions.map(row => {
+                    const minutes = (Date.parse(row.close_at) - Date.parse(row.open_at)) / 60000;
+                    return [row.label, row.open_at, row.close_at, Number.isFinite(minutes) ? `${Math.floor(minutes / 300)} × 5h + ${minutes % 300}m tail` : "—"];
+                }), "Actual market trading sessions"));
+            else
+                output.append(empty("No sessions in this range", "The selected calendar reports no sessions. This is not a missing-price-data imputation."));
+            output.append(el("p", "small muted", response.schedule.limitations.join(" ")), el("p", "small muted", "A session-open 5h grid never crosses a session boundary. DROP excludes a short tail; INCLUDE_CLOSED_SHORT_SESSION_TAIL requires the session to be closed and every minute available. This view does not aggregate uploaded data."), el("details", "data-disclosure", el("summary", "", "Complete calendar rules snapshot"), el("pre", "", JSON.stringify(response, null, 2))));
+        }
+        catch (error) {
+            if (pageEpoch === epoch && form.isConnected)
+                output.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            submit.disabled = false;
+        }
+    });
+    return form;
+}
 function renderBacktests(region) {
     region.append(heading("Simulation laboratory", "Backtests", "A bounded fixture run with explicit assumptions and an inspectable accounting trail."), syntheticNotice());
     const configuration = panel("Configure a run", "Causal long/flat momentum · cash funded");
@@ -1044,9 +1362,165 @@ function renderSettings(region) {
     }
     else
         region.append(notice("Only owners can view or create other accounts. Ask an owner to make access changes."));
+    const connections = panel("Private source connections", "Local configuration for SEC and Alpaca market data · live credentials forbidden");
+    region.append(connections.box);
+    if (session.user?.role === "owner") {
+        connections.body.id = "connections-panel";
+        connections.body.append(el("p", "loading-message", "Loading masked connection status…"));
+        void loadConnections(connections.body, epoch);
+    }
+    else
+        connections.body.append(notice("An owner must configure and test data sources. This account cannot view or change private connection settings."));
     const capabilities = panel("Additional administration", "These mission capabilities are not yet implemented");
-    capabilities.body.append(capabilityRows(["Source credentials", "External notifications", "Backups through the UI", "Paper broker configuration"]));
+    capabilities.body.append(capabilityRows(["External notifications", "Backups through the UI", "Paper broker configuration"]));
     region.append(capabilities.box);
+}
+function clearPrivateInputs(target = document) {
+    target.querySelectorAll('input[data-private-field="true"]').forEach(input => { if (input.type === "checkbox")
+        input.checked = false;
+    else
+        input.value = ""; });
+}
+function privateField(label, name, hint, maxLength) {
+    const result = field(label, name, "", { type: "password", autocomplete: "off", hint });
+    result.input.dataset.privateField = "true";
+    result.input.maxLength = maxLength;
+    result.input.spellcheck = false;
+    result.input.setAttribute("autocapitalize", "none");
+    return result;
+}
+function declaration(label, id) {
+    const input = el("input");
+    input.type = "checkbox";
+    input.id = id;
+    input.required = true;
+    input.dataset.privateField = "true";
+    const box = el("label", "checkbox-label", input, el("span", "", label));
+    box.htmlFor = id;
+    return { box, input };
+}
+async function loadConnections(target, epoch, success) {
+    try {
+        const response = await api("/connections");
+        if (pageEpoch !== epoch || !target.isConnected || session.user?.role !== "owner")
+            return;
+        clearPrivateInputs(target);
+        target.replaceChildren();
+        if (success) {
+            const status = notice(success, "success");
+            status.setAttribute("role", "status");
+            target.append(status);
+        }
+        target.append(notice("Private configuration is encrypted in a native vault outside the checkout. Its backing database is excluded from runtime backups; the owner must follow the separate private-vault backup procedure. This does not establish HOST_ENFORCED protection."));
+        const facts = el("dl", "definition-list");
+        [["Private vault", response.private_root], ["Initialized", response.initialized ? "Yes" : "No"], ["Live credentials", response.live_credentials], ["Connection limit", response.limit]].forEach(([key, value]) => facts.append(el("dt", "", key), el("dd", key === "Private vault" ? "mono" : "", value)));
+        target.append(facts, notice("Saving keeps configuration private and makes no provider request. Use the explicit test action in Sources only when access and any costs are authorized."));
+        const cards = el("div", "grid-two");
+        for (const id of ["SRC-01", "SRC-02"]) {
+            const metadata = response.connections.find(connection => connection.catalogue_id === id);
+            const item = panel(id === "SRC-01" ? "SEC identification" : "Alpaca market data", id, statusBadge(metadata?.state ?? "NOT_CONFIGURED"));
+            item.box.dataset.connection = id;
+            item.body.append(el("dl", "definition-list", el("dt", "", "Stored value"), el("dd", "mono", metadata?.masked ?? "—"), el("dt", "", "Revision"), el("dd", "", display(metadata?.revision)), el("dt", "", "External validation"), el("dd", "", "Unverified")), connectionForm(id, target, epoch));
+            if (metadata?.state === "CONFIGURED") {
+                const revoke = button(id === "SRC-01" ? "Revoke SEC connection" : "Revoke Alpaca connection", () => {
+                    clearPrivateInputs(target);
+                    revoke.disabled = true;
+                    void api(`/connections/${id}/revoke`, {}).then(() => { if (pageEpoch === epoch)
+                        void loadConnections(target, epoch, `${id} connection revoked.`); }).catch(error => { if (pageEpoch === epoch && item.body.isConnected)
+                        item.body.append(notice(readableError(error), "error")); }).finally(() => { revoke.disabled = false; });
+                }, "tertiary compact");
+                item.body.append(el("div", "form-actions", revoke));
+            }
+            cards.append(item.box);
+        }
+        target.append(cards);
+        const rotation = el("div");
+        const rotate = button("Rotate vault encryption key", () => {
+            clearPrivateInputs(target);
+            rotate.disabled = true;
+            rotation.replaceChildren(notice("Rotating the private vault key…"));
+            void api("/connections/rotate", {}).then(result => {
+                if (pageEpoch !== epoch || !rotation.isConnected)
+                    return;
+                rotation.replaceChildren(notice("Vault encryption key rotated.", "success"), el("dl", "definition-list", el("dt", "", "Key identifier"), el("dd", "mono", result.key_id), el("dt", "", "Versions rotated"), el("dd", "", result.versions_rotated), el("dt", "", "Old keys retained"), el("dd", "", display(result.old_keys_retained)), el("dt", "", "Reported protection"), el("dd", "", metadataText(result.protection))));
+            }).catch(error => { if (pageEpoch === epoch && rotation.isConnected)
+                rotation.replaceChildren(notice(readableError(error), "error")); }).finally(() => { rotate.disabled = false; });
+        }, "secondary compact", "shield");
+        rotate.disabled = !response.initialized;
+        target.append(el("div", "form-actions", rotate), el("p", "field-hint", "Rotation changes local encryption and retains the versions reported by the vault. It does not contact providers or validate account entitlements."), rotation);
+    }
+    catch (error) {
+        if (pageEpoch === epoch && target.isConnected) {
+            clearPrivateInputs(target);
+            target.replaceChildren(notice(readableError(error), "error"), button("Retry connection status", () => { void loadConnections(target, epoch); }, "secondary compact"));
+        }
+    }
+}
+function connectionForm(id, target, epoch) {
+    const form = el("form");
+    form.id = `connection-form-${id}`;
+    form.autocomplete = "off";
+    const fields = [];
+    let values;
+    if (id === "SRC-01") {
+        const organization = privateField("SEC organization", "sec_organization", "Your organization identifies the request to SEC; it stays private here.", 80);
+        organization.input.minLength = 2;
+        const email = privateField("SEC contact email", "sec_contact_email", "A real contact is required for provider access. Stored privately and never revealed after saving.", 190);
+        const cik = privateField("SEC company CIK", "sec_cik", "Exactly 10 digits, including leading zeros; identifies the bounded diagnostic target.", 10);
+        cik.input.pattern = "[0-9]{10}";
+        cik.input.inputMode = "numeric";
+        const rights = declaration("I have reviewed the SEC access terms and confirm my right to make the requested data access.", "sec-rights");
+        fields.push(organization.input, email.input, cik.input);
+        form.append(el("div", "form-grid", full(organization.box), full(email.box), full(cik.box)), rights.box);
+        values = () => ({ organization: organization.input.value.trim(), contact_email: email.input.value.trim(), cik: cik.input.value, license_confirmed: rights.input.checked });
+    }
+    else {
+        const key = privateField("Alpaca key ID", "alpaca_key_id", "Paper-account or read-only market-data credentials only. No live-account credentials.", 256);
+        key.input.minLength = 8;
+        const secret = privateField("Alpaca secret key", "alpaca_secret_key", "Used only by the server. This field is never prefilled or revealed.", 256);
+        secret.input.minLength = 8;
+        const source = selectField("Alpaca credential source", "alpaca_credential_source", [{ value: "", text: "Choose an allowed credential source" }, { value: "PAPER_ACCOUNT", text: "Paper account" }, { value: "READ_ONLY_MARKET_DATA", text: "Read-only market data" }], "");
+        const entitlement = declaration("I confirm that this account is entitled to the requested market data.", "alpaca-entitlement");
+        const cost = declaration("I confirm this bounded access adds no incremental charge and uses no live-account credentials.", "alpaca-no-charge");
+        fields.push(key.input, secret.input);
+        form.append(el("div", "form-grid", full(key.box), full(secret.box), full(source.box)), entitlement.box, cost.box);
+        values = () => ({ key_id: key.input.value, secret_key: secret.input.value, credential_source: source.input.value, entitlement_confirmed: entitlement.input.checked, no_incremental_charge: cost.input.checked });
+    }
+    const submit = el("button", "button", id === "SRC-01" ? "Save SEC connection" : "Save Alpaca connection");
+    submit.type = "submit";
+    const message = el("div", "notice");
+    message.hidden = true;
+    message.setAttribute("aria-live", "polite");
+    form.append(el("div", "form-actions", submit), message);
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const payload = values();
+        clearPrivateInputs(form);
+        submit.disabled = true;
+        form.setAttribute("aria-busy", "true");
+        message.hidden = true;
+        try {
+            await api(`/connections/${id}`, { values: payload });
+            if (pageEpoch !== epoch || !form.isConnected)
+                return;
+            fields.forEach(input => { input.value = ""; });
+            await loadConnections(target, epoch, `${id} configuration saved privately. No provider request was made; external validation remains unverified.`);
+        }
+        catch (error) {
+            if (pageEpoch === epoch && form.isConnected) {
+                message.className = "notice error";
+                message.setAttribute("role", "alert");
+                message.textContent = readableError(error);
+                message.hidden = false;
+            }
+        }
+        finally {
+            fields.forEach(input => { input.value = ""; });
+            submit.disabled = false;
+            form.setAttribute("aria-busy", "false");
+        }
+    });
+    return form;
 }
 async function loadUsers(target, epoch) {
     try {

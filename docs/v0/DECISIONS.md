@@ -116,3 +116,21 @@ export. Master keys/credential stores are excluded and require a separate owner
 procedure when introduced. An archive proves preservation of bytes and database
 integrity, not scientific validity or authorization to share those bytes. No
 existing archive, destination, user data or cache is overwritten or purged.
+
+## V0-D07 — Canonical market identity and private source configuration
+
+DEC-0040 governs the integrated INSTRUMENT kind, canonical revisions, market
+metadata knowledge/effective times, pinned XNYS/named-FX calendars, explicit
+session aggregation and authenticated private configuration. Ticker correction
+does not change permanent identity; asset class and base/quote currency changes
+require a new identity. Owner-declared metadata do not establish historical PIT
+facts. Shared local reference metadata are distinct from private datasets/jobs.
+
+Source configuration is a complete encrypted atomic slot outside checkout and
+runtime. Saving, rotating and locally revoking keys makes no network request.
+The source test is an explicit owner action with existing quotas, rights and
+no-incremental-charge declarations. Only fixed read-only hosts are available;
+no live-account purpose or broker order endpoint is admitted. Windows DPAPI and
+Linux private files have explicit same-user/administrator/rollback limitations.
+Credentials use separate owner recovery, never an ordinary runtime archive.
+No scientific or host gate, purchase, or original research authority changes.

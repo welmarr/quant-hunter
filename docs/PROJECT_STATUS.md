@@ -16,9 +16,15 @@ Private backup/restore reproduced 265 files and database counts in a distinct
 instance. The frozen Phase B gate passed 1,193 tests, zero skips, one warning and
 91.62% coverage; the restored browser passed 32 assertions. Prior checkpoint
 `9b74dd6` passed hosted Ubuntu/Windows CI and a separate clean-clone startup.
-See `v0/TEST_REPORT.md` for exact scope, failures and evidence. SEC/Alpaca clients,
-encrypted credentials and market calendars are next isolated work; the rest of
-the mission remains required in `v0/REQUIREMENTS.md`. No empirical or host gate is
+Saved import checkpoint `5da83fd` also passed hosted CI: 1,193 tests on each OS,
+91.58% Ubuntu coverage. Current work adds encrypted owner configuration,
+SEC/Alpaca read-only clients, canonical instrument history, market calendars and
+bounded aggregation. After correcting two regression failures, its full gate
+passed 1,460 tests with one platform skip and 92.33% coverage. A separate restored
+instance passed 48 browser checks plus five account-isolation assertions.
+The exact new saved commit still requires hosted CI. See `v0/TEST_REPORT.md`
+for exact scope, failures and evidence. The remaining mission remains required in
+`v0/REQUIREMENTS.md`. No empirical or host gate is
 closed by these software checks.
 
 Remote main was verified at `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2` (PR #12),

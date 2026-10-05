@@ -11,6 +11,14 @@ Use `npm ci --ignore-scripts`, `npm run typecheck` and `npm run build` from
 download. See `v0/TEST_REPORT.md` for executed local/CI/clean-clone evidence.
 Existing toolchain/coverage/security constraints below remain in force.
 
+DEC-0040 additionally pins cryptography 50.0.2, exchange-calendars 4.13.2 and
+tzdata 2026.5, with all 55 resolved packages/hashes in `uv.lock`. The credential
+tests exercise actual Windows DPAPI and independent processes; the POSIX-mode
+test is intentionally skipped on Windows and belongs to Linux CI. The market
+schedule uses the pinned timezone resource explicitly. Use the normal complete
+quality commands below; targeted module checks do not replace them. Current
+source and proof paths, failed runs and corrections are in `v0/TEST_REPORT.md`.
+
 Stage 1B Batch 1 uses standard GIL-enabled, 64-bit CPython 3.14.7 and uv
 0.12.10. The exact runtime is pinned by `.python-version`; uv is pinned by
 `uv.toml` and CI. Patch upgrades require an explicit decision, lock

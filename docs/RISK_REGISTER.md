@@ -18,6 +18,17 @@ archives retain source rights and local authentication material and must never
 be shared or committed. See DEC-0039, `v0/OPERATIONS.md`, and `v0/TEST_REPORT.md`.
 This mitigates tested software failure paths without closing the risks above.
 
+The subsequent private-configuration/market checkpoint adds authenticated
+credential encryption, tested key rotation and external private-vault storage.
+Windows DPAPI does not isolate other processes under the same identity or an
+administrator; ordinary runtime backups exclude the vault and its keys. Recovery
+requires the separately documented owner procedure. Only synthetic credentials
+were used. Instrument history preserves local knowledge/effective times, but
+owner declarations and pinned exchange rules are not verified historical
+publication vintages. Actual SEC/Alpaca access, source rights and FX venue
+holiday/financing conventions remain externally unverified. See DEC-0040 and
+`v0/CREDENTIALS.md`, `v0/MARKETS.md`, `v0/EQUITY_SOURCES.md`.
+
 Review this register at each stage gate and whenever evidence, scope, cost, or controls change. Use permanent IDs; retain closed risks. Link mitigations to decisions, experiments, data sources, and tests. `OPEN` means the risk requires active control, not that work is authorized.
 
 Every operational risk record must include ID, cause and consequence, likelihood, impact/severity, owner, controls, early-warning indicators, linked decisions/experiments/sources/tests, target and next-review dates, residual risk, status, and closure evidence. The summary entries below are the planning baseline; their detailed fields must be assigned during Stage 1B and before its exit gate. Scientific governance owns RISK-001–009, RISK-014–016, and RISK-019; data governance co-owns RISK-004–005, RISK-012, RISK-014, and RISK-019; architecture/security owns RISK-010–011, RISK-015, RISK-017–020, and RISK-022–024; and project budget governance owns RISK-013 and RISK-021. All open risks are next reviewed at Stage 1B closeout.

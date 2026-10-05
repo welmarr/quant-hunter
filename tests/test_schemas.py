@@ -83,6 +83,7 @@ def test_schema_catalog_is_complete_and_meta_valid() -> None:
         "dataset-lineage-manifest.schema.json",
         "environment-manifest.schema.json",
         "experiment.schema.json",
+        "instrument.schema.json",
         "pattern.schema.json",
         "pit-selection-config.schema.json",
         "raw-capture.schema.json",

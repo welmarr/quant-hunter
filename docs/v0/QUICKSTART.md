@@ -26,7 +26,8 @@ attempts are retained and reconciled, never automatically recomputed. Retry mean
 a new registered experiment. A filesystem lease prevents two server processes
 from owning one runtime. Native SQLite stores only operational accounts/sessions/
 jobs; governed JSON registry revisions and immutable objects remain scientific
-authority. All application data lives in ignored `.local/v0` on D:.
+authority. Ordinary application data lives in ignored `.local/v0` on D:.
+Private provider configuration uses a separate vault described below.
 
 To use a distinct demo/test instance:
 
@@ -48,8 +49,27 @@ commit, with the Git parent labeled separately.
 Sources now lists all 22 mission catalogue entries with their actual implementation
 status. BLS and ECB have explicit bounded test buttons; a successful connection
 does not approve a dataset or establish point-in-time history. No background
-network probe runs merely because you open the page. Other connectors remain
-unconfigured/unimplemented until their respective work is verified.
+network probe runs merely because you open the page. Owners can configure SEC
+identification or an authorized Alpaca paper/read-only data key in Settings,
+then explicitly test it from Sources. Saving configuration makes no request.
+Rights and no-additional-charge declarations must be selected explicitly;
+credentials remain unverified until an actual authorized provider response.
+Other connectors retain their displayed implementation status.
+
+The private vault defaults to `D:\QuantHunterPrivate\<runtime-identity>` for a
+D: runtime, outside the repository and ordinary backups. `-PrivateRoot` can
+specify a distinct absolute private location outside both checkout and runtime.
+The owner Settings page shows its path and supports local revocation and key
+rotation. Windows master keys use DPAPI under the application user's profile.
+Do not put real keys in a chat, command line, URL or source file. Follow
+`CREDENTIALS.md` for the separate owner recovery procedure and its limitations.
+
+Markets contains shared instrument reference metadata. Owners can create
+equity/ETF/FX identities and append corrections; all signed-in users can inspect
+history and calendar sessions. Local recording time is separate from effective
+time and does not prove historical publication. XNYS rules and the named FX
+New York 17:00 convention expose their limits. The 5h explanation describes
+implemented aggregation rules; it does not aggregate an uploaded dataset yet.
 
 Data accepts CSV or Parquet files up to 2,000,000 bytes. The required columns are
 `open_at,close_at,available_at,open_bid,open_ask,close`; optional columns are

@@ -2,8 +2,8 @@
   "mission": "Quant Hunter V0",
   "status": "IN_PROGRESS",
   "date": "2026-10-05",
-  "reference_commit": "9b74dd674077a824e35d2265111c7e6f946593f6",
-  "reference_semantics": "Parent commit plus the frozen Phase B implementation; exact source snapshots retained per operation",
+  "reference_commit": "5da83fd97637624c54022affd06bfd8bfc839054",
+  "reference_semantics": "Parent commit plus frozen corrected Phase C implementation; exact source snapshots retained per operation",
   "branch": "version-0",
   "host_evidence": "BLOCKED_EXTERNAL",
   "data_mode": "SYNTHETIC backtests; separate HISTORICAL_REAL acquisition and uploader-declared imports",
@@ -26,12 +26,12 @@
     {
       "name": "22-source catalogue and priority connectors",
       "status": "IN_PROGRESS",
-      "evidence": "All 22 entries visible; bounded BLS/ECB clients and actual public probes verified; remaining priority clients are not integrated"
+      "evidence": "All 22 entries visible; bounded BLS/ECB public probes verified; encrypted SEC/Alpaca configuration and concrete read-only clients integrated with actual provider access unverified; macro/other clients remain isolated"
     },
     {
       "name": "Instrument registry and PIT quality",
       "status": "IN_PROGRESS",
-      "evidence": "Import timing/quality declarations enforced; full instrument registry and market calendar are isolated next work"
+      "evidence": "Canonical UUIDv7 identity/history/CAS, owner writes, shared reference reads, XNYS/named-FX sessions and bounded causal aggregation integrated; imported-data aggregation workflow and historical metadata verification remain"
     },
     {
       "name": "Paper library and ten sourced CRP implementations",
@@ -86,7 +86,7 @@
     {
       "name": "Security and failure tests",
       "status": "IN_PROGRESS",
-      "evidence": "Auth/ownership, XSS, SSRF, bounded Parquet/ZIP, disk, interruption and restore checks passed; broader V0 threat/fault suite remains"
+      "evidence": "Auth/ownership, XSS, SSRF, bounded Parquet/ZIP, disk, interruption, private encryption/rotation/recovery and account-switch checks; broader V0 threat/fault suite remains"
     },
     {
       "name": "Backup/restore and clean-clone proof",
@@ -96,14 +96,14 @@
     {
       "name": "Responsive UI, browser evidence and status",
       "status": "IN_PROGRESS",
-      "evidence": "Eight functional views including Sources/Data verified at desktop/mobile/tablet; later mission modules remain"
+      "evidence": "Sources/Data and private Settings verified; Markets browser proof in TEST_REPORT.md; later mission modules remain"
     }
   ],
   "tests": {
-    "final_regression": "PASS: 1193 tests, zero skips, one warning, 91.62% coverage in 508.39 seconds",
-    "browser": "PASS: 32 restored-instance assertions, zero uncaught errors/dialogs, 20 screenshots",
+    "final_regression": "PASS: 1460 tests, one Linux-only skip, one warning,92.33% coverage in583.60 seconds",
+    "browser": "PASS: 48 restored-instance checks,26 screenshots,zero errors; five delayed-response isolation assertions",
     "lint_types_build": "PASS: lock, Ruff, mypy, TypeScript; distribution verification in TEST_REPORT.md",
-    "hosted_ci": "Pending exact Phase B commit; prior 9b74dd6 Quality53 passed both operating systems",
+    "hosted_ci": "PASS: 5da83fd run37272040597,1193 tests each OS,91.58% Ubuntu; subsequent Phase C not yet saved/verified",
     "empirical_validation": "NONE"
   }
 }

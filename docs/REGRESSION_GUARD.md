@@ -37,7 +37,17 @@ V0's 2026-10-05 application overlay reuses the invariant implementations below.
 Its synthetic loopback slice and agent cross-review are recorded in
 `v0/TEST_REPORT.md`. That evidence does not change the independent-review status
 of this catalog or establish the outstanding real-host gate. V0 has not changed
-the canonical lifecycle, registry, sealed-release, or schema implementations.
+the canonical lifecycle or sealed-release implementations. DEC-0040 subsequently
+adds the INSTRUMENT kind and closed schema to the existing registry machinery;
+its append-only, hash-chain, CAS and independent identity checks remain in force.
+Instrument metadata preserve separate effective and local knowledge times, and
+asset class/base/quote currencies cannot change under the same permanent ID.
+The private credential vault has no scientific authority. Source configuration
+cannot approve a candidate source, authorize spending or create live orders.
+Calendar/aggregation snapshots retain their rules and availability limits.
+The new full regression, hostile checks, cross-agent review and recovery/browser
+evidence are recorded in `v0/TEST_REPORT.md`; hosted CI remains tied to exact
+saved commits. REG-F03/F04 retain their explicit incomplete status.
 
 | ID | Invariant | Authority / governing decision | Primary implementation | Primary tests | Regression evidence required | Failure consequence |
 |---|---|---|---|---|---|---|

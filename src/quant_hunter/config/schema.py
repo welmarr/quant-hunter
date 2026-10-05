@@ -24,6 +24,7 @@ SCHEMA_BY_KIND = {
     RegistryKind.EXPERIMENT: "experiment.schema.json",
     RegistryKind.SOURCE: "source.schema.json",
     RegistryKind.DATASET: "dataset.schema.json",
+    RegistryKind.INSTRUMENT: "instrument.schema.json",
     RegistryKind.BACKLOG: "research-backlog.schema.json",
 }
 

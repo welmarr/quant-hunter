@@ -39,3 +39,16 @@ history rewrite, main merge, branch deletion or destructive cleanup was used.
 32. `git ls-remote --heads origin version-0 work-before-v0 main` | READ-ONLY | Verify remote checkpoint and untouched backup/main | Result: Succeeded; exact output retained in the conversation audit.
 33. `git clone --depth 1 --single-branch --branch version-0 https://github.com/welmarr/quant-hunter.git .tools/v0-cold-start` | LOCAL WRITE | Create independent clean-clone startup proof | Result: Succeeded; exact output retained in the conversation audit.
 34. `git rev-parse HEAD` | READ-ONLY | Resolve commit inside the documented clean-clone launcher | Result: Succeeded; exact output retained in the conversation audit.
+35. `git status --short --branch` | READ-ONLY | Inspect Phase B checkpoint changes | Result: Succeeded; exact output retained in the conversation audit.
+36. `git diff --check` | READ-ONLY | Check Phase B whitespace | Result: Succeeded; exact output retained in the conversation audit.
+37. `git diff --stat` | READ-ONLY | Review Phase B tracked scope | Result: Succeeded; exact output retained in the conversation audit.
+38. `git diff --check` | READ-ONLY | Verify final Phase B documentation and code whitespace | Result: Succeeded; exact output retained in the conversation audit.
+39. `git add artifacts/status.json docs/DECISIONS.md docs/DEVELOPMENT.md docs/PROJECT_STATUS.md docs/REGRESSION_GUARD.md docs/RISK_REGISTER.md docs/v0 frontend src/quant_hunter/imports src/quant_hunter/sources src/quant_hunter/web tests/test_v0_backup.py tests/test_v0_data_access.py tests/test_v0_imports.py tests/test_v0_sources.py` | LOCAL WRITE | Stage verified Phase B source and documentation only | Result: Succeeded; exact output retained in the conversation audit.
+40. `git diff --cached --stat` | READ-ONLY | Inspect staged files before preserving Phase B | Result: Succeeded; exact output retained in the conversation audit.
+41. `git commit -m "feat: add immutable imports, bounded sources and verified private recovery"` | LOCAL WRITE | Save the fully tested Phase B checkpoint | Result: Saved checkpoint 5da83fd.
+42. `git push origin version-0` | REMOTE WRITE | Back up Phase B progress on the authorized integration branch | Result: Pushed 5da83fd to origin/version-0.
+43. `git rev-parse HEAD main work-before-v0` | READ-ONLY | Record new checkpoint and preserved local branches | Result: Confirmed version-0 5da83fd; main c350c26 and backup 7346cf4 unchanged.
+44. `git ls-remote --heads origin version-0 work-before-v0 main` | READ-ONLY | Verify remote backup and unchanged protected branches | Result: Confirmed origin/version-0 5da83fd; remote main e0ba326 and backup 7346cf4 unchanged.
+45. `git status --short --branch` | READ-ONLY | Inspect corrected Phase C checkpoint scope | Result: Succeeded; whitespace check had only line-ending notices.
+46. `git diff --stat` | READ-ONLY | Review tracked Phase C changes | Result: Succeeded; whitespace check had only line-ending notices.
+47. `git diff --check` | READ-ONLY | Check Phase C whitespace before staging | Result: Succeeded; whitespace check had only line-ending notices.

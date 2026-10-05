@@ -33,6 +33,7 @@ class RegistryKind(Enum):
     EXPERIMENT = KindDefinition("EXP", "experiments", "experiment_id")
     SOURCE = KindDefinition("SOURCE", "sources", "source_id")
     DATASET = KindDefinition("DATASET", "datasets", "dataset_id")
+    INSTRUMENT = KindDefinition("INSTRUMENT", "instruments", "instrument_id")
     BACKLOG = KindDefinition("BACKLOG", "backlog", "backlog_id")
     COST = KindDefinition("COST", "costs", "cost_id")
 

@@ -23,6 +23,39 @@
 
 ## Decision Policy
 
+### DEC-0040 — Instrument identity and private read-only configuration (2026-10-05)
+
+- **Status:** ACCEPTED within the owner's continuous V0 implementation scope;
+  scientific, host and independent-review gates are unchanged.
+- **Scope:** data / architecture / security / operations.
+- **Decision:** Extend the existing typed UUIDv7 registry with INSTRUMENT records
+  and closed metadata snapshots, keeping its append-only revision/CAS authority.
+  Effective symbol/activity intervals and recorded knowledge time are distinct.
+  Current metadata never silently rewrites a historical information set.
+  Asset class and base/quote currencies are immutable within one identity;
+  another FX pair or currency-denominated listing requires a new identity.
+- **Market convention:** Use pinned exchange-calendars XNYS schedules and explicit
+  New York FX 17:00 weekday convention. The FX convention is not a universal
+  exchange or holiday assertion. Aggregation records session anchor, partial-bar
+  policy, completeness and actual availability. Unsupported markets fail closed.
+- **Security:** Owner-configured read-only source secrets use authenticated Fernet
+  envelopes and an explicit private root outside the checkout/runtime/export.
+  DPAPI CurrentUser protects Windows master files; Linux enforces private file
+  modes. No host ACL/policy mutation or HOST_ENFORCED claim is introduced.
+  Master rotation preserves recovery keys and uses atomic ciphertext changes.
+- **Alternatives rejected:** Tickers as permanent identity, independently mutable
+  registry state, hand-guessed exchange holidays, secret-bearing URLs and keys
+  stored with ordinary runtime backups.
+- **Consequences:** cryptography 50.0.2, exchange-calendars 4.13.2 and tzdata 2026.5
+  are exact new dependencies. Fixed-host SEC/Alpaca clients have offline contract
+  tests; actual configured access remains a separate external verification.
+  API keys do not authorize paid requests or any real-money trading.
+- **References:** `v0/MISSION.md` sections 7–8, 11–12, 15; instrument schema;
+  `v0/EQUITY_SOURCES.md`, `v0/CREDENTIALS.md`, `v0/MARKETS.md`,
+  `v0/TEST_REPORT.md`.
+- **Owner and approver:** Owner's explicit whole-V0 mission, 2026-10-05; routine
+  implementation choices remain subject to review and do not certify the gate.
+
 Record decisions that affect architecture, research methodology, statistical validity, data timing, leakage controls, experiment scope, cost modeling, production isolation, security, or spending. Record them before or with the change—never after seeing results merely to justify an outcome. Unresolved assumptions belong here as explicit open questions rather than silent guesses.
 
 Entries are append-only. A later decision may supersede an earlier one but must link to it and preserve its rationale. Changes to frozen experiments also require a new experiment ID under `EXPERIMENT_LEDGER.md`.

@@ -2,10 +2,11 @@
 
 Date: 2026-10-05. Status: IN_PROGRESS; V0 is not delivered.
 
-Last saved executable checkpoint: `9b74dd674077a824e35d2265111c7e6f946593f6`,
-verified on origin/version-0. Hosted Ubuntu/Windows Quality #53 passed 950 tests
-per OS; separate clean-clone launcher/browser proof passed 20 checks. Work after
-that commit must be reconciled separately; it is not covered by the prior CI.
+Last saved executable checkpoint: `5da83fd97637624c54022affd06bfd8bfc839054`,
+verified on origin/version-0. Hosted run 37272040597 passed 1,193 tests per OS;
+Ubuntu coverage was 91.58%. The earlier 9b74dd6 clean-clone launcher/browser proof
+passed 20 checks. Work after 5da83fd must be reconciled separately; it is not
+covered by that CI.
 
 Working and integration branch: `version-0` (tracking `origin/version-0`).
 Immutable saved branch: `work-before-v0`, locally/remotely verified at
@@ -24,7 +25,7 @@ Six UI views are functional. The real browser verified the accounting oracle,
 authorization boundaries, errors and responsive layouts. See TEST_REPORT.md for
 the corrected full-gate status and honest failures, and QUICKSTART.md to launch.
 
-The next frozen checkpoint adds private immutable CSV/Parquet import, the
+The saved 5da83fd checkpoint adds private immutable CSV/Parquet import, the
 22-source catalogue and bounded BLS/ECB probes, Sources/Data UI, quotas and
 versioned private backup/restore. It passed 1,193 tests, zero skips, one warning,
 91.62% coverage, lock/Ruff/mypy/TypeScript/build checks, and 32 browser assertions
@@ -32,9 +33,17 @@ on a separately restored instance. Recovery compared all 265 files byte for
 byte. See TEST_REPORT.md and OPERATIONS.md. Reconcile HEAD and origin before
 assuming this implementation is saved or covered by hosted CI.
 
-Next active work: integrate the isolated SEC/Alpaca read-only clients after
-cross-review, the encrypted credential vault/configuration UI, priority macro
-clients, and instrument/calendar/aggregation support. Agent worktrees are under
+Current Phase C work integrates fixed-host SEC/Alpaca read-only clients,
+authenticated encrypted credentials with owner-only UI, canonical instrument
+identities, metadata history, XNYS/named-FX calendars and bounded aggregation.
+These are software capabilities, not verified provider access or historical
+market facts. The corrected full gate passed 1,460 tests, one Linux-only skip,
+one warning and 92.33% coverage. A distinct restored instance passed 48 browser
+checks plus five delayed-response isolation assertions, after independently
+comparing 245 files and both instrument revisions. Exact evidence and initial
+failures are retained in TEST_REPORT.md. Reconcile the next saved commit/CI.
+Priority macro/other-source clients and ten sourced research math modules remain
+isolated under review and are not included in this checkpoint. Agent worktrees are under
 `.tools/v0-worktrees/{lifecycle,simulation,ui}`. Root is the sole integrator.
 Do not overwrite those uncommitted files or claim they are integrated without
 copy/review/testing. Continuous paper execution, ten CRPs, fifteen PatternLab

@@ -183,6 +183,8 @@ def test_reader_and_unimplemented_probe_do_not_reach_service(
     with pytest.raises(AccessError, match="Researcher"):
         service.import_data(reader, b"rows", file_format="CSV", metadata={})
     with pytest.raises(AccessError, match="not implemented"):
+        service.probe(reader, "SRC-05")
+    with pytest.raises(AccessError, match="Owner role"):
         service.probe(reader, "SRC-01")
     assert backend.calls == 0
 

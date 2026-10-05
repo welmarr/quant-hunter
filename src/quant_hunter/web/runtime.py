@@ -15,9 +15,12 @@ from typing import cast
 from quant_hunter.config import JsonRecord, JsonValue, canonicalize_json
 from quant_hunter.imports import ImportService
 from quant_hunter.lab import LabService
+from quant_hunter.markets.registry import InstrumentRegistry
 from quant_hunter.simulation import Costs, SimulationConfig, simulate, synthetic_fixture
 from quant_hunter.sources import SourceProbeService
+from quant_hunter.sources.equity_probes import EquityProbeService
 from quant_hunter.storage import ImmutableObjectStore
+from quant_hunter.web.connections import Connections, SourceRouter, default_private_root
 from quant_hunter.web.data_access import DataAccess
 from quant_hunter.web.state import AppState
 
@@ -59,7 +62,14 @@ def fixture_catalog() -> list[dict[str, object]]:
 class Runtime:
     """One process/worker owns this runtime under the CLI's runtime lease."""
 
-    def __init__(self, root: Path, repository: Path, code_revision: str) -> None:
+    def __init__(
+        self,
+        root: Path,
+        repository: Path,
+        code_revision: str,
+        *,
+        private_root: Path | None = None,
+    ) -> None:
         if (root / "restore.incomplete").exists():
             raise ValueError("Runtime restoration is incomplete; do not launch")
         expected_module = repository / "src" / "quant_hunter" / "web" / "runtime.py"
@@ -96,6 +106,20 @@ class Runtime:
         self.lab = LabService(
             root / "research", repository / "schemas" / "v1", code_revision, environment
         )
+        self.instruments = InstrumentRegistry(self.lab.registry)
+        public_probes = SourceProbeService(
+            self.lab.registry,
+            self.lab.objects,
+            repository / "schemas" / "v1",
+            code_revision,
+            self.lab.environment_digest,
+        )
+        self.connections = Connections(
+            private_root or default_private_root(root),
+            repository,
+            root,
+            EquityProbeService(public_probes),
+        )
         self.data = DataAccess(
             self.state,
             root,
@@ -106,13 +130,7 @@ class Runtime:
                 code_revision,
                 self.lab.environment_digest,
             ),
-            SourceProbeService(
-                self.lab.registry,
-                self.lab.objects,
-                repository / "schemas" / "v1",
-                code_revision,
-                self.lab.environment_digest,
-            ),
+            SourceRouter(public_probes, self.connections),
         )
 
     def recover(self) -> None:

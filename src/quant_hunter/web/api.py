@@ -9,6 +9,7 @@ import json
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
+from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated, Literal, cast
 
@@ -21,6 +22,12 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from quant_hunter.config import JsonRecord
+from quant_hunter.credentials import VaultError
+from quant_hunter.identity import IdentityError, RegistryIntegrityError
+from quant_hunter.markets import MarketError, sessions
+from quant_hunter.markets.registry import InstrumentRegistry
+from quant_hunter.sources.transport import SourceError
+from quant_hunter.web.connections import Connections
 from quant_hunter.web.data_access import DataAccess
 from quant_hunter.web.state import AccessError, AppState, Role, Session
 
@@ -74,6 +81,51 @@ class DatasetUpload(Input):
     metadata: ImportMetadata
     corrects_dataset_id: Annotated[str | None, Field(max_length=80)] = None
     correction_reason: Annotated[str | None, Field(max_length=500)] = None
+
+
+class ConnectionInput(Input):
+    values: dict[str, str | bool]
+
+
+class InstrumentInterval(Input):
+    start: Annotated[str, Field(max_length=32)]
+    end: Annotated[str | None, Field(max_length=32)] = None
+
+
+class InstrumentSymbol(InstrumentInterval):
+    symbol: Annotated[str, Field(pattern=r"^[A-Z0-9][A-Z0-9._/-]{0,31}$")]
+
+
+class InstrumentMetadata(Input):
+    asset_class: Literal["EQUITY", "ETF", "FX_SPOT"]
+    venue: Literal["XNYS", "OTC_NY_17_CONVENTION"]
+    base_currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
+    quote_currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
+    price_precision: Annotated[int, Field(strict=True, ge=0, le=12)]
+    quantity_precision: Annotated[int, Field(strict=True, ge=0, le=12)]
+    lot_size: Annotated[
+        str, Field(pattern=r"^(?:0|[1-9][0-9]{0,17})(?:\.[0-9]{1,12})?$")
+    ]
+    tick_size: Annotated[
+        str, Field(pattern=r"^(?:0|[1-9][0-9]{0,17})(?:\.[0-9]{1,12})?$")
+    ]
+    multiplier: Literal["1"] = "1"
+    timezone: Literal["America/New_York"] = "America/New_York"
+    calendar_id: Literal["XNYS", "FX_NY_17"]
+    activity: Annotated[list[InstrumentInterval], Field(min_length=1, max_length=128)]
+    symbols: Annotated[list[InstrumentSymbol], Field(min_length=1, max_length=128)]
+    status: Literal["ACTIVE", "INACTIVE", "DELISTED"] = "ACTIVE"
+
+
+class InstrumentInput(Input):
+    instrument: InstrumentMetadata
+    reason: Annotated[str, Field(min_length=1, max_length=500)]
+    evidence_mode: Literal["SYNTHETIC", "HISTORICAL_DECLARED"]
+    source_reference: Annotated[str, Field(min_length=1, max_length=1000)]
+
+
+class InstrumentUpdate(InstrumentInput):
+    expected_digest: Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
 
 
 class LocalBoundary:
@@ -166,6 +218,8 @@ def create_app(
     fixtures: list[dict[str, object]] | None = None,
     data: DataAccess | None = None,
     sources: list[dict[str, object]] | None = None,
+    connections: Connections | None = None,
+    instruments: InstrumentRegistry | None = None,
 ) -> FastAPI:
     """Create app without starting jobs or loading any external provider."""
     from quant_hunter.web.worker import Worker
@@ -225,6 +279,39 @@ def create_app(
             status_code=422,
         )
 
+    @app.exception_handler(VaultError)
+    @app.exception_handler(SourceError)
+    async def private_configuration_error(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        return JSONResponse(
+            {
+                "detail": "Private source operation failed. Check configuration, rights, key access and the retained source-operation status."
+            },
+            status_code=422,
+        )
+
+    @app.exception_handler(MarketError)
+    @app.exception_handler(IdentityError)
+    async def market_error(request: Request, exc: Exception) -> JSONResponse:
+        return JSONResponse(
+            {
+                "detail": "Market metadata or calendar request is invalid or unavailable. Check identities, intervals, precision, dates and explicit conventions."
+            },
+            status_code=422,
+        )
+
+    @app.exception_handler(RegistryIntegrityError)
+    async def registry_error(
+        request: Request, exc: RegistryIntegrityError
+    ) -> JSONResponse:
+        return JSONResponse(
+            {
+                "detail": "Governed record is unavailable or failed verification; retained history was not changed."
+            },
+            status_code=503,
+        )
+
     @app.get("/api/session")
     def current_session(request: Request) -> dict[str, object]:
         try:
@@ -276,6 +363,103 @@ def create_app(
                 payload.username, payload.password, payload.role, bootstrap=False
             )
         )
+
+    def private_connections(request: Request, *, mutation: bool = False) -> Connections:
+        authenticated(request, mutation=mutation, owner=True)
+        if connections is None:
+            raise HTTPException(503, "Private source configuration is unavailable")
+        return connections
+
+    @app.get("/api/connections")
+    def connection_status(request: Request) -> JsonRecord:
+        return private_connections(request).status()
+
+    @app.post("/api/connections/rotate")
+    def rotate_connections(request: Request) -> JsonRecord:
+        return private_connections(request, mutation=True).rotate()
+
+    @app.post("/api/connections/{catalogue_id}")
+    def configure_connection(
+        catalogue_id: str, payload: ConnectionInput, request: Request
+    ) -> JsonRecord:
+        return private_connections(request, mutation=True).save(
+            catalogue_id, cast(JsonRecord, payload.values)
+        )
+
+    @app.post("/api/connections/{catalogue_id}/revoke")
+    def revoke_connection(catalogue_id: str, request: Request) -> JsonRecord:
+        return private_connections(request, mutation=True).revoke(catalogue_id)
+
+    def instrument_service(
+        request: Request, *, mutation: bool = False
+    ) -> InstrumentRegistry:
+        authenticated(request, mutation=mutation, owner=mutation)
+        if instruments is None:
+            raise HTTPException(503, "Instrument registry is unavailable")
+        return instruments
+
+    @app.get("/api/instruments")
+    def instrument_list(
+        request: Request,
+        limit: Annotated[int, Query(ge=1, le=50)] = 25,
+        offset: Annotated[int, Query(ge=0, le=1000)] = 0,
+    ) -> dict[str, object]:
+        return {
+            "instruments": instrument_service(request).list(limit=limit, offset=offset),
+            "sharing": "Local reference metadata is visible to all authenticated users",
+            "limit": limit,
+            "offset": offset,
+        }
+
+    @app.post("/api/instruments", status_code=201)
+    def create_instrument(payload: InstrumentInput, request: Request) -> JsonRecord:
+        return instrument_service(request, mutation=True).create(
+            cast(JsonRecord, payload.model_dump())
+        )
+
+    @app.post("/api/instruments/{instrument_id}")
+    def update_instrument(
+        instrument_id: str, payload: InstrumentUpdate, request: Request
+    ) -> JsonRecord:
+        from quant_hunter.identity import StaleWriterError
+
+        try:
+            return instrument_service(request, mutation=True).update(
+                instrument_id,
+                payload.expected_digest,
+                cast(JsonRecord, payload.model_dump(exclude={"expected_digest"})),
+            )
+        except StaleWriterError as exc:
+            raise HTTPException(
+                409, "Instrument changed; reload the latest revision"
+            ) from exc
+
+    @app.get("/api/instruments/{instrument_id}")
+    def get_instrument(instrument_id: str, request: Request) -> JsonRecord:
+        return instrument_service(request).get(instrument_id)
+
+    @app.get("/api/instruments/{instrument_id}/as-of")
+    def instrument_as_of(
+        instrument_id: str,
+        knowledge_time: datetime,
+        effective_time: datetime,
+        request: Request,
+    ) -> JsonRecord:
+        return instrument_service(request).as_of(
+            instrument_id, knowledge_time, effective_time
+        )
+
+    @app.get("/api/calendars/{calendar_id}")
+    def calendar(
+        calendar_id: str, start: date, end: date, request: Request
+    ) -> JsonRecord:
+        authenticated(request)
+        schedule = sessions(calendar_id, start, end)
+        return {
+            "schedule": schedule.to_record(),
+            "digest": schedule.digest,
+            "availability": "Versioned rules; historical publication time not established",
+        }
 
     @app.get("/api/jobs")
     def jobs(request: Request) -> list[dict[str, object]]:

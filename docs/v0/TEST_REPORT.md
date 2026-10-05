@@ -184,6 +184,102 @@ Registry/source data history remains immutable; imported declarations cannot
 become scientific approval, backtest input or host authority. The root reviewed
 the imports and source clients; another agent independently authored/reviewed
 the hostile backup tests and another executed the restored browser flow. This
-is cross-agent review, not professional independent certification. Hosted CI
-must still verify the exact new saved commit; the previous 950-test CI cannot
-be attributed to these changes.
+is cross-agent review, not professional independent certification. The saved
+Phase B commit `5da83fd97637624c54022affd06bfd8bfc839054` subsequently passed
+[hosted run 37272040597](https://github.com/welmarr/quant-hunter/actions/runs/37272040597):
+Windows 1,193 passed in 285.89 seconds; Ubuntu 1,193 passed in 205.79 seconds,
+91.58% coverage. Each retained one existing warning and no skips. This evidence
+applies to that exact commit, not subsequent work.
+
+## Private source configuration and market metadata checkpoint
+
+Source parent: `5da83fd97637624c54022affd06bfd8bfc839054` plus the Phase C
+implementation. Exact dirty source snapshots are retained by the application.
+Macro/priority source adapters and research-method agent drafts are excluded.
+
+The integrated scope adds the authenticated private credential vault, fixed-host
+SEC/Alpaca read-only clients, owner configuration and explicit probe routes,
+canonical INSTRUMENT registry records, metadata history, market-calendar API,
+Markets UI and bounded minute aggregation. No actual SEC/Alpaca request or
+provider credential was used. Market reference data are shared explicitly among
+local accounts; owners alone may append metadata. Historical declarations,
+calendar rule snapshots and fixture arithmetic are not empirical validation.
+
+Targeted verification and corrections:
+
+- Credential tests used actual Windows DPAPI, concurrent processes, interrupted
+  rotation, authenticated identity/tamper checks, serialized revoke/use and a
+  separate private-copy recovery. The isolated result was 46 passed and one
+  Linux-only permission test skipped on Windows, 93.84% targeted coverage.
+- SEC/Alpaca tests passed 99 cases after independent review added decimal
+  magnitude/exponent bounds and escaped/URL-encoded secret-reflection checks.
+  Fixed public DNS/TLS hosts, request/header bounds, pagination and safe failures
+  are tested without authenticated provider access.
+- An initial integrated targeted run had two failures because assertions used
+  `StoredObject.size` instead of `byte_size`; these test errors were corrected.
+  The corrected instrument/connection integration run passed 23 tests. Later
+  instrument API additions passed nine tests. Cross-review identified mutable
+  base/quote currency as an identity error; the fix and regression then passed
+  100 combined market/instrument tests. Stale CAS, full-history semantic replay,
+  historical selection, owner roles and calendar early closes are covered.
+- The first private-configuration browser run passed 41 checks, zero uncaught
+  errors/dialogs, 23 screenshots. A separate test delayed an actual owner API
+  response across reader login and passed five account-isolation assertions.
+  Synthetic credentials were saved, rotated and revoked; no provider was called.
+  Evidence is `.local/v0-connections-proof/browser/`.
+- Markets browser verification first found the route missing from the hash
+  allowlist. The production fix preserves the new view, and failure artifacts
+  remain under `.local/v0-phase-c-proof/browser/`. The final rerun passed
+  **48 checks, 26 screenshots, zero JavaScript errors**, Chrome 154.0.8037.97,
+  07:07:45.516–07:08:45.030 UTC. It exercised the real app's EQ/FX calculations,
+  private configuration, imports/hostile markup, instrument create/correction,
+  stale-write 409, as-of snapshots, NYSE early close, FX weekend/DST and roles.
+  Evidence: `.local/v0-phase-c-proof/browser/final/browser-proof.json` and
+  `gallery-metadata.json`, including source/screenshot hashes. No provider called.
+- Lock check, Ruff formatting/lint and strict mypy passed (147 formatted files,
+  100 checked source files). TypeScript and the PowerShell launcher syntax passed.
+  The first complete run reported **2 failed, 1,453 passed, one platform skip,
+  one warning, 92.31% coverage in 634.68 seconds**. A real competing-process race
+  removed SQLite's optional DELETE journal during permission inspection. The fix
+  allows a genuinely absent optional sidecar while rejecting existing unsafe
+  paths, links and permission failures; mandatory database/key checks remain.
+  Three deterministic hostile/race regressions were added, and an independent
+  reviewer executed those plus the actual competing-process test: four passed.
+  The other failure was a stale SRC-01-unimplemented assertion; it now checks
+  SRC-05 and also verifies the new owner-only SEC boundary. The two affected
+  modules then passed 57 tests, one Linux-only skip and one warning.
+- Independent source review found an unhandled Decimal exception for an extreme
+  JSON exponent. Both exponent signs now fail with sanitized SourceError. The
+  complete SEC/Alpaca module passed 101 tests; the reviewer separately passed the
+  two hostile cases. These checks preceded a new frozen **1,461-test** full run.
+  The corrected frozen full run passed **1,460 tests, one Linux-only skip, one
+  existing warning, 92.33% combined coverage in 583.60 seconds**. The same source
+  passed the lock check, Ruff format/lint and strict mypy gate. Full text/XML:
+  `.local/v0-phase-c-proof/final.txt` and `final.xml`. No Python production/test
+  edits occurred during this final run. The unchanged 90% threshold was met.
+- A stopped-runtime Phase C backup restored to a distinct new path with **245
+  byte-identical files**, including both canonical instrument revisions. Counts
+  matched: seven users, eight jobs, 15 data operations and 12 owned datasets.
+  The archive excludes `vault.sqlite3` and master-key files. Archive SHA-256:
+  `d8c76d7ba3250263ead01299eec6c7e823d99128294360a13c948d4a509ad267`.
+  Independent evidence: `.local/v0-phase-c-proof/restoration-proof.json`.
+  The original runtime/vault are retained. A distinct synthetic private vault
+  was used when subsequently testing the restored application.
+  The first browser launch preceded server readiness and failed with connection
+  refused; its evidence is retained. After an explicit readiness check, the
+  restored browser passed **48 checks, 26 screenshots, zero errors** at
+  07:26:06.189–07:27:00.911 UTC. The delayed-response account-isolation test also
+  passed with zero provider requests. Evidence is under
+  `.local/v0-phase-c-proof/restored-browser-final/`.
+- The final wheel (73 members) and source archive (202 members) built
+  successfully. Membership checks excluded runtime data, vaults, caches,
+  dependencies, Git metadata and private archives, and compared updated vault,
+  parser and served JavaScript bytes with source. An initial membership-check
+  script mistakenly tried to parse the builder's `.gitignore` marker as an
+  archive; restricting inspection to `.whl`/`.tar.gz` corrected that check.
+
+The root reviewed credential, source and market math changes; another agent
+independently reviewed the owner/API/persistence integration and ran real-browser
+flows. This is cross-agent software review, not external professional approval.
+REG-001–020 and REG-F01–F04 retain their scientific and host meanings. None of
+these changes create sealed release, production promotion or live-order authority.

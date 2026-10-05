@@ -226,7 +226,9 @@ class DataAccess:
             raise
 
     def probe(self, user: User, catalogue_id: str) -> JsonRecord:
-        if catalogue_id not in ("SRC-04", "SRC-08"):
+        if catalogue_id in ("SRC-01", "SRC-02") and user.role != "owner":
+            raise AccessError("Owner role required for configured source access")
+        if catalogue_id not in ("SRC-01", "SRC-02", "SRC-04", "SRC-08"):
             raise AccessError("This connector is not implemented")
         operation_id = self._begin(user, "PROBE", catalogue_id)
         try:

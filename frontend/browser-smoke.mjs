@@ -32,6 +32,10 @@ evidence.browser = browser.version();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1080 }, locale: "en-US", timezoneId: "UTC", reducedMotion: "reduce" });
 const page = await context.newPage();
 const phaseB = process.env.QH_E2E_PHASE_B === "1";
+const connectionsEnabled = process.env.QH_E2E_CONNECTIONS === "1";
+const marketsEnabled = process.env.QH_E2E_MARKETS === "1";
+let instrumentCreated = null;
+let instrumentPayload = null;
 let importedDataset = null;
 let importPayload = null;
 page.on("pageerror", error => evidence.errors.push(error.message));
@@ -39,7 +43,7 @@ page.on("dialog", dialog => { evidence.errors.push(`Unexpected browser dialog: $
 const check = text => { evidence.checks.push(text); console.log(`PASS ${text}`); };
 async function screenshot(name) {
   const file = path.join(output, `${name}.png`);
-  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); window.scrollTo(0, 0); });
   await page.screenshot({ path: file, fullPage: true });
   evidence.screenshots.push({ name, path: file, viewport: page.viewportSize(), url: page.url(), captured_at: new Date().toISOString(), sha256: createHash("sha256").update(readFileSync(file)).digest("hex") });
 }
@@ -211,6 +215,178 @@ async function phaseBProof() {
   await noPageOverflow("Mobile data import/evidence390px"); await screenshot("20-mobile-data");
   await page.setViewportSize({ width: 1440, height: 1080 });
 }
+async function connectionProof() {
+  let probeRequests = 0;
+  const countProbe = request => { if (/\/api\/sources\/[^/]+\/probe$/u.test(request.url())) probeRequests += 1; };
+  page.on("request", countProbe);
+  const operationCount = (await (await page.request.get(`${base}/api/data-operations`)).json()).operations.length;
+  await route("settings");
+  await page.locator("#connection-form-SRC-01").waitFor();
+  assert.equal(await page.locator('#connections-panel input[type="checkbox"]:checked').count(), 0);
+  const privateInputs = page.locator('#connections-panel input[data-private-field="true"]:not([type="checkbox"])');
+  for (const input of await privateInputs.all()) { assert.equal(await input.getAttribute("type"), "password"); assert.equal(await input.inputValue(), ""); }
+  const initial = await (await page.request.get(`${base}/api/connections`)).json();
+  assert.equal(initial.live_credentials, "FORBIDDEN");
+  assert.ok(initial.connections.every(connection => connection.externally_validated === false));
+  check("Owner sees only masked connection metadata, blank password fields and unchecked rights declarations");
+  const fakeOrg = "Synthetic Browser Lab";
+  const fakeEmail = "synthetic-browser@example.invalid";
+  const fakeKey = `SYNTHETIC_KEY_${randomBytes(8).toString("hex")}`;
+  const fakeSecret = `SYNTHETIC_SECRET_${randomBytes(16).toString("hex")}`;
+  await page.getByLabel("SEC organization", { exact: true }).fill(fakeOrg);
+  await page.getByLabel("SEC contact email", { exact: true }).fill(fakeEmail);
+  await page.getByLabel("SEC company CIK", { exact: true }).fill("0000320193");
+  await page.getByLabel(/I have reviewed the SEC access terms/).check();
+  await page.getByRole("button", { name: "Save SEC connection", exact: true }).click();
+  await page.getByText(/SRC-01 configuration saved privately/).waitFor();
+  await page.getByLabel("Alpaca key ID", { exact: true }).fill(fakeKey);
+  await page.getByLabel("Alpaca secret key", { exact: true }).fill(fakeSecret);
+  await page.getByLabel("Alpaca credential source", { exact: true }).selectOption("PAPER_ACCOUNT");
+  await page.getByLabel(/I confirm that this account is entitled/).check();
+  await page.getByLabel(/I confirm this bounded access adds no incremental charge/).check();
+  await page.getByRole("button", { name: "Save Alpaca connection", exact: true }).click();
+  await page.getByText(/SRC-02 configuration saved privately/).waitFor();
+  const masked = await (await page.request.get(`${base}/api/connections`)).json();
+  assert.ok(masked.connections.every(connection => connection.state === "CONFIGURED" && connection.masked === "********" && connection.externally_validated === false));
+  for (const value of [fakeOrg, fakeEmail, fakeKey, fakeSecret]) assert.ok(!JSON.stringify(masked).includes(value));
+  for (const input of await privateInputs.all()) assert.equal(await input.inputValue(), "");
+  assert.equal(await page.locator('#connections-panel input[type="checkbox"]:checked').count(), 0);
+  const storage = await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }));
+  for (const value of [fakeOrg, fakeEmail, fakeKey, fakeSecret]) assert.ok(!storage.includes(value));
+  await screenshot("22-private-connections-masked");
+  check("Synthetic SEC/Alpaca settings save through real UI/API without exposing or storing plaintext in the browser");
+  await page.getByLabel("Alpaca secret key", { exact: true }).fill("SYNTHETIC_UNSAVED_SECRET");
+  const oldField = await page.getByLabel("Alpaca secret key", { exact: true }).elementHandle();
+  await route("overview");
+  assert.equal(await oldField.evaluate(input => input.value), ""); await oldField.dispose();
+  await route("sources");
+  await page.getByRole("button", { name: "Test configured source", exact: true }).first().waitFor();
+  assert.equal(await page.getByRole("button", { name: "Test configured source", exact: true }).count(), 2);
+  check("Navigation clears detached private fields; only configured owner sources expose explicit test actions");
+  await route("settings");
+  await page.getByRole("button", { name: "Rotate vault encryption key", exact: true }).waitFor();
+  const rotationPromise = page.waitForResponse(response => response.url().endsWith("/api/connections/rotate") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Rotate vault encryption key", exact: true }).click();
+  const rotated = await rotationPromise; assert.equal(rotated.status(), 200);
+  const rotation = await rotated.json(); assert.ok(rotation.versions_rotated >= 2);
+  await page.getByText("Vault encryption key rotated.", { exact: true }).waitFor();
+  evidence.synthetic_connection_rotation = { versions_rotated: rotation.versions_rotated, old_keys_retained: rotation.old_keys_retained, protection: rotation.protection };
+  check("Owner rotates actual encrypted test-vault versions through the UI and sees the returned protection limits");
+  const badCsrf = await page.request.post(`${base}/api/connections/SRC-01/revoke`, { headers: { "X-QH-Request": "1", "X-CSRF-Token": "incorrect" }, data: {} });
+  assert.equal(badCsrf.status(), 403);
+  for (const [name, id] of [["Revoke SEC connection", "SRC-01"], ["Revoke Alpaca connection", "SRC-02"]]) {
+    await page.getByRole("button", { name, exact: true }).click();
+    await page.getByText(`${id} connection revoked.`, { exact: true }).waitFor();
+    await page.locator(`[data-connection="${id}"]`).getByText("REVOKED", { exact: true }).waitFor();
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noPageOverflow("Mobile private settings390px"); await screenshot("23-private-connections-revoked-mobile");
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  await route("sources"); await page.getByLabel("Search catalogue", { exact: true }).waitFor();
+  await page.locator(".source-grid .panel").filter({ has: page.getByText("SRC-01", { exact: true }) }).getByText("REVOKED", { exact: true }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Test configured source", exact: true }).count(), 0);
+  assert.equal((await (await page.request.get(`${base}/api/data-operations`)).json()).operations.length, operationCount);
+  assert.equal(probeRequests, 0); page.off("request", countProbe);
+  check("Revocation removes configured test actions; CSRF is enforced and save/rotate/revoke make zero provider-probe requests");
+}
+async function deniedConnectionProof() {
+  let privateRequests = 0;
+  const countRequest = request => { if (request.url().includes("/api/connections")) privateRequests += 1; };
+  page.on("request", countRequest);
+  await route("settings"); await page.getByText(/This account cannot view or change private connection settings/).waitFor();
+  assert.equal(await page.locator('[id^="connection-form-"]').count(), 0);
+  await route("sources"); await page.getByLabel("Search catalogue", { exact: true }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Test configured source", exact: true }).count(), 0);
+  assert.equal(privateRequests, 0); page.off("request", countRequest);
+  const current = await apiSession();
+  assert.equal((await page.request.get(`${base}/api/connections`)).status(), 403);
+  assert.equal((await page.request.post(`${base}/api/connections/rotate`, { headers: { "X-QH-Request": "1", "X-CSRF-Token": current.csrf }, data: {} })).status(), 403);
+  check(`${current.user.role}: private settings perform no connection read and direct configuration/rotation API access is denied`);
+}
+async function marketsProof() {
+  await route("markets");
+  await page.locator("#instrument-create-form").waitFor();
+  const oldSymbol = `SYNTH${randomBytes(3).toString("hex").toUpperCase()}`;
+  const newSymbol = `${oldSymbol}B`;
+  await page.getByLabel("Instrument ticker / pair", { exact: true }).fill(oldSymbol);
+  await page.getByLabel("Activity begins (UTC)", { exact: true }).fill("2020-01-01T00:00:00Z");
+  await page.getByLabel("Instrument source reference", { exact: true }).fill("Synthetic browser fixture; no real listing or publication assertion");
+  const createPromise = page.waitForResponse(response => response.url().endsWith("/api/instruments") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Register instrument", exact: true }).click();
+  const created = await createPromise; assert.equal(created.status(), 201);
+  instrumentCreated = await created.json(); instrumentPayload = created.request().postDataJSON();
+  assert.equal(instrumentCreated.record.revision, 1); assert.equal(instrumentCreated.revision_count, 1);
+  assert.equal(instrumentCreated.record.evidence_mode, "SYNTHETIC");
+  assert.equal(instrumentCreated.historical_availability, "LOCAL_RECORDED_TIME_ONLY");
+  assert.equal(instrumentCreated.empirically_validated, false);
+  assert.match(instrumentCreated.record.instrument_id, /^INSTRUMENT-/u);
+  await page.locator("#instrument-detail").getByText(instrumentCreated.digest, { exact: true }).waitFor();
+  await page.getByLabel("New historical ticker", { exact: true }).fill(newSymbol);
+  await page.getByLabel("New ticker begins (UTC)", { exact: true }).fill("2025-01-01T00:00:00Z");
+  await page.getByLabel("Correction reason", { exact: true }).fill("Synthetic historical ticker correction; retain prior local knowledge");
+  const correctionPromise = page.waitForResponse(response => response.url().endsWith(`/api/instruments/${instrumentCreated.record.instrument_id}`) && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Append ticker correction", exact: true }).click();
+  const correctionResponse = await correctionPromise; assert.equal(correctionResponse.status(), 200);
+  const corrected = await correctionResponse.json();
+  assert.equal(corrected.record.instrument_id, instrumentCreated.record.instrument_id);
+  assert.equal(corrected.record.revision, 2); assert.equal(corrected.revision_count, 2);
+  assert.equal(corrected.record.previous_revision_digest, instrumentCreated.digest);
+  assert.deepEqual(corrected.record.instrument.symbols.map(row => row.symbol), [oldSymbol, newSymbol]);
+  await page.locator("#instrument-detail").getByText(corrected.digest, { exact: true }).waitFor();
+  assert.equal(await page.getByRole("table", { name: "Instrument historical symbols", exact: true }).locator("tbody tr").count(), 2);
+  check("Markets UI creates a stable synthetic identity and appends a ticker correction with both canonical revisions retained");
+  const current = await apiSession();
+  const stale = await page.request.post(`${base}/api/instruments/${instrumentCreated.record.instrument_id}`, { headers: { "X-QH-Request": "1", "X-CSRF-Token": current.csrf }, data: { ...instrumentPayload, expected_digest: instrumentCreated.digest } });
+  assert.equal(stale.status(), 409);
+  assert.equal((await (await page.request.get(`${base}/api/instruments/${instrumentCreated.record.instrument_id}`)).json()).revision_count, 2);
+  check("Stale canonical instrument digest is rejected without replacing the latest revision");
+  await page.getByLabel("Known by the app (UTC)", { exact: true }).fill(instrumentCreated.record.recorded_at);
+  await page.getByLabel("Effective instrument time (UTC)", { exact: true }).fill("2025-06-01T12:00:00Z");
+  await page.getByRole("button", { name: "Look up historical metadata", exact: true }).click();
+  await page.locator("#instrument-asof-result").getByText(oldSymbol, { exact: true }).waitFor();
+  await page.locator("#instrument-asof-result").getByText(instrumentCreated.digest, { exact: true }).waitFor();
+  await screenshot("25-markets-prior-knowledge");
+  await page.getByLabel("Known by the app (UTC)", { exact: true }).fill(corrected.record.recorded_at);
+  await page.getByRole("button", { name: "Look up historical metadata", exact: true }).click();
+  await page.locator("#instrument-asof-result").getByText(newSymbol, { exact: true }).waitFor();
+  check("Historical lookup distinguishes original local knowledge from a later correction at the same effective time");
+  await page.getByLabel("Calendar start date", { exact: true }).fill("2025-11-27");
+  await page.getByLabel("Calendar end date", { exact: true }).fill("2025-11-28");
+  const nyPromise = page.waitForResponse(response => response.url().includes("/api/calendars/XNYS?") && response.request().method() === "GET");
+  await page.getByRole("button", { name: "Load trading sessions", exact: true }).click();
+  const nyResponse = await nyPromise; assert.equal(nyResponse.status(), 200); const ny = await nyResponse.json();
+  assert.equal(ny.schedule.sessions.length, 1); assert.equal(ny.schedule.sessions[0].label, "2025-11-28");
+  assert.equal(Date.parse(ny.schedule.sessions[0].close_at), Date.parse("2025-11-28T18:00:00Z"));
+  await page.getByRole("table", { name: "Actual market trading sessions", exact: true }).getByText(ny.schedule.sessions[0].close_at, { exact: true }).waitFor();
+  await screenshot("26-markets-nyse-early-close");
+  check("Actual NYSE calendar excludes Thanksgiving and renders the next day's 18:00 UTC early close");
+  await page.getByLabel("Market calendar", { exact: true }).selectOption("FX_NY_17");
+  await page.getByLabel("Calendar start date", { exact: true }).fill("2025-03-07");
+  await page.getByLabel("Calendar end date", { exact: true }).fill("2025-03-10");
+  const fxPromise = page.waitForResponse(response => response.url().includes("/api/calendars/FX_NY_17?") && response.request().method() === "GET");
+  await page.getByRole("button", { name: "Load trading sessions", exact: true }).click();
+  const fxResponse = await fxPromise; assert.equal(fxResponse.status(), 200); const fx = await fxResponse.json();
+  assert.deepEqual(fx.schedule.sessions.map(row => row.label), ["2025-03-07", "2025-03-10"]);
+  assert.equal(Date.parse(fx.schedule.sessions[1].open_at), Date.parse("2025-03-09T21:00:00Z"));
+  await page.getByRole("table", { name: "Actual market trading sessions", exact: true }).getByText(fx.schedule.sessions[1].open_at, { exact: true }).waitFor();
+  await screenshot("27-markets-fx-weekend");
+  check("Named FX convention skips weekend labels and handles the spring DST Sunday opening in UTC");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noPageOverflow("Mobile Markets forms/history/calendar390px"); await screenshot("28-mobile-markets");
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  evidence.instrument_checks = { instrument_id: instrumentCreated.record.instrument_id, original_registry_digest: instrumentCreated.digest, corrected_registry_digest: corrected.digest, original_recorded_at: instrumentCreated.record.recorded_at, corrected_recorded_at: corrected.record.recorded_at, nyse_calendar_digest: ny.digest, fx_calendar_digest: fx.digest };
+}
+async function deniedInstrumentProof() {
+  const current = await apiSession();
+  await route("markets");
+  await page.getByText(/Your account can read shared instruments and calendars/).waitFor();
+  assert.equal(await page.locator("#instrument-create-form").count(), 0);
+  const shared = await page.request.get(`${base}/api/instruments/${instrumentCreated.record.instrument_id}`); assert.equal(shared.status(), 200);
+  assert.equal((await shared.json()).record.instrument_id, instrumentCreated.record.instrument_id);
+  const denied = await page.request.post(`${base}/api/instruments`, { headers: { "X-QH-Request": "1", "X-CSRF-Token": current.csrf }, data: instrumentPayload });
+  assert.equal(denied.status(), 403);
+  check(`${current.user.role}: shared instrument metadata is readable while registration is denied by UI and API`);
+}
 try {
   await page.goto(base);
   const served = await page.request.get(`${base}/static/app.js`);
@@ -254,7 +430,9 @@ try {
   for (const role of ["researcher", "reader"]) if (!users.some(user => user.username === accounts[role].username)) await createUser(role);
   await route("settings"); await page.getByRole("cell", { name: accounts.reader.username, exact: true }).waitFor();
   await screenshot("06-owner-users"); check("Owner creates researcher and reader accounts through settings");
+  if (connectionsEnabled) await connectionProof();
   if (phaseB) await phaseBProof();
+  if (marketsEnabled) await marketsProof();
   await route("project"); await page.getByRole("heading", { name: "Project checkpoint", exact: true }).waitFor(); await screenshot("07-project-status");
   await route("overview"); await context.setOffline(true);
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
@@ -275,6 +453,8 @@ try {
   const ownedJobs = await page.request.get(`${base}/api/jobs`); assert.ok(!(await ownedJobs.json()).some(job => job.id === equity.job.id));
   const researcherUsers = await page.request.get(`${base}/api/users`); assert.equal(researcherUsers.status(), 403);
   check("Researcher cannot read owner job IDs/list or users through the API");
+  if (connectionsEnabled) await deniedConnectionProof();
+  if (marketsEnabled) await deniedInstrumentProof();
   if (phaseB) {
     const privateDatasets = (await (await page.request.get(`${base}/api/datasets`)).json()).datasets;
     assert.ok(!privateDatasets.some(dataset => dataset.dataset_id === importedDataset.dataset_id));
@@ -290,6 +470,8 @@ try {
   assert.equal(rejected.status(), 403);
   const crossAccess = await page.request.get(`${base}/api/jobs/${equity.job.id}`); assert.equal(crossAccess.status(), 403);
   await screenshot("11-reader-restrictions"); check("Reader cannot submit jobs or read another user's result even through direct API requests");
+  if (connectionsEnabled) await deniedConnectionProof();
+  if (marketsEnabled) await deniedInstrumentProof();
   if (phaseB) {
     await route("data"); await page.getByText(/Your reader role can inspect datasets/).waitFor();
     assert.equal(await page.getByRole("button", { name: "Import dataset", exact: true }).count(), 0);

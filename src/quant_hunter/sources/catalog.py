@@ -43,6 +43,15 @@ def list_sources() -> tuple[SourceSpec, ...]:
             "Identifying User-Agent required",
             "SEC fair-access and reuse terms must be reviewed before automated acquisition",
             "Acceptance/accession/amendment semantics required; not a price feed",
+            implementation_status="IN_PROGRESS",
+            capabilities=(
+                "RECENT_SUBMISSIONS",
+                "SINGLE_CONCEPT_FACTS",
+                "OWNER_CONFIGURED_BOUNDED_DIAGNOSTIC",
+            ),
+            cost_class="FREE",
+            documentation_reviewed_on="2026-10-05",
+            rate_limit="Application: one explicit configured probe per minute; SEC maximum 10 requests/second is not a target",
         ),
         SourceSpec(
             "SRC-02",
@@ -52,6 +61,15 @@ def list_sources() -> tuple[SourceSpec, ...]:
             "Provider API credentials; no account creation here",
             "Feed, tier, redistribution and user rights depend on agreement",
             "Feed coverage and delay must be retained; partial feed is not consolidated market",
+            implementation_status="IN_PROGRESS",
+            capabilities=(
+                "READ_ONLY_HISTORICAL_BARS",
+                "EXPLICIT_IEX_OR_SIP_CLIENT",
+                "BOUNDED_PAGINATION",
+                "OWNER_CONFIGURED_IEX_DIAGNOSTIC",
+            ),
+            documentation_reviewed_on="2026-10-05",
+            rate_limit="Application: one explicit configured probe per minute; provider tier quota must be verified",
         ),
         SourceSpec(
             "SRC-03",

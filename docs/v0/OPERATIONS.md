@@ -71,3 +71,10 @@ operations and 3 owned datasets). The restored application subsequently passed
 listed in TEST_REPORT.md. This proves this tested software recovery path, not
 host isolation, source licensing, scientific validity or future recovery under
 every failure mode.
+
+Private provider configuration is deliberately outside the runtime archive.
+Restore of the runtime alone does not restore or activate those credentials.
+Use the separate owner procedure in CREDENTIALS.md, preserving all key generations
+and the original Windows DPAPI identity context. The new canonical instrument
+records live under the runtime research registry and are ordinary immutable
+runtime records; credentials and master keys never belong there.
