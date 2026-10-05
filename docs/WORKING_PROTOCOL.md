@@ -1,5 +1,13 @@
 # Quant Hunter Working Protocol
 
+## Authorized V0 workflow exception
+
+For the owner's 2026-10-05 V0 mission, DEC-0037 permits continuous implementation,
+verification, commit and push on `version-0` without a stop or fresh approval after
+each internal batch. `main` and the verified `work-before-v0` backup are immutable
+for this mission. All scientific, security, review and spending limits below
+retain their force; a software checkpoint is not a scientific or host gate pass.
+
 ## Purpose and Stability
 
 This document defines how Nova/ChatGPT, Codex, and the project owner collaborate,

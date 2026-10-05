@@ -1,5 +1,26 @@
 # Decisions
 
+## V0 mission reconciliation — DEC-0037 (2026-10-05)
+
+- **Status:** ACCEPTED for implementation scope; scientific/review gates unchanged.
+- **Scope:** governance / architecture / operations.
+- **Context:** The owner explicitly requested execution of the entire attached V0
+  mandate on `version-0` after preserving `work-before-v0`.
+- **Decision:** Apply continuous V0 implementation and periodic commit/push on
+  version-0; supersede the prior stop-after-one-batch convention for this mission.
+  Build synthetic/exploratory software without claiming Stage 1 completion or
+  granting sealed-OOS, production or live-money authority. Preserve Item 8 as sole
+  experiment lifecycle/attempt authority and all reviewed invariants.
+- **Alternatives considered:** Stopping after backup would not execute the request;
+  weakening host gates would manufacture security evidence.
+- **Consequences:** Native-first delivery on D:, real calculations with declared
+  limits, zero new paid services. Host/security mutation and paid or real-money
+  actions remain outside authorization. Independent review remains required.
+- **References:** `v0/MISSION.md`, `v0/DECISIONS.md`, `v0/RESUME.md`, REG-001–020.
+- **Supersedes:** Only the workflow/scope restrictions expressly changed by the
+  owner. Historical decisions below retain their original evidence and rationale.
+- **Owner and approver:** Owner's direct V0 request dated 2026-10-05.
+
 ## Decision Policy
 
 Record decisions that affect architecture, research methodology, statistical validity, data timing, leakage controls, experiment scope, cost modeling, production isolation, security, or spending. Record them before or with the change—never after seeing results merely to justify an outcome. Unresolved assumptions belong here as explicit open questions rather than silent guesses.

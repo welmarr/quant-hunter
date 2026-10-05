@@ -1,5 +1,21 @@
 # Quant Hunter Project Status
 
+## V0 operational overlay — 2026-10-05
+
+The owner authorized continuous V0 implementation on `version-0`; see DEC-0037
+and `v0/RESUME.md`. The clean prior checkout was saved and remotely verified as
+`work-before-v0` at `7346cf4f79ca5897777c0118f8cf4c2292be929e`.
+The same commit starts version-0. Main and the saved branch must remain unchanged.
+V0 implementation is IN_PROGRESS; no complete product claim is made.
+
+Remote main was verified at `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2` (PR #12),
+with successful post-merge Quality #51. PR #13 is open and unmerged. There are no
+open GitHub Issues as of this inspection; historical issue drafts have no remote
+IDs. Main is unprotected. No formal GitHub review was found for PR #12/#13.
+The inherited hardening commit has no newly verified independent review.
+RISK-017, RISK-018, RISK-023 and RISK-024 remain open. The following foundation
+checkpoint is retained as historical evidence; it does not describe V0 completion.
+
 ## CURRENT RESUME STATE
 
 | Field | Value |

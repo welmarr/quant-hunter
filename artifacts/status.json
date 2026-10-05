@@ -1,0 +1,83 @@
+{
+  "mission": "Quant Hunter V0",
+  "status": "IN_PROGRESS",
+  "date": "2026-10-05",
+  "reference_commit": "7346cf4f79ca5897777c0118f8cf4c2292be929e",
+  "branch": "version-0",
+  "host_evidence": "BLOCKED_EXTERNAL",
+  "data_mode": "SYNTHETIC",
+  "features": [
+    {
+      "name": "Native launch and first backtest",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Owner/researcher/reader authentication",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "CSV/Parquet immutable import",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "22-source catalogue and priority connectors",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Instrument registry and PIT quality",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Paper library and ten sourced CRP implementations",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Fifteen PatternLab families",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Bounded multi-scale pattern search and benchmarks",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Equity/FX accounting and costs",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Governed experiments and chronological validation",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Portfolio and ensemble/meta-model baseline",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Persistent local paper execution and risk",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Paper broker adapters and contract tests",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Local notifications and optional Telegram",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Worker restart/cancellation/recovery",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Security and failure tests",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Backup/restore and clean-clone proof",
+      "status": "NOT_STARTED"
+    },
+    {
+      "name": "Responsive UI, browser evidence and status",
+      "status": "NOT_STARTED"
+    }
+  ]
+}

@@ -16,3 +16,9 @@ dist/
 # Generated research data and artifact objects never belong in Git.
 artifacts/objects/
 /data/
+
+# V0 local runtime, data, secrets, caches and browser evidence.
+/.local/
+**/node_modules/
+/.env.*
+!/.env.example

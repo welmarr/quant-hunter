@@ -1,5 +1,13 @@
 # Roadmap
 
+## V0 mission overlay — 2026-10-05
+
+DEC-0037 records the owner's explicit continuous V0 software authorization on
+`version-0`. `v0/MISSION.md` and `v0/REQUIREMENTS.md` define its delivery scope.
+The historical foundation gates below remain truthfully open where evidence is
+missing. Synthetic/exploratory implementation does not certify Stage 1, access
+sealed evidence, promote research, authorize host mutations or permit real money.
+
 ## Stage Gates
 
 Progression is evidence-gated, not calendar-gated. No later stage is authorized by completing an earlier document. Strategy implementation, paper trading, shadow validation, and controlled capital each require separate scope and approval.
