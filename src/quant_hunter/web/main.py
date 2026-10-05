@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 from pathlib import Path
 
 import uvicorn
 
+from quant_hunter.sources import list_sources
 from quant_hunter.web.api import create_app
 from quant_hunter.web.lease import RuntimeLease
 from quant_hunter.web.runtime import Runtime, fixture_catalog
@@ -31,6 +33,8 @@ def main() -> None:
             process_job=runner.process_one,
             get_run=runner.lab.get_run,
             fixtures=fixture_catalog(),
+            data=runner.data,
+            sources=[asdict(source) for source in list_sources()],
         )
         uvicorn.run(
             app, host="127.0.0.1", port=args.port, access_log=False, log_level="warning"

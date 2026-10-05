@@ -50,3 +50,16 @@ this private directory must not be shared or committed. Browser temporaries
 remain in `.tools/browser-temp`. Screenshot evidence records actual viewport,
 URL, capture time and SHA-256; the reference must honestly identify an
 uncommitted snapshot when applicable.
+
+Set `QH_E2E_PHASE_B=1` to include the actual source catalogue, CSV import,
+immutable correction, bounded dataset pagination, and data access checks.
+`QH_E2E_PARQUET` may identify a local synthetic Parquet fixture for the same
+upload workflow. These tests do not query external providers by default.
+Only set `QH_E2E_LIVE_PROBE=1` when one bounded public ECB retrieval has been
+explicitly authorized; its actual response and limitations are retained in
+the proof manifest. `QH_E2E_EXPECTED_STATIC` may identify the committed
+JavaScript asset in a separate clean checkout for an exact served-byte check.
+
+The Data view loads 25 owned dataset versions per page. Imports and account
+changes reset to the first page. Historical availability and licensing remain
+uploader declarations, and imports do not enable historical backtesting.

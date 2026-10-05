@@ -1,7 +1,8 @@
 # Run the first V0 slice
 
-This is an in-progress synthetic software demonstration, not the complete V0.
-No historical returns or real-money capability are claimed.
+This is an in-progress V0 application. Backtests currently use synthetic data;
+imports and bounded public-source diagnostics have separate provenance. No
+historical returns or real-money capability are claimed.
 
 From Windows CMD in `D:\quant-hunter`:
 
@@ -44,6 +45,26 @@ Source/configuration/environment/dataset/result bytes are bound by immutable
 digests. An actual source snapshot is retained for runs made before a development
 commit, with the Git parent labeled separately.
 
-Source connectors, imports, PatternLab, canonical research studies, paper brokers,
-notifications, full recovery/export tooling and later acceptance requirements
-remain tracked in REQUIREMENTS.md. Do not infer completion from navigation entries.
+Sources now lists all 22 mission catalogue entries with their actual implementation
+status. BLS and ECB have explicit bounded test buttons; a successful connection
+does not approve a dataset or establish point-in-time history. No background
+network probe runs merely because you open the page. Other connectors remain
+unconfigured/unimplemented until their respective work is verified.
+
+Data accepts CSV or Parquet files up to 2,000,000 bytes. The required columns are
+`open_at,close_at,available_at,open_bid,open_ask,close`; optional columns are
+`high,low,volume`. CSV timestamps need explicit offsets or Z. Parquet timestamps
+must be native and timezone-aware, with fixed numeric/decimal price/volume types.
+Nested, binary and string column schemas are refused. Every row must be valid;
+no missing price is silently filled and duplicate/contradictory bars are refused.
+The page offers a clearly synthetic sample. Declare the source, license and
+instrument; a declaration is not verified permission or historical availability.
+Imports preserve exact raw bytes and new immutable normalized versions. They are
+not yet connected to the synthetic-only backtest. Read details and limits in
+`SOURCES.md` and the requirement matrix.
+
+Private backup and verified restoration commands are in `OPERATIONS.md`.
+
+PatternLab, canonical research studies, paper brokers, notifications, portfolio/
+ensemble workflows and later acceptance requirements remain tracked in
+REQUIREMENTS.md. Do not infer completion from navigation entries.

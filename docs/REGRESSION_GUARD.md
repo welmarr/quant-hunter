@@ -25,6 +25,14 @@ change requires an accepted decision and explicit independent review.
 
 ## Implemented and Reviewed Invariants
 
+The V0 import/source/recovery checkpoint rechecks REG-001–020 as applicable:
+immutable raw and registry history, exact configuration/source graph binding,
+retained unknown timing/rights, unchanged Item 8 authority, separate operational
+state and no host/research promotion. Its full gate passed 1,193 tests and its
+restored browser workflow passed 32 checks. Cross-agent findings were corrected
+before the frozen gate. Hosted CI and independent review retain their separate
+statuses; none of these results declares the full V0 or Stage 1 complete.
+
 V0's 2026-10-05 application overlay reuses the invariant implementations below.
 Its synthetic loopback slice and agent cross-review are recorded in
 `v0/TEST_REPORT.md`. That evidence does not change the independent-review status

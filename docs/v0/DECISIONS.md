@@ -63,3 +63,56 @@ Primary software references consulted 2026-10-05:
 [TypeScript](https://www.typescriptlang.org/docs/handbook/intro.html).
 No paid service or additional account was used. Hosted CI's existing public,
 standard-runner profile now also runs on version-0 pushes.
+
+## V0-D05 — Declared uploads and bounded public diagnostics
+
+CSV/Parquet imports accept a closed bar schema and explicit instrument, license
+and availability declarations. Raw bytes and normalized Parquet have separate
+immutable identities, using existing raw-capture/derived-data authorities.
+Corrections allocate new IDs. Reads replay normalization and verify the complete
+graph. Structural PASS does not approve source rights, vintage timing, market
+coverage or research validity. Upload evidence `HISTORICAL` means uploader-
+declared historical origin, not verified historical availability. It is never
+silently relabeled SYNTHETIC or admitted to the current synthetic simulator.
+
+The initial limits are 2,000,000 raw bytes, 16,000,000 decoded bytes and 100,000
+rows. Native Parquet timestamp/fixed numeric schemas and bounded page metadata
+are checked before Arrow decoding. No arbitrary paths, URLs, archives or schema
+inference enter the importer. Pagination bounds default dataset verification.
+
+BLS v1 monthly series and ECB daily reference FX use fixed public HTTPS endpoints,
+public-IP pinning with hostname TLS, bounded responses and no automatic retries.
+Each explicit small probe creates a reviewed CANDIDATE source before acquisition,
+retains exact bytes and creates a PENDING dataset. Latest revisions retain UNKNOWN
+publication/revision times and remain ineligible for historical PIT use. ECB
+reference rates remain indicative. Credentials are not needed by these clients.
+The application serializes admission, limits BLS to 25 probes per rolling day,
+limits each user to one probe per minute, and retains failed/interrupted work.
+
+All imports/probes combined are capped at 1,000 operations in this initial
+profile, preserving the 2 GB cumulative raw-acquisition budget. Runtime admission
+checks the 30 GB storage cap and reserves at least 20 GiB or 15% of the volume.
+The native profile aggregates its `.local` runtimes, results and backup copies;
+an explicitly configured root outside `.local` receives its own bounded check
+and requires owner accounting of other external roots.
+Existing material is not deleted when a limit is reached. These native profile
+limits remain visible limitations; larger research must receive a separately
+reviewed bounded configuration. No paid source, live trading or scientific
+promotion is introduced. SEC/Alpaca clients are subsequent isolated work, not
+already integrated by the BLS/ECB checkpoint.
+
+## V0-D06 — Private offline backup format
+
+Backup and restore use a versioned, checksum-manifest ZIP_STORED format, with
+bounded central-directory metadata, files, sizes and total bytes. The runtime
+must be stopped and its OS lease acquired before backup. Restore accepts a new
+destination only and holds its lease while publishing. Every member is verified
+before and during extraction; SQLite integrity is checked before removing an
+incomplete-restore marker. An incomplete runtime cannot launch.
+
+The archive is PRIVATE: it contains local accounts/password hashes and source
+data governed by their original rights. It must never enter Git or a shared
+export. Master keys/credential stores are excluded and require a separate owner
+procedure when introduced. An archive proves preservation of bytes and database
+integrity, not scientific validity or authorization to share those bytes. No
+existing archive, destination, user data or cache is overwritten or purged.

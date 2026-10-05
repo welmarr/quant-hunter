@@ -591,3 +591,31 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
 - **References:** DEC-0037; `v0/DECISIONS.md` V0-D03/D04;
   `v0/TEST_REPORT.md`; REG-001–020; `tests/test_v0_*.py`.
 - **Owner and approver:** Owner's explicit continuous V0 mission, 2026-10-05.
+
+### DEC-0039 — V0 Uploads, Public Diagnostics and Private Recovery
+
+- **Date:** 2026-10-05
+- **Status:** ACCEPTED for authorized software implementation; scientific and
+  independent-review gates remain unchanged.
+- **Scope:** provenance / temporal semantics / input bounds / operational recovery.
+- **Decision:** Apply V0-D05/D06 in `v0/DECISIONS.md`. Reuse immutable raw capture,
+  deterministic normalized Parquet and governed SOURCE/DATASET chains. Uploader
+  declarations remain unverified. Register reviewed free-source candidates before
+  small BLS/ECB diagnostic requests. Preserve unknown publication/revision timing,
+  indication versus execution semantics, and exact raw responses. Current imported
+  or public data cannot enter the synthetic-only backtest or sealed workflows.
+- **Alternatives considered:** Treating upload metadata as source approval or
+  current macro values as historical vintages would manufacture validity. Generic
+  unbounded downloads or arbitrary endpoint URLs would exceed the mission limits.
+  Overwriting runtime state during restore would risk losing the user's work.
+- **Consequences:** Ownership and admission are operational SQLite controls;
+  immutable objects/registries remain data authority. Resource/response/page bounds,
+  safe failures, no implicit retries, exact correction versions, and private
+  checksum backups with no-overwrite restoration become tested application controls.
+  These do not close RISK-017/018, validate a strategy, approve redistribution,
+  authorize paid access, or enable live trading. Source and recovery implementation
+  status is determined by executed tests, not this decision's acceptance.
+- **References:** DEC-0037/0038; REG-001–007; RISK-003–005/011/012/015/017–019;
+  `v0/SOURCES.md`; `v0/TEST_REPORT.md`; `tests/test_v0_imports.py`;
+  `tests/test_v0_sources.py`; operational and restore tests.
+- **Owner and approver:** Owner's explicit continuous V0 mission, 2026-10-05.

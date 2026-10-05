@@ -6,6 +6,14 @@
   remain unresolved; no raw data, credentials or large evidence artifacts enter Git.
 - Native app additions require authentication, authorization, hostile-input and
   recovery verification before claiming local delivery.
-- All initial datasets are synthetic. Neither software tests nor fixture returns
-  establish empirical validity, profitability or real-money readiness.
+- Backtest datasets remain synthetic. Bounded BLS/ECB acquisitions have actual
+  raw-byte evidence but unknown historical publication/revision timing and
+  PENDING quality. Uploaded history is a declaration, not verified availability.
+  None establishes empirical validity, profitability or real-money readiness.
+- CSV/Parquet imports are capped at 2 MB raw, 16 MB decoded and 100,000 rows;
+  they do not yet support the mission's ten-year multi-asset research corpus.
+  The larger bounded pipeline remains required work in the requirement matrix.
+- Runtime backups contain account hashes and source data; they are private,
+  unencrypted archives, never shareable exports. Credential keys remain outside
+  this format. Incomplete restores stay quarantined and are never auto-deleted.
 - C: is below the mission's free-space reserve. New heavy resources stay on D:.

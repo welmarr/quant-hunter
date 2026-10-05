@@ -1,16 +1,17 @@
 # V0 feature matrix
 
 V0 remains IN_PROGRESS. Software verification is distinct from historical or
-scientific validation. The first executable slice uses SYNTHETIC data only.
+scientific validation. Backtests use SYNTHETIC data; public acquisitions and
+uploader declarations retain separate modes and unresolved timing/rights.
 Source-linked acceptance requirements remain in REQUIREMENTS.md.
 
 | Capability | Software status | Evidence and remaining scope |
 |---|---|---|
-| Native launch and first backtest | IN_PROGRESS | Running native application and verified UI oracle; clean-clone launch pending |
+| Native launch and first backtest | PASS | Documented clean-clone launcher and 20 real-browser checks passed at 9b74dd6; new checkpoint builds and restores independently |
 | Owner/researcher/reader authentication | PASS | Local role boundaries verified by API and real browser; additional account administration remains future work |
-| CSV/Parquet immutable import | IN_PROGRESS | Implementation underway in isolated agent checkout; not yet exposed |
-| 22-source catalogue and priority connectors | IN_PROGRESS | Catalogue and first public clients underway; not yet exposed |
-| Instrument registry and PIT quality | NOT_STARTED | Foundation PIT controls retained; full application integration pending |
+| CSV/Parquet immutable import | IN_PROGRESS | Private UI/API imports, exact raw/normalized identities, corrections and hostile parsing verified; larger corpus, mappings and research integration remain required |
+| 22-source catalogue and priority connectors | IN_PROGRESS | All 22 entries visible; bounded BLS/ECB clients and actual public probes verified; remaining priority clients are not integrated |
+| Instrument registry and PIT quality | IN_PROGRESS | Import timing/quality declarations enforced; full instrument registry and market calendar are isolated next work |
 | Paper library and ten sourced CRP implementations | NOT_STARTED | No empirical reproductions claimed |
 | Fifteen PatternLab families | NOT_STARTED | Complete mission scope retained |
 | Bounded multi-scale pattern search and benchmarks | NOT_STARTED | Complete mission scope retained |
@@ -21,9 +22,10 @@ Source-linked acceptance requirements remain in REQUIREMENTS.md.
 | Paper broker adapters and contract tests | NOT_STARTED | External credentials absent; offline client implementation remains required |
 | Local notifications and optional Telegram | NOT_STARTED | No external messages sent |
 | Worker restart/cancellation/recovery | IN_PROGRESS | Single leased worker, queued cancellation and interrupted-attempt preservation verified; complete job operations pending |
-| Security and failure tests | IN_PROGRESS | Auth/CSRF/origin/ownership/worker/immutable-evidence checks executed; broader threat and fault suite pending |
-| Backup/restore and clean-clone proof | NOT_STARTED | Git backup verified; runtime restoration not yet implemented |
-| Responsive UI, browser evidence and status | IN_PROGRESS | Six functional views verified at desktop/mobile/tablet; later modules pending |
+| Security and failure tests | IN_PROGRESS | Auth/ownership, XSS, SSRF, bounded Parquet/ZIP, disk, interruption and restore checks passed; broader V0 threat/fault suite remains |
+| Backup/restore and clean-clone proof | PASS | Private archive restored to distinct runtime: 265 identical files/equal database counts and 32 restored-browser assertions; scope/limits in OPERATIONS.md |
+| Responsive UI, browser evidence and status | IN_PROGRESS | Eight functional views including Sources/Data verified at desktop/mobile/tablet; later mission modules remain |
 
-Executed commands, failures, corrective reviews and artifact locations are in
-TEST_REPORT.md. No host gate or stage transition is claimed.
+PASS applies only to the stated bounded capability and evidence. It does not
+complete the mission or certify a host/stage/scientific gate. See TEST_REPORT.md
+for executed commands, failures, corrections and retained artifact locations.

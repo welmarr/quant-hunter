@@ -8,14 +8,18 @@ and `v0/RESUME.md`. The clean prior checkout was saved and remotely verified as
 The same commit starts version-0. Main and the saved branch must remain unchanged.
 V0 implementation is IN_PROGRESS; no complete product claim is made.
 
-The first executable slice now has a native loopback UI, local owner/researcher/
-reader accounts, an asynchronous worker, Decimal equity/FX synthetic simulation,
-and immutable Item 8 experiments. A real-browser workflow demonstrated the
-10,008 USD accounting oracle and authorization boundaries. The corrected full
-gate passed 950 tests with zero skips, one warning and 90.74% branch coverage;
-the real browser passed 19 assertions. See `v0/TEST_REPORT.md` for exact evidence and prior
-failures. CSV/Parquet imports and source management are the next implementation
-work. All remaining mission scope stays in `v0/REQUIREMENTS.md`.
+The native loopback UI has owner/researcher/reader accounts, private persistent
+jobs, Decimal synthetic equity/FX simulation and immutable Item 8 evidence.
+CSV/Parquet imports now preserve raw/normalized versions with explicit timing and
+rights declarations; bounded BLS/ECB diagnostics retain real raw observations.
+Private backup/restore reproduced 265 files and database counts in a distinct
+instance. The frozen Phase B gate passed 1,193 tests, zero skips, one warning and
+91.62% coverage; the restored browser passed 32 assertions. Prior checkpoint
+`9b74dd6` passed hosted Ubuntu/Windows CI and a separate clean-clone startup.
+See `v0/TEST_REPORT.md` for exact scope, failures and evidence. SEC/Alpaca clients,
+encrypted credentials and market calendars are next isolated work; the rest of
+the mission remains required in `v0/REQUIREMENTS.md`. No empirical or host gate is
+closed by these software checks.
 
 Remote main was verified at `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2` (PR #12),
 with successful post-merge Quality #51. PR #13 is open and unmerged. There are no

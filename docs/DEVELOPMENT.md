@@ -2,6 +2,15 @@
 
 ## Pinned toolchain
 
+The V0 application checkpoint on 2026-10-05 additionally pins FastAPI 0.142.2,
+Uvicorn 0.54.0 and dev-only httpx 0.28.1 in `uv.lock`. The optional frontend
+development toolchain uses TypeScript 5.9.3 and Playwright 1.63.0 from
+`frontend/package-lock.json`; shipped static assets require no Node runtime.
+Use `npm ci --ignore-scripts`, `npm run typecheck` and `npm run build` from
+`frontend`. Browser verification uses already installed Chrome without a browser
+download. See `v0/TEST_REPORT.md` for executed local/CI/clean-clone evidence.
+Existing toolchain/coverage/security constraints below remain in force.
+
 Stage 1B Batch 1 uses standard GIL-enabled, 64-bit CPython 3.14.7 and uv
 0.12.10. The exact runtime is pinned by `.python-version`; uv is pinned by
 `uv.toml` and CI. Patch upgrades require an explicit decision, lock

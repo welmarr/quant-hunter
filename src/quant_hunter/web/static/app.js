@@ -11,11 +11,20 @@ let pollBusy = false;
 let pageEpoch = 0;
 let detailEpoch = 0;
 let dataLoaded = false;
+let datasets = [];
+let selectedDataset = null;
+const datasetPageSize = 25;
+let datasetOffset = 0;
+let datasetTotal = 0;
+let datasetRequest = 0;
+let datasetsLoading = false;
 let view = parseView();
 let draft = { market: "EQUITY", initial_cash: "10000", quantity: "10", lookback: 1, commission: "1", slippage_bps: "0", annual_financing_rate: "0" };
-const viewNames = { overview: "Overview", backtests: "Backtests", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
+const viewNames = { overview: "Overview", sources: "Sources", data: "Data", backtests: "Backtests", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
 const paths = {
     overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
+    sources: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
+    data: "M3 6a9 3 0 0 0 18 0 9 3 0 0 0-18 0 M3 6v12a9 3 0 0 0 18 0V6 M3 12a9 3 0 0 0 18 0",
     backtests: "M4 20V4 M4 20h17 M7 15l4-5 4 3 5-8",
     experiments: "M9 3h6 M10 3v7l-6 9a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2l-6-9V3 M8 15h8",
     portfolio: "M3 7h18v14H3z M8 7V3h8v4 M3 12h18 M10 12v3h4v-3",
@@ -81,9 +90,14 @@ function dateLabel(value) {
     return Number.isNaN(date.valueOf()) ? value : date.toISOString().slice(0, 10);
 }
 function record(value) { return typeof value === "object" && value !== null && !Array.isArray(value) ? value : {}; }
+function metadataText(value) {
+    if (Array.isArray(value))
+        return value.map(item => typeof item === "object" ? JSON.stringify(item) : display(item)).join(" · ") || "—";
+    return typeof value === "object" && value !== null ? JSON.stringify(value, null, 2) : display(value);
+}
 function parseView() {
     const hash = window.location.hash.slice(1);
-    return ["overview", "backtests", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
+    return ["overview", "sources", "data", "backtests", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
 }
 function navigate(next) {
     if (view === next && document.getElementById("workspace-view")) {
@@ -112,6 +126,7 @@ class ApiError extends Error {
     }
 }
 async function api(path, payload) {
+    const requestingUser = session.user?.id;
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 15000);
     try {
@@ -124,6 +139,8 @@ async function api(path, payload) {
         }
         const response = await fetch(`/api${path}`, { method: payload === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", headers, ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}), signal: controller.signal });
         const body = await response.json().catch(() => null);
+        if (requestingUser !== undefined && requestingUser !== session.user?.id)
+            throw new ApiError("The active account changed while this request was running. Refresh to load the current account's data.", 409);
         if (!response.ok) {
             const content = record(body);
             const detail = record(content.error);
@@ -217,6 +234,12 @@ function renderAuth(message) {
     fixtures = [];
     selectedId = null;
     selectedDetail = null;
+    datasets = [];
+    selectedDataset = null;
+    datasetOffset = 0;
+    datasetTotal = 0;
+    datasetsLoading = false;
+    datasetRequest += 1;
     const setup = session.needs_owner;
     const intro = el("div", "", el("p", "eyebrow", "An independent research laboratory"), el("h1", "", "Build conviction.", el("br"), el("em", "Keep the evidence.")), el("p", "", "A local workspace for reproducible experiments, explicit assumptions, and results you can inspect."), el("div", "auth-rule"), badge("SYNTHETIC RESEARCH", "synthetic"));
     const story = el("aside", "auth-story", brand(), intro, el("footer", "", "QUANT HUNTER  /  V0 IN DEVELOPMENT"));
@@ -288,14 +311,14 @@ function renderShell() {
     const breadcrumb = el("div", "breadcrumb", "Workspace", el("span", "", "/", el("span", "", viewNames[view])));
     breadcrumb.id = "breadcrumb";
     const account = el("div", "account", el("div", "avatar", session.user?.username.slice(0, 2).toUpperCase() ?? ""), el("div", "", el("div", "account-name", session.user?.username), el("div", "account-role", session.user?.role)), button("Sign out", () => { void logout(); }, "tertiary"));
-    const topbar = el("header", "topbar", breadcrumb, badge("SYNTHETIC", "synthetic"), account);
+    const topbar = el("header", "topbar", breadcrumb, badge("SYNTHETIC ENGINE", "synthetic"), account);
     const message = el("div", "notice");
     message.id = "message";
     message.hidden = true;
     message.setAttribute("aria-live", "polite");
     const region = el("div");
     region.id = "workspace-view";
-    const main = el("main", "content", message, region, el("footer", "content-footer", el("span", "", "Quant Hunter · Reproducible research, explicit uncertainty."), el("span", "", "LOCAL / SYNTHETIC / LIVE DISABLED")));
+    const main = el("main", "content", message, region, el("footer", "content-footer", el("span", "", "Quant Hunter · Reproducible research, explicit uncertainty."), el("span", "", "LOCAL / LIVE DISABLED")));
     main.id = "main";
     main.setAttribute("aria-busy", String(!dataLoaded));
     root.replaceChildren(el("div", "app-shell", sidebar, el("div", "workspace", topbar, main)));
@@ -308,6 +331,12 @@ async function loadWorkspace() {
     }
     jobs = [];
     fixtures = [];
+    datasets = [];
+    selectedDataset = null;
+    datasetOffset = 0;
+    datasetTotal = 0;
+    datasetsLoading = false;
+    datasetRequest += 1;
     dataLoaded = false;
     renderShell();
     try {
@@ -321,6 +350,7 @@ async function loadWorkspace() {
     }
     catch (error) {
         announce(readableError(error), true);
+        document.getElementById("workspace-view")?.append(button("Reconnect workspace", () => { void loadWorkspace(); }, "secondary", "refresh"));
     }
     finally {
         document.getElementById("main")?.setAttribute("aria-busy", "false");
@@ -351,7 +381,11 @@ function renderView(focus = false) {
     if (crumb)
         crumb.replaceChildren("Workspace", el("span", "", "/", el("span", "", viewNames[view])));
     region.replaceChildren();
-    const views = { overview: renderOverview, backtests: renderBacktests, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
+    if (!dataLoaded) {
+        region.append(heading("Connecting to your local installation", viewNames[view], "Loading the current account's workspace…"));
+        return;
+    }
+    const views = { overview: renderOverview, sources: renderSources, data: renderData, backtests: renderBacktests, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
     views[view](region);
     if (focus) {
         const title = region.querySelector("h1");
@@ -391,6 +425,321 @@ function updateStats() {
     target.replaceChildren(stat("Available fixtures", dataLoaded ? String(fixtures.length) : "—", "Synthetic · locally available", true), stat("Recorded jobs", dataLoaded ? String(jobs.length) : "—", "Visible to your account"), stat("Completed runs", dataLoaded ? String(jobs.filter(complete).length) : "—", "Software results, not validation"), stat("Active jobs", dataLoaded ? String(jobs.filter(active).length) : "—", "Actual queued + running state"));
 }
 function fixtureCard(fixture) { return el("article", "fixture-row", el("div", "fixture-row-head", el("span", "fixture-title", fixture.symbol), badge(fixture.mode, "synthetic")), el("div", "fixture-details", `${marketName(fixture.market)} · ${fixture.bar_count} observations`), el("div", "fixture-dates", `${dateLabel(fixture.start)} → ${dateLabel(fixture.end)} · UTC`)); }
+function renderSources(region) {
+    const epoch = pageEpoch;
+    region.append(heading("Know where the evidence begins", "Data sources", "Inspect coverage, rights, timing limitations and the actual implementation status of each catalogue entry.", el("div", "heading-actions", button("Refresh catalogue", () => renderView(), "secondary", "refresh"))));
+    region.append(notice("A catalogue entry describes a potential source. It does not establish a configured connection, access rights, successful ingestion or point-in-time validity."));
+    const target = el("div", "", el("p", "loading-message", "Loading the source catalogue…"));
+    region.append(target);
+    void api("/sources").then(response => {
+        if (pageEpoch !== epoch || !target.isConnected)
+            return;
+        const sources = response.sources;
+        target.replaceChildren();
+        const search = field("Search catalogue", "source_search", "", { type: "search", required: false, hint: "Search source names, markets, capabilities or implementation status." });
+        search.box.classList.add("source-search");
+        const count = el("p", "small muted");
+        count.setAttribute("aria-live", "polite");
+        const cards = el("div", "source-grid");
+        const operations = panel("Data operation history", "Actual import and endpoint-probe attempts retained by the local service", button("Refresh history", () => { void loadDataOperations(operations.body, epoch); }, "tertiary compact", "refresh"));
+        function show() {
+            const query = search.input.value.trim().toLowerCase();
+            const filtered = sources.filter(source => [source.name, source.catalogue_id, source.implementation_status, metadataText(source.markets), metadataText(source.capabilities)].join(" ").toLowerCase().includes(query));
+            count.textContent = `${filtered.length} of ${sources.length} catalogue entries`;
+            cards.replaceChildren();
+            filtered.forEach(source => {
+                const item = panel(source.name, source.catalogue_id, statusBadge(display(source.implementation_status)));
+                item.body.append(el("div", "status-row", badge(metadataText(source.markets)), badge(display(source.status))));
+                const description = el("dl", "definition-list source-facts");
+                [["Authentication", metadataText(source.authentication)], ["Capabilities", metadataText(source.capabilities)], ["Rights / licensing", metadataText(source.license_notes)], ["Historical timing", metadataText(source.pit_notes)], ["Cost classification", metadataText(source.cost_class)], ["Cost basis", metadataText(source.cost_basis)], ["Rate limit", metadataText(source.rate_limit)], ["Documentation reviewed", display(source.documentation_reviewed_on)], ["Coverage verified", source.coverage_verified === true ? "Yes, according to the catalogue" : "Unverified"]].forEach(([key, value]) => description.append(el("dt", "", key), el("dd", "", value)));
+                item.body.append(description);
+                try {
+                    const url = new URL(source.documentation_url);
+                    if (url.protocol === "https:" && !url.username && !url.password) {
+                        const link = el("a", "button secondary compact", "Official documentation", icon("arrow"));
+                        link.href = url.href;
+                        link.target = "_blank";
+                        link.rel = "noopener noreferrer";
+                        item.body.append(el("div", "form-actions", link));
+                    }
+                }
+                catch { /* Invalid catalogue links are not made clickable. */ }
+                if (["SRC-04", "SRC-08"].includes(source.catalogue_id) && session.user?.role !== "reader") {
+                    const probeResult = el("div");
+                    const probe = button("Probe public endpoint", () => {
+                        probe.disabled = true;
+                        probe.textContent = "Probing endpoint…";
+                        probeResult.replaceChildren(notice("A bounded public request is running. Its actual result or failure will be retained."));
+                        void api(`/sources/${encodeURIComponent(source.catalogue_id)}/probe`, {}).then(result => {
+                            if (pageEpoch === epoch && probeResult.isConnected) {
+                                const outcome = record(result);
+                                probeResult.replaceChildren(el("div", "", el("div", "status-row probe-note", statusBadge(display(outcome.status))), outcome.status === "FAILED" ? notice(display(outcome.error_code), "error") : null, el("pre", "json-view", JSON.stringify(result, null, 2))));
+                            }
+                        }).catch(error => { if (pageEpoch === epoch && probeResult.isConnected)
+                            probeResult.replaceChildren(notice(readableError(error), "error")); }).finally(() => {
+                            probe.disabled = false;
+                            probe.textContent = "Probe public endpoint";
+                            if (pageEpoch === epoch)
+                                void loadDataOperations(operations.body, epoch);
+                        });
+                    }, "secondary compact", "refresh");
+                    item.body.append(el("div", "form-actions", probe), el("p", "field-hint probe-note", "Makes one fixed, small public query. Limits: one probe per user per minute; BLS also has a persistent installation-wide daily quota. A successful probe does not verify full source coverage."), probeResult);
+                }
+                cards.append(item.box);
+            });
+            if (!filtered.length)
+                cards.append(empty("No matching sources", "Try another name, market or capability. Nothing has been configured or downloaded."));
+        }
+        search.input.addEventListener("input", show);
+        target.append(search.box, count, cards, operations.box);
+        show();
+        void loadDataOperations(operations.body, epoch);
+    }).catch(error => { if (pageEpoch === epoch && target.isConnected)
+        target.replaceChildren(notice(readableError(error), "error")); });
+}
+async function loadDataOperations(target, epoch) {
+    try {
+        const response = await api("/data-operations");
+        if (pageEpoch !== epoch || !target.isConnected)
+            return;
+        if (!response.operations.length) {
+            target.replaceChildren(empty("No data operations recorded", "Imports and explicitly requested probes will appear here with their actual result or error."));
+            return;
+        }
+        const rows = response.operations.map(operation => {
+            const detail = el("details", "operation-detail", el("summary", "", shortId(operation.id)), el("pre", "json-view", JSON.stringify({ result: operation.result, error: operation.error }, null, 2)));
+            const date = new Date(Number(operation.created_at_unix) * 1000);
+            return [detail, operation.kind, display(operation.catalogue_id), statusBadge(operation.status), Number.isFinite(date.valueOf()) ? date.toISOString() : "—"];
+        });
+        target.className = "";
+        target.replaceChildren(table(["Operation / inspect", "Kind", "Source", "State", "Recorded (UTC)"], rows, "Retained data operations"));
+    }
+    catch (error) {
+        if (pageEpoch === epoch && target.isConnected)
+            target.replaceChildren(notice(readableError(error), "error"));
+    }
+}
+function renderData(region) {
+    const epoch = pageEpoch;
+    region.append(heading("Trace the inputs", "Data library", "Import bounded files with declared provenance and inspect their immutable identities, timing and quality.", el("div", "heading-actions", button("Refresh data", () => { void loadDatasets(epoch); }, "secondary", "refresh"))));
+    region.append(notice("Historical imports are user-supplied evidence. A timestamp or licence declaration is not proof of point-in-time validity or permission. Imports do not unlock historical backtesting."));
+    const imported = panel("Your dataset versions", "Private to your account · corrections retain earlier versions");
+    imported.body.className = "";
+    imported.body.id = "dataset-list";
+    const detail = el("div");
+    detail.id = "dataset-detail";
+    const upload = panel("Import a dataset", "CSV or Parquet · maximum 2,000,000 bytes");
+    if (session.user?.role === "reader")
+        upload.body.append(notice("Your reader role can inspect datasets available to this account. Only owners and researchers can import files."));
+    else
+        upload.body.append(datasetForm(epoch));
+    region.append(el("div", "run-layout data-layout", upload.box, el("div", "", imported.box, detail)));
+    if (datasets.length)
+        updateDatasetList();
+    else
+        imported.body.append(el("p", "loading-message", "Loading your dataset versions…"));
+    renderDatasetDetail();
+    void loadDatasets(epoch);
+}
+async function loadDatasets(epoch, offset = datasetOffset) {
+    const request = ++datasetRequest;
+    datasetsLoading = true;
+    if (datasets.length || datasetTotal)
+        updateDatasetList();
+    document.getElementById("dataset-list")?.setAttribute("aria-busy", "true");
+    try {
+        const response = await api(`/datasets?limit=${datasetPageSize}&offset=${offset}`);
+        if (pageEpoch !== epoch || view !== "data" || request !== datasetRequest)
+            return;
+        datasets = response.datasets;
+        datasetOffset = response.offset ?? offset;
+        datasetTotal = response.total ?? datasets.length;
+        datasetsLoading = false;
+        if (selectedDataset)
+            selectedDataset = datasets.find(dataset => dataset.dataset_id === selectedDataset?.dataset_id) ?? null;
+        updateDatasetList();
+        renderDatasetDetail();
+    }
+    catch (error) {
+        const target = document.getElementById("dataset-list");
+        if (pageEpoch === epoch && request === datasetRequest && target) {
+            datasetsLoading = false;
+            updateDatasetList();
+            target.prepend(notice(readableError(error), "error"));
+        }
+    }
+    finally {
+        if (request === datasetRequest) {
+            datasetsLoading = false;
+            document.getElementById("dataset-list")?.setAttribute("aria-busy", "false");
+        }
+    }
+}
+function updateDatasetList() {
+    const target = document.getElementById("dataset-list");
+    if (!target)
+        return;
+    const previous = button("Previous datasets", () => { void loadDatasets(pageEpoch, Math.max(0, datasetOffset - datasetPageSize)); }, "secondary compact");
+    const next = button("Next datasets", () => { void loadDatasets(pageEpoch, datasetOffset + datasetPageSize); }, "secondary compact");
+    previous.disabled = datasetsLoading || datasetOffset === 0;
+    next.disabled = datasetsLoading || datasetOffset + datasets.length >= datasetTotal;
+    const count = el("p", "small muted", datasets.length ? `Showing ${datasetOffset + 1}–${datasetOffset + datasets.length} of ${datasetTotal} dataset versions · ${datasetPageSize} per page` : `${datasetTotal} dataset versions`);
+    count.setAttribute("aria-live", "polite");
+    const paging = el("div", "panel-body", count, el("nav", "form-actions", previous, next));
+    paging.lastElementChild?.setAttribute("aria-label", "Dataset pages");
+    if (!datasets.length) {
+        target.replaceChildren(empty(datasetTotal ? "No datasets on this page" : "No imported datasets", datasetTotal ? "Return to the previous page to inspect earlier dataset versions." : "Choose a file and declare its provenance to create the first immutable version. The built-in backtest fixtures are separate."), paging);
+        return;
+    }
+    target.replaceChildren(table(["Dataset / inspect", "Instrument", "Rows", "Declared mode"], datasets.map(dataset => {
+        const inspect = button(shortId(dataset.dataset_id), () => { selectedDataset = dataset; renderDatasetDetail(); });
+        inspect.className = "table-link";
+        inspect.title = dataset.dataset_id;
+        const metadata = record(dataset.metadata);
+        const instrument = record(metadata.instrument);
+        const mode = display(metadata.evidence_mode);
+        return [inspect, display(instrument.symbol), display(dataset.row_count), badge(mode, mode === "SYNTHETIC" ? "synthetic" : "neutral")];
+    }), "Imported immutable dataset versions", [2]), paging);
+}
+function renderDatasetDetail() {
+    const target = document.getElementById("dataset-detail");
+    if (!target)
+        return;
+    if (!selectedDataset) {
+        target.replaceChildren(empty("Inspect a dataset version", "Select an imported dataset to review its provenance, raw identity, normalized identity and quality findings."));
+        return;
+    }
+    const dataset = selectedDataset;
+    const metadata = record(dataset.metadata);
+    const mode = display(metadata.evidence_mode);
+    const detail = panel("Dataset evidence", dataset.dataset_id, badge(mode, mode === "SYNTHETIC" ? "synthetic" : "neutral"));
+    const provenance = el("dl", "definition-list");
+    [["Source", display(metadata.source_name)], ["Source ID", display(dataset.source_id)], ["Declared rights", display(metadata.declared_license)], ["Restrictions", display(metadata.declared_restrictions)], ["Row count", display(dataset.row_count)], ["File format", display(dataset.file_format)], ["Raw SHA-256", display(dataset.raw_digest)], ["Normalized object", display(dataset.normalized_digest)], ["Lineage SHA-256", display(dataset.lineage_digest)], ["Logical fingerprint", display(dataset.logical_fingerprint)], ["Record digest", display(dataset.record_digest)], ["Timing bounds", metadataText(dataset.bounds)], ["Columns", metadataText(dataset.columns)], ["Corrects dataset", display(dataset.corrects_dataset_id)], ["Correction reason", display(dataset.correction_reason)]].forEach(([key, value]) => provenance.append(el("dt", "", key), el("dd", key?.includes("SHA") || key?.includes("object") || key?.includes("fingerprint") || key?.includes("digest") || key?.includes("ID") ? "mono" : "", value)));
+    detail.body.append(provenance);
+    const quality = panel("Quality and limitations", "Findings from this actual import; no inferred research approval");
+    quality.body.append(el("h3", "", "Structural checks"), badge(metadataText(dataset.quality)), el("dl", "definition-list", el("dt", "", "Historical availability"), el("dd", "", display(dataset.availability)), el("dt", "", "Licensing"), el("dd", "", display(dataset.licensing)), el("dt", "", "Empirical validation"), el("dd", "", dataset.empirically_validated === true ? "Claimed by the returned record; inspect supporting evidence" : "Not established"), el("dt", "", "Host enforcement"), el("dd", "", dataset.host_enforced === true ? "Claimed by the returned record; inspect supporting evidence" : "Not established")), el("h3", "", "Limitations"), el("p", "small muted", metadataText(dataset.limitations)));
+    detail.body.append(el("details", "data-disclosure", el("summary", "", "Complete immutable dataset record"), el("pre", "", JSON.stringify(dataset, null, 2))));
+    target.replaceChildren(detail.box, quality.box);
+    if (Array.isArray(dataset.preview) && dataset.preview.length) {
+        const previewRows = dataset.preview.slice(0, 20).map(record);
+        const columns = Object.keys(previewRows[0] ?? {});
+        const preview = panel("Normalized preview", `${previewRows.length} returned observations · available_at remains an uploader declaration`);
+        preview.body.className = "";
+        preview.body.append(table(columns, previewRows.map(row => columns.map(column => metadataText(row[column]))), "Imported normalized data preview"));
+        target.append(preview.box);
+    }
+}
+const syntheticCsv = "open_at,close_at,available_at,open_bid,open_ask,close,high,low,volume\n2025-01-06T14:30:00Z,2025-01-06T21:00:00Z,2025-01-06T21:00:00Z,99.95,100.05,100,101,99,1000\n2025-01-07T14:30:00Z,2025-01-07T21:00:00Z,2025-01-07T21:00:00Z,100.95,101.05,101,102,100,1200\n2025-01-08T14:30:00Z,2025-01-08T21:00:00Z,2025-01-08T21:00:00Z,101.95,102.05,102,103,101,900\n";
+function downloadSyntheticCsv() {
+    const url = URL.createObjectURL(new Blob([syntheticCsv], { type: "text/csv;charset=utf-8" }));
+    const link = el("a");
+    link.href = url;
+    link.download = "quant-hunter-SYNTHETIC-example.csv";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function datasetForm(epoch) {
+    const form = el("form");
+    form.id = "dataset-form";
+    const file = field("Dataset file", "dataset_file", "", { type: "file", hint: "The filename stays in your browser. Raw bytes and declared provenance are sent to this local installation." });
+    file.input.accept = ".csv,.parquet";
+    const format = selectField("File format", "file_format", [{ value: "CSV", text: "CSV · UTF-8 text" }, { value: "PARQUET", text: "Parquet · typed columns" }], "CSV");
+    const fileInfo = el("p", "field-hint");
+    fileInfo.setAttribute("aria-live", "polite");
+    file.input.addEventListener("change", () => {
+        const selected = file.input.files?.[0];
+        fileInfo.textContent = selected ? `${selected.name} · ${selected.size.toLocaleString("en-US")} bytes` : "";
+        if (selected?.name.toLowerCase().endsWith(".parquet"))
+            format.input.value = "PARQUET";
+        else if (selected?.name.toLowerCase().endsWith(".csv"))
+            format.input.value = "CSV";
+        file.input.setCustomValidity(selected && selected.size > 2_000_000 ? "This file exceeds the 2,000,000-byte import limit." : "");
+    });
+    const source = field("Source name", "source_name", "", { hint: "Identify who produced the original observations." });
+    source.input.maxLength = 120;
+    const license = field("Declared licence / access rights", "declared_license", "", { hint: "State the actual rights permitting local storage and use; do not assume catalogue inclusion grants rights." });
+    license.input.maxLength = 1000;
+    const restrictions = field("Declared restrictions (optional)", "declared_restrictions", "", { required: false, hint: "For example, limits on redistribution or commercial use." });
+    restrictions.input.maxLength = 1000;
+    const mode = selectField("Declared evidence mode", "evidence_mode", [{ value: "SYNTHETIC", text: "SYNTHETIC · generated observations" }, { value: "HISTORICAL", text: "HISTORICAL · user-supplied, unverified" }], "SYNTHETIC");
+    const symbol = field("Instrument symbol", "import_symbol", "", { hint: "One instrument per file. Use uppercase symbols; FX must match its declared currency pair." });
+    symbol.input.maxLength = 32;
+    const market = selectField("Asset class", "asset_class", [{ value: "EQUITY", text: "Equities" }, { value: "FX_SPOT", text: "Spot FX" }], "EQUITY");
+    const base = field("Base currency", "base_currency", "USD");
+    base.input.maxLength = 3;
+    base.input.pattern = "[a-zA-Z]{3}";
+    const quote = field("Quote currency", "quote_currency", "USD");
+    quote.input.maxLength = 3;
+    quote.input.pattern = "[a-zA-Z]{3}";
+    const quantityStep = field("Quantity step", "quantity_step", "1", { type: "number", min: "0.000001", step: "any" });
+    const declaration = el("input");
+    declaration.type = "checkbox";
+    declaration.id = "import-rights";
+    declaration.required = true;
+    const declarationLabel = el("label", "checkbox-label", declaration, el("span", "", "I have checked my right to store and use this file, and the provenance and evidence mode above describe this import."));
+    declarationLabel.htmlFor = declaration.id;
+    const message = el("div", "notice");
+    message.hidden = true;
+    message.setAttribute("aria-live", "polite");
+    const submit = el("button", "button", icon("data"), "Import dataset");
+    submit.type = "submit";
+    const timing = el("details", "data-disclosure", el("summary", "", "Required columns and timing contract"), el("p", "small muted", "Required: open_at, close_at, available_at, open_bid, open_ask, close. Optional: high, low, volume. CSV timestamps must include UTC (Z). Parquet timestamps must be timezone-aware native columns; prices and volume must be native numeric/decimal columns. Text, nested and dictionary Parquet columns are rejected."), el("p", "small muted", "available_at declares when the completed observation became available. Import validation does not independently verify that historical availability or corporate-action treatment."));
+    form.append(file.box, fileInfo, format.box, el("div", "form-actions", button("Download synthetic CSV", downloadSyntheticCsv, "secondary compact", "download")), timing, el("fieldset", "form-section import-section", el("legend", "", "Declared provenance"), el("div", "form-grid", full(source.box), full(license.box), full(restrictions.box), full(mode.box))), el("fieldset", "form-section", el("legend", "", "Instrument definition"), el("div", "form-grid", symbol.box, market.box, base.box, quote.box, full(quantityStep.box))), declarationLabel, message, el("div", "form-actions", submit));
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const selected = file.input.files?.[0];
+        if (!selected)
+            return;
+        if (selected.size > 2_000_000) {
+            message.className = "notice error";
+            message.textContent = "This file exceeds the 2,000,000-byte import limit.";
+            message.hidden = false;
+            return;
+        }
+        submit.disabled = true;
+        submit.textContent = "Reading file…";
+        message.hidden = true;
+        form.setAttribute("aria-busy", "true");
+        try {
+            const bytes = new Uint8Array(await selected.arrayBuffer());
+            const pieces = [];
+            for (let start = 0; start < bytes.length; start += 32768)
+                pieces.push(String.fromCharCode(...bytes.subarray(start, start + 32768)));
+            const content = btoa(pieces.join(""));
+            submit.textContent = "Importing and validating…";
+            const dataset = await api("/datasets", { file_format: format.input.value, content_base64: content, metadata: { source_name: source.input.value.trim(), declared_license: license.input.value.trim(), evidence_mode: mode.input.value, instrument: { symbol: symbol.input.value.trim(), asset_class: market.input.value, base_currency: base.input.value.trim().toUpperCase(), quote_currency: quote.input.value.trim().toUpperCase(), quantity_step: quantityStep.input.value }, ...(restrictions.input.value.trim() ? { declared_restrictions: restrictions.input.value.trim() } : {}) } });
+            if (pageEpoch !== epoch || !form.isConnected)
+                return;
+            selectedDataset = dataset;
+            datasetOffset = 0;
+            datasets = [];
+            datasetTotal = 0;
+            renderDatasetDetail();
+            await loadDatasets(epoch, 0);
+            message.className = "notice success";
+            message.setAttribute("role", "status");
+            message.textContent = `Import recorded: ${dataset.row_count} rows. Raw data and the new dataset identity have been retained.`;
+            message.hidden = false;
+            file.input.value = "";
+            fileInfo.textContent = "";
+        }
+        catch (error) {
+            message.className = "notice error";
+            message.setAttribute("role", "alert");
+            message.textContent = readableError(error);
+            message.hidden = false;
+        }
+        finally {
+            submit.disabled = false;
+            submit.replaceChildren(icon("data"), "Import dataset");
+            form.setAttribute("aria-busy", "false");
+        }
+    });
+    return form;
+}
+function full(node) { node.classList.add("full-width"); return node; }
 function renderBacktests(region) {
     region.append(heading("Simulation laboratory", "Backtests", "A bounded fixture run with explicit assumptions and an inspectable accounting trail."), syntheticNotice());
     const configuration = panel("Configure a run", "Causal long/flat momentum · cash funded");
@@ -837,8 +1186,9 @@ async function manualRefresh() {
     try {
         await refreshJobs();
         fixtures = await api("/fixtures");
+        const firstLoad = !dataLoaded;
         dataLoaded = true;
-        if (view === "overview")
+        if (view === "overview" || firstLoad)
             renderView();
         announce("Workspace refreshed from the local service.");
     }

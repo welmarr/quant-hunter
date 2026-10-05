@@ -2,16 +2,16 @@
   "mission": "Quant Hunter V0",
   "status": "IN_PROGRESS",
   "date": "2026-10-05",
-  "reference_commit": "c43d7c763177f62bf52cb8ef4ff81c01aa0c570a",
-  "reference_semantics": "Parent commit plus uncommitted first executable slice; exact code snapshots retained per experiment",
+  "reference_commit": "9b74dd674077a824e35d2265111c7e6f946593f6",
+  "reference_semantics": "Parent commit plus the frozen Phase B implementation; exact source snapshots retained per operation",
   "branch": "version-0",
   "host_evidence": "BLOCKED_EXTERNAL",
-  "data_mode": "SYNTHETIC",
+  "data_mode": "SYNTHETIC backtests; separate HISTORICAL_REAL acquisition and uploader-declared imports",
   "features": [
     {
       "name": "Native launch and first backtest",
-      "status": "IN_PROGRESS",
-      "evidence": "Running native application and verified UI oracle; clean-clone launch pending"
+      "status": "PASS",
+      "evidence": "Documented clean-clone launcher and 20 real-browser checks passed at 9b74dd6; new checkpoint builds and restores independently"
     },
     {
       "name": "Owner/researcher/reader authentication",
@@ -21,17 +21,17 @@
     {
       "name": "CSV/Parquet immutable import",
       "status": "IN_PROGRESS",
-      "evidence": "Implementation underway in isolated agent checkout; not yet exposed"
+      "evidence": "Private UI/API imports, exact raw/normalized identities, corrections and hostile parsing verified; larger corpus, mappings and research integration remain required"
     },
     {
       "name": "22-source catalogue and priority connectors",
       "status": "IN_PROGRESS",
-      "evidence": "Catalogue and first public clients underway; not yet exposed"
+      "evidence": "All 22 entries visible; bounded BLS/ECB clients and actual public probes verified; remaining priority clients are not integrated"
     },
     {
       "name": "Instrument registry and PIT quality",
-      "status": "NOT_STARTED",
-      "evidence": "Foundation PIT controls retained; full application integration pending"
+      "status": "IN_PROGRESS",
+      "evidence": "Import timing/quality declarations enforced; full instrument registry and market calendar are isolated next work"
     },
     {
       "name": "Paper library and ten sourced CRP implementations",
@@ -86,23 +86,24 @@
     {
       "name": "Security and failure tests",
       "status": "IN_PROGRESS",
-      "evidence": "Auth/CSRF/origin/ownership/worker/immutable-evidence checks executed; broader threat and fault suite pending"
+      "evidence": "Auth/ownership, XSS, SSRF, bounded Parquet/ZIP, disk, interruption and restore checks passed; broader V0 threat/fault suite remains"
     },
     {
       "name": "Backup/restore and clean-clone proof",
-      "status": "NOT_STARTED",
-      "evidence": "Git backup verified; runtime restoration not yet implemented"
+      "status": "PASS",
+      "evidence": "Private archive restored to distinct runtime: 265 identical files/equal database counts and 32 restored-browser assertions; scope/limits in OPERATIONS.md"
     },
     {
       "name": "Responsive UI, browser evidence and status",
       "status": "IN_PROGRESS",
-      "evidence": "Six functional views verified at desktop/mobile/tablet; later modules pending"
+      "evidence": "Eight functional views including Sources/Data verified at desktop/mobile/tablet; later mission modules remain"
     }
   ],
   "tests": {
-    "final_regression": "PASS: 950 tests, zero skips, one warning, 90.74% branch coverage in 417.58 seconds",
-    "browser": "PASS: 19 assertions, no uncaught JavaScript errors",
-    "lint_types_build": "PASS",
+    "final_regression": "PASS: 1193 tests, zero skips, one warning, 91.62% coverage in 508.39 seconds",
+    "browser": "PASS: 32 restored-instance assertions, zero uncaught errors/dialogs, 20 screenshots",
+    "lint_types_build": "PASS: lock, Ruff, mypy, TypeScript; distribution verification in TEST_REPORT.md",
+    "hosted_ci": "Pending exact Phase B commit; prior 9b74dd6 Quality53 passed both operating systems",
     "empirical_validation": "NONE"
   }
 }

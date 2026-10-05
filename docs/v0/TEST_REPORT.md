@@ -1,7 +1,7 @@
 # V0 test evidence
 
-2026-10-05: V0 remains IN_PROGRESS. This report describes the first executable
-synthetic slice only; it does not certify the full mission or the host boundary.
+2026-10-05: V0 remains IN_PROGRESS. This report records successive executable
+checkpoints; it does not certify the full mission or the host boundary.
 
 Environment: Windows, CPython 3.14.7, uv 0.12.10, Node 25.8.0, TypeScript 5.9.3,
 Playwright 1.63.0 using installed Chrome 154.0.8037.97. The tested source parent
@@ -43,7 +43,8 @@ immutable snapshot; the Git parent is never represented as the entire dirty code
   corrections and again on the corrected source. Package inspection found all three static assets and no local
   runtime, venv, node_modules or cache content. Both PowerShell scripts parsed.
   Locked `npm ci --ignore-scripts`, `npm run typecheck` and `npm run build` also
-  passed. Clean-clone startup and restoration are still unexecuted.
+  passed. Clean-clone startup passed as recorded below. Restoration was executed
+  subsequently in the Phase B checkpoint below.
 
 The remaining Starlette warning concerns its deprecated httpx TestClient path;
 it is reported rather than suppressed. No skipped test is presented as passed.
@@ -74,6 +75,26 @@ commission 1 each way, gives cash 10,008; doubling commission gives 10,006.
 Separate bid/ask spread gives 10,004; separate adverse slippage gives 10,005.99.
 These are synthetic software tests, not historical evidence of profitability.
 
+## Saved checkpoint, hosted CI and clean start
+
+The first working slice was committed and pushed as
+`9b74dd674077a824e35d2265111c7e6f946593f6` on `origin/version-0`. Remote
+`work-before-v0` remains `7346cf4f79ca5897777c0118f8cf4c2292be929e`; remote main
+remains `e0ba326540b4493f122e384ac7e7d4bcd0ebf6e2`.
+[Quality #53](https://github.com/welmarr/quant-hunter/actions/runs/37268298076)
+passed on that exact commit: Ubuntu 950 tests, one warning, 90.69% coverage in
+170.34 seconds; Windows 950 tests, one warning in 256.39 seconds. No skips.
+
+A separate shallow clone from origin was created at
+`D:\quant-hunter\.tools\v0-cold-start`. Its unmodified documented launcher ran
+with a fresh runtime on D: and port 8766, installing the locked environment.
+Chrome then passed 20 checks including fresh owner creation, first equity/FX
+backtests, role isolation, offline recovery and mobile/tablet layouts. Fetched
+JavaScript bytes were compared with the clone's committed static artifact.
+Proof: `.local/v0-cold-proof/browser-proof.json` and its actual captures;
+private test credentials: `.local/v0-cold-private`. The temporary test server
+was closed after completion. Clone and test evidence were retained.
+
 ## Cross-item review
 
 The simulation agent reviewed the lifecycle and root application; the root
@@ -89,3 +110,80 @@ independent-review/host gates retain their own status.
 Sandbox process startup failed with `helper_unknown_error: apply deny-read ACLs`.
 Read-only commands and explicitly authorized branch operations succeeded through
 the reviewed sandbox override. No host ACL or security setting was changed.
+
+## Phase B: imports, public diagnostics and private recovery
+
+Source parent: `9b74dd674077a824e35d2265111c7e6f946593f6` plus this checkpoint's
+uncommitted implementation. Exact source snapshots are retained with application
+runs. No SEC/Alpaca/credential/calendar agent work is included in this gate.
+
+- The frozen full regression passed **1,193 tests, zero skips, one warning,
+  91.62% combined statement/branch coverage in 508.39 seconds**. Lock validation,
+  Ruff formatting (122 files), lint and strict mypy (80 files) passed. Python
+  production/test sources were unchanged during the final run. The existing
+  Starlette TestClient deprecation warning remains reported.
+- Import tests: 82 passed, 93.32% targeted coverage. Hostile native Parquet
+  metadata/page preflight, decompression bounds, timestamp offsets, decimal
+  precision, duplicate rows, immutable corrections and graph contradictions
+  are checked. A Windows Arrow timezone-database failure was corrected by
+  converting epoch microseconds explicitly; no time or validity check was relaxed.
+- Source tests: 88 passed, 95.19% targeted coverage. Corrected checks include
+  ECB unit multipliers, safe failure retention and exact source/environment
+  binding. One real BLS request returned 12 observations and one real ECB request
+  returned four. The UI subsequently performed one explicit ECB diagnostic.
+  These are bounded acquisition proofs with PENDING quality and unknown
+  historical publication/revision timing. Raw hashes are in SOURCES.md; raw
+  data remain in ignored local stores. No credential or purchase was used.
+- Eight DataAccess tests exercise persistent quotas, atomic operation admission,
+  ownership, pagination and disk-budget refusal. API tests exercise strict input
+  validation, roles, private data, source errors and absence of secret echoing.
+- Independent backup tests: 65 passed, 97.64% targeted coverage. Cross-review
+  corrected a restore lease race, a missing extraction hash recheck, and a forged
+  central-directory entry count. A coverage run made while code was still
+  changing was discarded; the frozen rerun passed. Tests cover traversal,
+  symlinks, encrypted/compressed/oversized ZIPs, disk limits, interrupted restore,
+  active runtimes, SQLite integrity, overwrite refusal and actual CLI execution.
+- A real stopped-runtime backup restored to a distinct path. Independent hash
+  comparison found **265 identical files**. Original/restored database counts
+  matched: 9 users, 16 jobs, 5 data operations, 3 owned datasets. Archive SHA-256:
+  `715741336163102404a3009d69e68fabcd4988fb886ca3912c7f6eda907f3697`.
+  Private archive: `.local/v0-backups/phase-b.qhbackup`; comparison proof:
+  `.local/v0-phase-b-proof/restoration-proof.json`. The source runtime was retained.
+- Initial Phase B browser verification passed 31 checks, including valid CSV and
+  Parquet, invalid timestamp rejection, correction IDs, raw hashes, source probe,
+  account isolation and responsive layouts. After restoration, the harness
+  initially timed out waiting for an unnecessary GET on an unchanged Data route.
+  That test-only defect was corrected, and its failure evidence was retained.
+  The final restored-instance run passed **32 assertions, zero uncaught errors
+  or dialogs**, with 20 screenshots in Chrome 154.0.8037.97 (06:09:21–06:10:04 UTC).
+  It also verified literal rendering of hostile imported markup, no injected
+  image or JavaScript effect, dataset pagination metadata, synthetic EQ/FX
+  accounting, role boundaries, offline recovery and 320/390/768 pixel layouts.
+  No external source request ran in this final restored-instance verification.
+- `npm run typecheck` and `npm run build` passed after the final frontend change.
+  Wheel/source archive build and membership inspection are recorded with this
+  checkpoint; the build's warning about a cache inside the source tree does not
+  imply that caches entered an artifact. No private runtime or dependency cache
+  is accepted in a distribution.
+
+Reproduction uses the earlier environment variables, then:
+
+```powershell
+uv run --locked pytest --cov=quant_hunter --cov-branch --cov-fail-under=90 --basetemp=.tools/v0-phase-b-full --junitxml=.local/v0-phase-b-proof/full.xml
+```
+
+Full text/XML are in `.local/v0-phase-b-proof/full.txt` and `full.xml`.
+Restored browser evidence is `.local/v0-restored-proof/final/browser-proof.json`
+with actual captures and `gallery-metadata.json`; prior harness failure artifacts
+remain in the parent directory. Browser use and private credential handling are
+documented in `frontend/README.md`; recovery commands are in OPERATIONS.md.
+
+Applicable prior invariants were re-reviewed across the import/raw/derived
+graph, operational SQLite migrations, source timing and runtime recovery.
+Registry/source data history remains immutable; imported declarations cannot
+become scientific approval, backtest input or host authority. The root reviewed
+the imports and source clients; another agent independently authored/reviewed
+the hostile backup tests and another executed the restored browser flow. This
+is cross-agent review, not professional independent certification. Hosted CI
+must still verify the exact new saved commit; the previous 950-test CI cannot
+be attributed to these changes.

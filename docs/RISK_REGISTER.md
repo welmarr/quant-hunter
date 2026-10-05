@@ -10,6 +10,14 @@ was introduced. Real host evidence (RISK-017), Windows registry stress closure
 Issues; existing local drafts are not equivalent to remote tracking. Ongoing
 V0 requirements are not represented as resolved or deferred by this checkpoint.
 
+The subsequent V0 import/source/recovery checkpoint adds real bounded BLS/ECB
+acquisitions and uploader-declared data, all with PENDING or review-required
+quality and no empirical approval. Historical availability is not inferred from
+retrieval or reference periods. Private restoration was actually tested; its
+archives retain source rights and local authentication material and must never
+be shared or committed. See DEC-0039, `v0/OPERATIONS.md`, and `v0/TEST_REPORT.md`.
+This mitigates tested software failure paths without closing the risks above.
+
 Review this register at each stage gate and whenever evidence, scope, cost, or controls change. Use permanent IDs; retain closed risks. Link mitigations to decisions, experiments, data sources, and tests. `OPEN` means the risk requires active control, not that work is authorized.
 
 Every operational risk record must include ID, cause and consequence, likelihood, impact/severity, owner, controls, early-warning indicators, linked decisions/experiments/sources/tests, target and next-review dates, residual risk, status, and closure evidence. The summary entries below are the planning baseline; their detailed fields must be assigned during Stage 1B and before its exit gate. Scientific governance owns RISK-001–009, RISK-014–016, and RISK-019; data governance co-owns RISK-004–005, RISK-012, RISK-014, and RISK-019; architecture/security owns RISK-010–011, RISK-015, RISK-017–020, and RISK-022–024; and project budget governance owns RISK-013 and RISK-021. All open risks are next reviewed at Stage 1B closeout.

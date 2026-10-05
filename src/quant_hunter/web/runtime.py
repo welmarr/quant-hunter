@@ -13,9 +13,12 @@ from pathlib import Path
 from typing import cast
 
 from quant_hunter.config import JsonRecord, JsonValue, canonicalize_json
+from quant_hunter.imports import ImportService
 from quant_hunter.lab import LabService
 from quant_hunter.simulation import Costs, SimulationConfig, simulate, synthetic_fixture
+from quant_hunter.sources import SourceProbeService
 from quant_hunter.storage import ImmutableObjectStore
+from quant_hunter.web.data_access import DataAccess
 from quant_hunter.web.state import AppState
 
 
@@ -57,6 +60,8 @@ class Runtime:
     """One process/worker owns this runtime under the CLI's runtime lease."""
 
     def __init__(self, root: Path, repository: Path, code_revision: str) -> None:
+        if (root / "restore.incomplete").exists():
+            raise ValueError("Runtime restoration is incomplete; do not launch")
         expected_module = repository / "src" / "quant_hunter" / "web" / "runtime.py"
         if expected_module.resolve() != Path(__file__).resolve():
             raise ValueError("Repository must contain the actually imported runtime")
@@ -91,9 +96,28 @@ class Runtime:
         self.lab = LabService(
             root / "research", repository / "schemas" / "v1", code_revision, environment
         )
+        self.data = DataAccess(
+            self.state,
+            root,
+            ImportService(
+                self.lab.registry,
+                self.lab.objects,
+                repository / "schemas" / "v1",
+                code_revision,
+                self.lab.environment_digest,
+            ),
+            SourceProbeService(
+                self.lab.registry,
+                self.lab.objects,
+                repository / "schemas" / "v1",
+                code_revision,
+                self.lab.environment_digest,
+            ),
+        )
 
     def recover(self) -> None:
         """Never rerun an unknown interrupted attempt. Retain failure and require retry."""
+        self.data.recover()
         for job in self.state.interrupted():
             if job.experiment_id:
                 run = self.lab.recover_run(job.experiment_id)
