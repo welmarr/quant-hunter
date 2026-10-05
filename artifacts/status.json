@@ -2,8 +2,8 @@
   "mission": "Quant Hunter V0",
   "status": "IN_PROGRESS",
   "date": "2026-10-05",
-  "reference_commit": "5da83fd97637624c54022affd06bfd8bfc839054",
-  "reference_semantics": "Parent commit plus frozen corrected Phase C implementation; exact source snapshots retained per operation",
+  "reference_commit": "796771c81a7c49768ebe7040730c88707c98827b",
+  "reference_semantics": "Prior saved CI-verified checkpoint; current corrected local checkpoint passed2288tests/93.07% and restored browser57+20; next saved-commit CI pending",
   "branch": "version-0",
   "host_evidence": "BLOCKED_EXTERNAL",
   "data_mode": "SYNTHETIC backtests; separate HISTORICAL_REAL acquisition and uploader-declared imports",
@@ -26,7 +26,7 @@
     {
       "name": "22-source catalogue and priority connectors",
       "status": "IN_PROGRESS",
-      "evidence": "All 22 entries visible; bounded BLS/ECB public probes verified; encrypted SEC/Alpaca configuration and concrete read-only clients integrated with actual provider access unverified; macro/other clients remain isolated"
+      "evidence": "Public BLS/ECB/G17 and private SEC/Alpaca/FRED/Sharadar/Trading Economics diagnostics; BEA/ALFRED/BI5/EODHD file workflows verified by 57 browser checks. Authenticated access unverified; total process deadlines reviewed. Native startup correction verified by actual G17 success; earlier failure retained. Source remains CANDIDATE/PENDING."
     },
     {
       "name": "Instrument registry and PIT quality",
@@ -35,23 +35,23 @@
     },
     {
       "name": "Paper library and ten sourced CRP implementations",
-      "status": "NOT_STARTED",
-      "evidence": "No empirical reproductions claimed"
+      "status": "IN_PROGRESS",
+      "evidence": "Ten CRP and two comparison studies execute actual mathematics through Item8; 36 workflow/binding tests and 20 browser checks passed. Publication core integrated; owned application workflow pending. No empirical replication."
     },
     {
       "name": "Fifteen PatternLab families",
-      "status": "NOT_STARTED",
-      "evidence": "Complete mission scope retained"
+      "status": "IN_PROGRESS",
+      "evidence": "Fifteen classical computation families integrated with 69 focused tests and peer review; registered product workflows remain required."
     },
     {
       "name": "Bounded multi-scale pattern search and benchmarks",
-      "status": "NOT_STARTED",
-      "evidence": "Complete mission scope retained"
+      "status": "IN_PROGRESS",
+      "evidence": "Synthetic 2015\u20132024 schedules scanned 4,734,600 rows with bounded candidates; small-corpus exact/approximate recall retained. Persistent corpus/search UI remains required."
     },
     {
       "name": "Equity/FX accounting and costs",
       "status": "IN_PROGRESS",
-      "evidence": "Synthetic Decimal momentum, next-bar bid/ask, commission, slippage and financing; broader market conventions pending"
+      "evidence": "Reviewed Decimal event accounting integrated with 66 focused tests: partial fills/cancel races, corporate actions, directed FX and cost identities. Durable paper service still isolated."
     },
     {
       "name": "Governed experiments and chronological validation",
@@ -61,17 +61,17 @@
     {
       "name": "Portfolio and ensemble/meta-model baseline",
       "status": "IN_PROGRESS",
-      "evidence": "Individual actual run portfolio view only; no aggregate/ensemble implementation"
+      "evidence": "ENS-COV and META-OOF synthetic studies execute real models and comparisons with frozen train/target/seed evidence. Empirical and operational portfolio workflows remain."
     },
     {
       "name": "Persistent local paper execution and risk",
-      "status": "NOT_STARTED",
-      "evidence": "Live trading disabled; continuous paper engine remains required"
+      "status": "IN_PROGRESS",
+      "evidence": "Durable paper engine author tests passed 83 cases; independent review in progress before root integration. Live trading remains disabled."
     },
     {
       "name": "Paper broker adapters and contract tests",
-      "status": "NOT_STARTED",
-      "evidence": "External credentials absent; offline client implementation remains required"
+      "status": "IN_PROGRESS",
+      "evidence": "Fixed paper-host adapters and persistent submission journal under isolated implementation; no actual accounts, credentials or orders."
     },
     {
       "name": "Local notifications and optional Telegram",
@@ -103,7 +103,9 @@
     "final_regression": "PASS: 1460 tests, one Linux-only skip, one warning,92.33% coverage in583.60 seconds",
     "browser": "PASS: 48 restored-instance checks,26 screenshots,zero errors; five delayed-response isolation assertions",
     "lint_types_build": "PASS: lock, Ruff, mypy, TypeScript; distribution verification in TEST_REPORT.md",
-    "hosted_ci": "PASS: 5da83fd run37272040597,1193 tests each OS,91.58% Ubuntu; subsequent Phase C not yet saved/verified",
-    "empirical_validation": "NONE"
+    "hosted_ci": "PASS: 796771c run37278264340;1460 tests each OS,one platform-specific skip each,92.09% Ubuntu coverage",
+    "empirical_validation": "NONE",
+    "current_checkpoint": "PASS:2288tests,one platform skip,one warning,93.07%,998.05s; all131source hashes unchanged; lock/Ruff/mypy/TypeScript/build and private distribution checksPASS",
+    "current_browser": "PASS:separate restored instance provider57checks/32screens and Studies20checks/18screens;zero errors"
   }
 }

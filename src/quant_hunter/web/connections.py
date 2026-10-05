@@ -18,12 +18,24 @@ from quant_hunter.config import (
 from quant_hunter.credentials import CredentialVault, VaultError
 from quant_hunter.sources.alpaca_data import AlpacaCredentials, AlpacaDataConnector
 from quant_hunter.sources.equity_probes import EquityProbeService
+from quant_hunter.sources.macro_fred import FREDKey, FREDReleaseConnector
+from quant_hunter.sources.priority_common import PriorityKey
+from quant_hunter.sources.priority_sharadar import SharadarConnector
+from quant_hunter.sources.priority_tradingeconomics import TradingEconomicsConnector
 from quant_hunter.sources.probes import SourceProbeService
+from quant_hunter.sources.providers import ProviderConnector, ProviderService
 from quant_hunter.sources.sec import SECConnector, SECIdentity
 from quant_hunter.sources.transport import SourceError
 
-PROVIDERS = {"SRC-01": "sec", "SRC-02": "alpaca_data"}
-type ConnectorFactory = Callable[[str, JsonRecord], SECConnector | AlpacaDataConnector]
+PROVIDERS = {
+    "SRC-01": "sec",
+    "SRC-02": "alpaca_data",
+    "SRC-07": "fred",
+    "SRC-18": "sharadar",
+    "SRC-20": "trading_economics",
+}
+type ConfiguredConnector = SECConnector | AlpacaDataConnector | ProviderConnector
+type ConnectorFactory = Callable[[str, JsonRecord], ConfiguredConnector]
 
 
 def default_private_root(runtime: Path) -> Path:
@@ -74,14 +86,24 @@ def validated_config(source: str, values: JsonRecord) -> JsonRecord:
             or values["no_incremental_charge"] is not True
         ):
             raise VaultError("READ_ONLY_RIGHTS_AND_NO_CHARGE_DECLARATION_REQUIRED")
+    elif source in ("SRC-07", "SRC-18", "SRC-20"):
+        if set(values) != {"api_key", "entitlement_confirmed", "no_incremental_charge"}:
+            raise VaultError("INVALID_SOURCE_CONFIGURATION")
+        if source == "SRC-07":
+            FREDKey(cast(str, values["api_key"]))
+        else:
+            PriorityKey(cast(str, values["api_key"]))
+        if (
+            values["entitlement_confirmed"] is not True
+            or values["no_incremental_charge"] is not True
+        ):
+            raise VaultError("READ_ONLY_RIGHTS_AND_NO_CHARGE_DECLARATION_REQUIRED")
     else:
         raise VaultError("SOURCE_CONFIGURATION_NOT_IMPLEMENTED")
     return dict(values)
 
 
-def configured_connector(
-    source: str, values: JsonRecord
-) -> SECConnector | AlpacaDataConnector:
+def configured_connector(source: str, values: JsonRecord) -> ConfiguredConnector:
     validated_config(source, values)
     if source == "SRC-01":
         return SECConnector(
@@ -89,6 +111,12 @@ def configured_connector(
                 cast(str, values["organization"]), cast(str, values["contact_email"])
             )
         )
+    if source == "SRC-07":
+        return FREDReleaseConnector(FREDKey(cast(str, values["api_key"])))
+    if source == "SRC-18":
+        return SharadarConnector(PriorityKey(cast(str, values["api_key"])))
+    if source == "SRC-20":
+        return TradingEconomicsConnector(PriorityKey(cast(str, values["api_key"])))
     return AlpacaDataConnector(
         AlpacaCredentials(
             cast(str, values["key_id"]),
@@ -114,6 +142,7 @@ class Connections:
         probes: EquityProbeService,
         *,
         connector_factory: ConnectorFactory = configured_connector,
+        provider_service: ProviderService | None = None,
     ) -> None:
         from quant_hunter.credentials.protection import safe_path
 
@@ -124,6 +153,7 @@ class Connections:
                 raise VaultError("PRIVATE_ROOT_OVERLAPS_APPLICATION")
         self.private_root, self.application_root = private_root, application_root
         self.probes, self.connector_factory = probes, connector_factory
+        self.provider_service = provider_service
         self._vault: CredentialVault | None = None
         self._lock = threading.Lock()
 
@@ -168,7 +198,7 @@ class Connections:
             "private_root": str(self.private_root),
             "initialized": initialized,
             "live_credentials": "FORBIDDEN",
-            "limit": "One bounded IEX or SEC diagnostic per explicit action; saving never connects",
+            "limit": "One bounded source diagnostic per explicit action; saving never connects",
         }
 
     def save(self, source: str, values: JsonRecord) -> JsonRecord:
@@ -200,6 +230,14 @@ class Connections:
                 raise VaultError("CREDENTIAL_INTEGRITY")
             config = validated_config(source, value)
             connector = self.connector_factory(source, config)
+            if source in ("SRC-07", "SRC-18", "SRC-20"):
+                if self.provider_service is None or isinstance(
+                    connector, SECConnector | AlpacaDataConnector
+                ):
+                    raise SourceError("PROVIDER_SERVICE_UNAVAILABLE")
+                return self.provider_service.probe(source, connector)
+            if not isinstance(connector, SECConnector | AlpacaDataConnector):
+                raise SourceError("CONNECTOR_ID_MISMATCH")
             return self.probes.probe(
                 source, connector, cik=cast(str, config.get("cik", "0000320193"))
             )
@@ -208,12 +246,20 @@ class Connections:
 
 
 class SourceRouter:
-    def __init__(self, public: SourceProbeService, connections: Connections) -> None:
+    def __init__(
+        self,
+        public: SourceProbeService,
+        connections: Connections,
+        providers: ProviderService | None = None,
+    ) -> None:
         self.public, self.connections = public, connections
+        self.providers = providers or ProviderService(public)
 
     def probe(self, catalogue_id: str) -> JsonRecord:
         if catalogue_id in PROVIDERS:
             return self.connections.probe(catalogue_id)
         if catalogue_id in ("SRC-04", "SRC-08"):
             return self.public.probe(catalogue_id)
+        if catalogue_id == "SRC-06":
+            return self.providers.probe(catalogue_id)
         raise SourceError("CONNECTOR_NOT_IMPLEMENTED")

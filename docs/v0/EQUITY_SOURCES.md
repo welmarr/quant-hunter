@@ -99,9 +99,11 @@ encryption, rotation and permission checks.
 
 No arbitrary URL, broker endpoint, redirect, proxy, compressed response or
 automatic retry is supported. DNS resolves once to public addresses and the
-selected address is pinned while TLS validates the official hostname. OS DNS
-has its own timeout. Connect/TLS stages use ten-second socket timeouts; response
-reads have a ten-second deadline. Each response is capped at 2,000,000 bytes.
+selected address is pinned while TLS validates the official hostname. Each
+request has a twenty-second parent wall deadline covering child startup, DNS,
+connection, TLS, headers and body, followed by bounded termination/reaping.
+Socket/body timeouts remain additional limits; each response is capped at
+2,000,000 bytes. See SOURCE_HTTP_BOUNDARY.md for the exact process contract.
 SEC permits at most 2,000 submissions or 5,000 facts per response. Alpaca permits
 at most five pages of 1,000 bars each, with repeated tokens and duplicate or
 unordered bars rejected. Partial pages remain accessible as `last_pages` after

@@ -745,10 +745,10 @@ def test_https_pins_official_ip_uses_only_auth_headers_and_bounds_response(
     request = AlpacaDataConnector(CREDENTIALS)._request(BAR_QUERY, None)
     if code:
         with pytest.raises(SourceError, match=code) as caught:
-            EquityHTTPS().send(request)
+            EquityHTTPS._send_once(request)
         assert "sensitive" not in str(caught.value)
     else:
-        response = EquityHTTPS().send(request)
+        response = EquityHTTPS._send_once(request)
         assert response.body == b"{}" and max(sock.timeouts) <= 10
         assert connection.headers["APCA-API-KEY-ID"] == CREDENTIALS.key_id
         assert connection.headers["APCA-API-SECRET-KEY"] == CREDENTIALS.secret_key
@@ -766,4 +766,4 @@ def test_https_private_dns_response_fails_before_socket(
     )
     request = AlpacaDataConnector(CREDENTIALS)._request(BAR_QUERY, None)
     with pytest.raises(SourceError, match="NONPUBLIC_ADDRESS_REFUSED"):
-        EquityHTTPS().send(request)
+        EquityHTTPS._send_once(request)

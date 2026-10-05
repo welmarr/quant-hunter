@@ -19,6 +19,7 @@ from quant_hunter.markets.registry import InstrumentRegistry
 from quant_hunter.simulation import Costs, SimulationConfig, simulate, synthetic_fixture
 from quant_hunter.sources import SourceProbeService
 from quant_hunter.sources.equity_probes import EquityProbeService
+from quant_hunter.sources.providers import ProviderService
 from quant_hunter.storage import ImmutableObjectStore
 from quant_hunter.web.connections import Connections, SourceRouter, default_private_root
 from quant_hunter.web.data_access import DataAccess
@@ -114,11 +115,13 @@ class Runtime:
             code_revision,
             self.lab.environment_digest,
         )
+        providers = ProviderService(public_probes)
         self.connections = Connections(
             private_root or default_private_root(root),
             repository,
             root,
             EquityProbeService(public_probes),
+            provider_service=providers,
         )
         self.data = DataAccess(
             self.state,
@@ -130,7 +133,8 @@ class Runtime:
                 code_revision,
                 self.lab.environment_digest,
             ),
-            SourceRouter(public_probes, self.connections),
+            SourceRouter(public_probes, self.connections, providers),
+            providers,
         )
 
     def recover(self) -> None:
@@ -162,6 +166,21 @@ class Runtime:
             return False
         experiment_id: str | None = None
         try:
+            if job.config.get("kind") == "CRP_STUDY":
+                from quant_hunter.research_methods.studies import execute_study
+                from quant_hunter.web.studies import prepare_job
+
+                study_config, study_dataset, study_name = prepare_job(job.config)
+                experiment_id = self.lab.begin_run(
+                    study_config, study_dataset, name=study_name
+                )
+                self.state.bind(job.id, experiment_id)
+                study_result = execute_study(study_dataset, study_config)
+                self.lab.evaluate_run(experiment_id, study_result)
+                self.state.finish(job.id)
+                return True
+            if "kind" in job.config:
+                raise ValueError("Unsupported job kind")
             instrument, bars = synthetic_fixture(str(job.config["market"]))
             config: JsonRecord = dict(job.config)
             config["dataset_start"] = json_value(bars[0].open_at)

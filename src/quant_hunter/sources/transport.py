@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import http.client
 import ipaddress
 import json
@@ -109,13 +110,33 @@ def public_address(host: str) -> str:
 class HTTPSPublicTransport:
     """No redirects, proxies, credentials, decompression or automatic retries.
 
-    System DNS has its operating-system timeout. After DNS, connect/TLS use a
-    10-second socket timeout and response reads have a 10-second total deadline.
+    A disposable child enforces a 20-second parent deadline including system
+    DNS, connect, TLS, headers and body. Socket stages retain 10-second limits.
     Request endpoints are fixed; TLS still validates the official hostname while
     the connection uses the previously checked public IP.
     """
 
     def send(self, request: Request) -> Response:
+        from quant_hunter.sources.process_http import run
+
+        Request(request.method, request.host, request.target, request.body)
+        return run(
+            "PUBLIC",
+            json.dumps(
+                {
+                    "method": request.method,
+                    "host": request.host,
+                    "target": request.target,
+                    "body": base64.b64encode(request.body).decode("ascii")
+                    if request.body is not None
+                    else None,
+                }
+            ).encode("utf-8"),
+        )
+
+    @staticmethod
+    def _send_once(request: Request) -> Response:
+        """Private wire primitive; public callers use the bounded child."""
         # Revalidate even if a caller has bypassed the frozen dataclass API.
         Request(request.method, request.host, request.target, request.body)
         connection = http.client.HTTPSConnection(request.host, timeout=SOCKET_TIMEOUT)

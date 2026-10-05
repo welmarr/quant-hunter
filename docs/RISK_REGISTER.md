@@ -31,6 +31,16 @@ holiday/financing conventions remain externally unverified. See DEC-0040 and
 
 Review this register at each stage gate and whenever evidence, scope, cost, or controls change. Use permanent IDs; retain closed risks. Link mitigations to decisions, experiments, data sources, and tests. `OPEN` means the risk requires active control, not that work is authorized.
 
+The next source/study work preserves all open risks. Macro/priority exports retain
+unknown historical availability and rights, synthetic method success remains
+INCONCLUSIVE, and null fits remain failed trials. Cross-review identified usable
+training-cadence and frozen seed/method inconsistencies; those current-batch
+issues are being corrected and retested rather than deferred. A slow-header
+timeout gap is being closed with disposable source workers before acceptance.
+Publication extraction limits and reading declarations do not authenticate a
+paper's claims. Pattern approximation can miss true nearest neighbors; the
+synthetic scale report records observed false negatives. See DEC-0041/0042.
+
 Every operational risk record must include ID, cause and consequence, likelihood, impact/severity, owner, controls, early-warning indicators, linked decisions/experiments/sources/tests, target and next-review dates, residual risk, status, and closure evidence. The summary entries below are the planning baseline; their detailed fields must be assigned during Stage 1B and before its exit gate. Scientific governance owns RISK-001–009, RISK-014–016, and RISK-019; data governance co-owns RISK-004–005, RISK-012, RISK-014, and RISK-019; architecture/security owns RISK-010–011, RISK-015, RISK-017–020, and RISK-022–024; and project budget governance owns RISK-013 and RISK-021. All open risks are next reviewed at Stage 1B closeout.
 
 | ID | Risk | Required controls | Status |

@@ -71,6 +71,10 @@
       "type": "string",
       "pattern": "^INSTRUMENT-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
+    "paper_id": {
+      "type": "string",
+      "pattern": "^PAPER-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
     "backlog_id": {
       "type": "string",
       "pattern": "^BACKLOG-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
@@ -87,6 +91,7 @@
         {"$ref": "#/$defs/source_id"},
         {"$ref": "#/$defs/dataset_id"},
         {"$ref": "#/$defs/instrument_id"},
+        {"$ref": "#/$defs/paper_id"},
         {"$ref": "#/$defs/backlog_id"},
         {"$ref": "#/$defs/cost_id"}
       ]

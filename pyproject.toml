@@ -14,9 +14,12 @@ dependencies = [
     "fastapi>=0.115,<1",
     "jsonschema>=4.25,<5",
     "pyarrow==25.0.1",
+    "pypdf==6.19.0",
     "referencing>=0.36,<1",
     "rfc3339-validator>=0.1,<1",
     "rfc8785==0.1.4",
+    "scipy==1.18.1",
+    "statsmodels==0.15.0",
     "tzdata==2026.5",
     "uvicorn>=0.34,<1",
 ]

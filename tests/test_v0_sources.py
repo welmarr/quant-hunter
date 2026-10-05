@@ -87,7 +87,7 @@ def test_catalogue_has_exact_mission_keys_and_no_fake_connections() -> None:
     ready = [
         source.catalogue_id for source in catalog if source.status == "READY_TO_TEST"
     ]
-    assert ready == ["SRC-04", "SRC-08"]
+    assert ready == ["SRC-04", "SRC-06", "SRC-08"]
     assert all(source.documentation_url.startswith("https://") for source in catalog)
     assert all(source.license_notes and source.pit_notes for source in catalog)
     assert all(source.coverage_verified.startswith("NONE") for source in catalog)
@@ -394,7 +394,7 @@ def test_dns_is_pinned_and_dns_errors_are_sanitized(
     assert public_address("api.bls.gov") == "8.8.8.8"
     monkeypatch.setattr("socket.getaddrinfo", lambda *_args, **_kwargs: [])
     with pytest.raises(SourceError, match="DNS_UNAVAILABLE"):
-        HTTPSPublicTransport().send(
+        HTTPSPublicTransport._send_once(
             Request(
                 "POST",
                 "api.bls.gov",
@@ -633,10 +633,10 @@ def test_native_transport_bounds_pins_tls_and_closes_connections(
     )
     if expected:
         with pytest.raises(SourceError, match=expected) as captured:
-            HTTPSPublicTransport().send(request)
+            HTTPSPublicTransport._send_once(request)
         assert "private" not in str(captured.value)
     else:
-        result = HTTPSPublicTransport().send(request)
+        result = HTTPSPublicTransport._send_once(request)
         assert result.body == b"{}" and result.status == 200
         assert socket.timeouts and max(socket.timeouts) <= 10
     assert connection.closed

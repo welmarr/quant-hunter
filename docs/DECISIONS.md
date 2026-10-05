@@ -23,6 +23,74 @@
 
 ## Decision Policy
 
+### DEC-0042 — Publication identity and classical pattern/accounting cores (2026-10-05)
+
+- **Status:** ACCEPTED for authorized V0 software implementation; no scientific,
+  host, live-order or stage gate is passed.
+- **Scope:** immutable identity / numerical conventions / operational resources.
+- **Decision:** Add PAPER records and a closed publication schema through the
+  existing UUIDv7/append-only/CAS registry. Attached bytes, extraction attempts,
+  text access, reading declarations and reproduction claims remain distinct.
+  Pin pypdf 6.19.0. Native disposable workers bound PDF and public retrieval;
+  process resource controls do not establish HOST_ENFORCED authority. The four
+  fixed source transports also use a twenty-second parent deadline, 256 MiB/five
+  CPU-second child limits and bounded termination/reaping. No automatic retry,
+  arbitrary URL, plaintext credential file or response-pickle decoding is added.
+  Exact resource/IPC conventions are in `v0/SOURCE_HTTP_BOUNDARY.md`.
+- **Pattern convention:** Integrate the fifteen documented bounded classical
+  methods in `v0/PATTERNLAB.md`. Exact small-corpus search and approximate
+  candidate reduction are separate modes. Retain actual recall/false negatives,
+  train-only fits, cadence/schema bindings, known outcome availability and
+  candidate exposure. No synthetic throughput result establishes market validity.
+- **Accounting convention:** Integrate the pure Decimal transition core in
+  `v0/ACCOUNTING.md`: explicit order/fill/cancellation events, cash-funded long
+  spot, directed executable FX sides, split/ex-date entitlement rules and explicit
+  financing. Unsupported short/margin/derivative execution fails closed. Scalar
+  derivative identities do not constitute an execution implementation.
+- **Consequences:** Application ownership, durable paper risk reservations,
+  registered pattern experiments, user workflows and full regression evidence
+  remain separate requirements. Every new artifact stays on D:, per the owner's
+  reiterated constraint. No protected PDF, licensed data or private vault enters Git.
+- **References:** DEC-0037/0038/0041; `v0/PUBLICATIONS.md`, `v0/PATTERNLAB.md`,
+  `v0/ACCOUNTING.md`; mission sections 8–15.
+- **Owner and approver:** Owner's explicit full V0 mission, 2026-10-05.
+
+### DEC-0041 — Source-grounded research math and bounded provider adapters (2026-10-05)
+
+- **Status:** ACCEPTED for implementation under the full V0 mission; no empirical,
+  sealed-data, live-order or stage authority is granted.
+- **Scope:** methodology / numerical reproducibility / data timing.
+- **Decision:** Integrate ten explicitly named classical research variants with
+  primary-source method mappings, synthetic independent arithmetic oracles and
+  causal fit/prediction contracts. Pin SciPy 1.18.1 and statsmodels 0.15.0 for
+  tested optimization and statistical primitives. Preserve all actual failures
+  and adaptations; a formula test is not a paper reproduction or investment claim.
+- **Timing:** Fits select actual available information before numeric inspection.
+  OOF labels carry actual availability separate from horizon end. Consensus
+  source/statistic identity is bound to its training scale. Moreira–Muir scaling
+  uses a preregistered/train-only constant, never the paper's full-sample choice
+  retrospectively passed off as a prospective calibration.
+- **Authority:** Pure math has no registry, holdout, network, credential or order
+  capability. Product evaluation must still allocate identities, register every
+  variant, freeze and execute through the existing Item 8 lifecycle. Integration
+  remains in progress until those user workflows and evidence are verified.
+- **Frozen study partitions:** Synthetic study adapters declare actual inclusive
+  train cutoff and its exclusive end, decision and target/receipt dates. Item 8
+  registration and integrity revalidation use that exact boundary instead of the
+  four-bar demonstration's midpoint. Old runs retain their existing midpoint.
+  Each positive, null, sensitivity or manually changed parameter is a new counted
+  variant; failed fits remain failed and successful software results INCONCLUSIVE.
+- **Data:** Add concrete bounded macro/priority read-only clients and file
+  importers. Unknown publication/consensus/vintage/rights remain unknown.
+  Sources requiring secret-bearing URLs or unapproved billing use file imports
+  or explicit external blockers; no undocumented authentication is invented.
+- **Review:** Independent agent review corrected delayed OOF label exposure,
+  numerically ineffective ridge, future BEA/ALFRED vintages and source parser
+  exceptions before integration. Full regression and current CI remain required.
+- **References:** `v0/RESEARCH_METHODS.md`, `v0/MACRO_SOURCES.md`,
+  `v0/PRIORITY_SOURCES.md`, original mandate sections 7, 9–13.
+- **Owner and approver:** Owner's explicit full-V0 mission, 2026-10-05.
+
 ### DEC-0040 — Instrument identity and private read-only configuration (2026-10-05)
 
 - **Status:** ACCEPTED within the owner's continuous V0 implementation scope;

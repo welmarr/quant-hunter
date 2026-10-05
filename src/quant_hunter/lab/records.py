@@ -11,6 +11,7 @@ LIMITATION = (
     "confirmatory validation, real sealed data, or HOST_ENFORCED authority."
 )
 FAMILY_NAME = "V0 synthetic accounting demonstrations"
+STUDY_FAMILY_NAME = "V0 synthetic mathematical studies"
 DOCUMENTATION = "https://github.com/welmarr/quant-hunter"
 
 
@@ -19,7 +20,7 @@ def pending(reason: str) -> JsonRecord:
     return {"status": "PENDING", "reason": reason}
 
 
-def source_record(timestamp: str) -> JsonRecord:
+def source_record(timestamp: str, *, study: bool = False) -> JsonRecord:
     """Register only the application's explicitly synthetic source."""
     return {
         "schema_version": "1.0.0",
@@ -28,7 +29,9 @@ def source_record(timestamp: str) -> JsonRecord:
         "status": "CANDIDATE",
         "provider": "Quant Hunter local synthetic fixture generator",
         "documentation_uri": DOCUMENTATION,
-        "data_domain": "Synthetic accounting software fixtures",
+        "data_domain": "Synthetic mathematical study fixtures"
+        if study
+        else "Synthetic accounting software fixtures",
         "granularity": "Explicit fixture observations; no provider coverage claim",
         "historical_depth": "Only the immutable supplied synthetic fixture",
         "realtime_availability": "HISTORICAL_ONLY",
@@ -68,9 +71,10 @@ def research_record(
     name: str,
     configuration_digest: str,
     family: bool,
+    method: JsonRecord | None = None,
 ) -> JsonRecord:
     """Register a family or strategy before executing a variant."""
-    return {
+    result: JsonRecord = {
         "schema_version": "1.0.0",
         "created_at": timestamp,
         "object_type": "RESEARCH_FAMILY" if family else "STRATEGY",
@@ -134,6 +138,24 @@ def research_record(
             "reason": "Software demonstration, not reproduction of a research paper",
         },
     }
+    if method is not None:
+        result.update(
+            hypothesis="One frozen synthetic method obeys its stated numerical and temporal contracts.",
+            mathematical_definition=method["implemented_scope"],
+            source_citations=deepcopy(method["source_citations"]),
+            outputs=[
+                "Actual signals, fitted parameters and declared numerical metrics"
+            ],
+            academic_institutional_basis="Source-documented mathematical variant or project-defined comparison baseline; no empirical reproduction",
+            validation_plan="Independent numerical oracles; null and sensitivity require separately registered variants",
+            assumptions=deepcopy(method["assumptions"]),
+            transaction_cost_sensitivity=method["cost_model"],
+        )
+        if family:
+            result["mathematical_definition"] = (
+                "Shared exposure accounting for all V0 mathematical study variants; each method is frozen separately."
+            )
+    return result
 
 
 def experiment_record(
@@ -149,6 +171,8 @@ def experiment_record(
     code_revision: str,
     partitions: JsonRecord,
     name: str,
+    method: JsonRecord | None = None,
+    random_seed: int = 0,
 ) -> JsonRecord:
     """Build a result-free, complete preregistration with one bounded trial."""
     payload: JsonRecord = {
@@ -170,7 +194,7 @@ def experiment_record(
         "code_revision": code_revision,
         "configuration_digest": configuration_digest,
         "environment_digest": environment_digest,
-        "random_seed": 0,
+        "random_seed": random_seed,
         "author": "local-lab-ai-originated-software",
         "academic_institutional_basis": "Software accounting conservation identities",
         "dataset_vintages": [
@@ -212,6 +236,19 @@ def experiment_record(
     }
     for field in ("results", "result_artifact_locations", "reason_for_decision"):
         payload[field] = pending("No execution or scientific decision has occurred")
+    if method is not None:
+        payload.update(
+            evaluation_metrics=[
+                "Actual method signals, fitted parameters and numerical metrics specified by frozen implementation"
+            ],
+            academic_institutional_basis="Source-documented method or project-defined comparison baseline; synthetic evidence only",
+            feature_definitions=method["implemented_scope"],
+            label_definitions="Typed target with distinct start, end and actual availability in frozen bytes; unused diagnostic targets are explicit",
+            baselines=[
+                "Declared null and sensitivity scenarios are separate experiments; no empirical superiority claim"
+            ],
+            execution_cost_assumptions=[method["cost_model"]],
+        )
     return payload
 
 

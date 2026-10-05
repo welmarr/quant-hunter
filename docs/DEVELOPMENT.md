@@ -19,6 +19,14 @@ schedule uses the pinned timezone resource explicitly. Use the normal complete
 quality commands below; targeted module checks do not replace them. Current
 source and proof paths, failed runs and corrections are in `v0/TEST_REPORT.md`.
 
+DEC-0041/0042 additionally pin SciPy 1.18.1, statsmodels 0.15.0 and pypdf 6.19.0;
+the current lock contains 63 packages. These support specified classical
+mathematics and bounded PDF extraction. All new dependency caches, temporary
+files and verification artifacts must stay on D:. Set UV_CACHE_DIR to
+D:\quant-hunter\.tools\uv-cache, UV_PYTHON_INSTALL_DIR to
+D:\quant-hunter\.tools\python, TEMP/TMP to D:\quant-hunter\.tools\v0-tmp and
+NPM_CONFIG_CACHE to D:\quant-hunter\.tools\npm-cache before each tool process.
+
 Stage 1B Batch 1 uses standard GIL-enabled, 64-bit CPython 3.14.7 and uv
 0.12.10. The exact runtime is pinned by `.python-version`; uv is pinned by
 `uv.toml` and CI. Patch upgrades require an explicit decision, lock

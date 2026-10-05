@@ -117,12 +117,32 @@ class EquityTransport(Protocol):
 class EquityHTTPS:
     """No proxy, redirects, retries, decompression or endpoint changes.
 
-    DNS uses the OS timeout. After a single public-address lookup, TLS validates
-    the official host against the pinned IP. Socket stages and response reading
-    are bounded. Header values and response bodies never enter diagnostics.
+    A disposable child enforces a 20-second total parent deadline, including
+    DNS/TLS/headers/body. TLS validates the official host against the pinned IP.
+    Header values and response bodies never enter error diagnostics.
     """
 
     def send(self, request: EquityRequest) -> EquityResponse:
+        from quant_hunter.sources.process_http import run
+
+        request.__post_init__()
+        result = run(
+            "EQUITY",
+            json.dumps(
+                {
+                    "host": request.host,
+                    "target": request.target,
+                    "user_agent": request.user_agent,
+                    "key_id": request.key_id,
+                    "secret_key": request.secret_key,
+                }
+            ).encode("utf-8"),
+        )
+        return EquityResponse(result.status, result.body, result.retry_after)
+
+    @staticmethod
+    def _send_once(request: EquityRequest) -> EquityResponse:
+        """Private wire primitive; public callers use the bounded child."""
         request.__post_init__()
         connection = http.client.HTTPSConnection(request.host, timeout=SOCKET_TIMEOUT)
         try:

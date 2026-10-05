@@ -34,6 +34,8 @@ const page = await context.newPage();
 const phaseB = process.env.QH_E2E_PHASE_B === "1";
 const connectionsEnabled = process.env.QH_E2E_CONNECTIONS === "1";
 const marketsEnabled = process.env.QH_E2E_MARKETS === "1";
+const providersEnabled = process.env.QH_E2E_PROVIDERS === "1";
+let providerOperationIds = [];
 let instrumentCreated = null;
 let instrumentPayload = null;
 let importedDataset = null;
@@ -126,13 +128,13 @@ async function phaseBProof() {
   const sources = (await catalogue.json()).sources;
   assert.equal(sources.length, 22);
   assert.equal(await page.locator(".source-grid .panel").count(), 22);
-  assert.equal(await page.getByRole("button", { name: "Probe public endpoint", exact: true }).count(), 2);
+  assert.equal(await page.getByRole("button", { name: "Probe public endpoint", exact: true }).count(), 3);
   await page.getByLabel("Search catalogue", { exact: true }).fill(sources[0].name);
   assert.ok(await page.locator(".source-grid .panel").count() >= 1);
   await page.getByLabel("Search catalogue", { exact: true }).fill("");
   await screenshot("15-source-catalogue");
   check("Source catalogue renders all22 actual entries with searchable capabilities and explicit implementation status");
-  check("Only the two implemented public probes have actionable controls; default browser test makes no external probe request");
+    check("Only the three implemented public probes have actionable controls; default browser test makes no external probe request");
   if (process.env.QH_E2E_LIVE_PROBE === "1") {
     const before = (await (await page.request.get(`${base}/api/data-operations`)).json()).operations.length;
     const responsePromise = page.waitForResponse(response => response.url().endsWith("/api/sources/SRC-08/probe") && response.request().method() === "POST");
@@ -247,7 +249,7 @@ async function connectionProof() {
   await page.getByRole("button", { name: "Save Alpaca connection", exact: true }).click();
   await page.getByText(/SRC-02 configuration saved privately/).waitFor();
   const masked = await (await page.request.get(`${base}/api/connections`)).json();
-  assert.ok(masked.connections.every(connection => connection.state === "CONFIGURED" && connection.masked === "********" && connection.externally_validated === false));
+  assert.ok(masked.connections.filter(connection => ["SRC-01", "SRC-02"].includes(connection.catalogue_id)).every(connection => connection.state === "CONFIGURED" && connection.masked === "********" && connection.externally_validated === false));
   for (const value of [fakeOrg, fakeEmail, fakeKey, fakeSecret]) assert.ok(!JSON.stringify(masked).includes(value));
   for (const input of await privateInputs.all()) assert.equal(await input.inputValue(), "");
   assert.equal(await page.locator('#connections-panel input[type="checkbox"]:checked').count(), 0);
@@ -302,6 +304,107 @@ async function deniedConnectionProof() {
   assert.equal((await page.request.get(`${base}/api/connections`)).status(), 403);
   assert.equal((await page.request.post(`${base}/api/connections/rotate`, { headers: { "X-QH-Request": "1", "X-CSRF-Token": current.csrf }, data: {} })).status(), 403);
   check(`${current.user.role}: private settings perform no connection read and direct configuration/rotation API access is denied`);
+}
+
+const providerExports = [
+  { id: "SRC-05", title: "BEA NIPA", rows: 1, fields: { table: "T10101", series_id: "A191RL", unit: "Percent change, annual rate", unit_multiplier: "0", start: "2023-01-01", end: "2023-12-31", vintage: "2024-01-25" }, data: { BEAAPI: { Request: { RequestParam: [{ ParameterName: "USERID", ParameterValue: "[REDACTED]" }, { ParameterName: "METHOD", ParameterValue: "GETDATA" }, { ParameterName: "DATASETNAME", ParameterValue: "NIPA" }, { ParameterName: "TABLENAME", ParameterValue: "T10101" }] }, Results: { Data: [{ TableName: "T10101", SeriesCode: "A191RL", TimePeriod: "2023Q1", CL_UNIT: "Percent change, annual rate", UNIT_MULT: "0", DataValue: "1.5", METRIC_NAME: "Quantity change" }] } } } },
+  { id: "SRC-07", title: "ALFRED vintages", rows: 2, fields: { series_id: "TEST", unit: "Index", start: "2023-01-01", end: "2023-12-31", realtime_start: "2024-01-01", realtime_end: "2024-12-31" }, data: { realtime_start: "2024-01-01", realtime_end: "2024-12-31", observation_start: "2023-01-01", observation_end: "2023-12-31", units: "lin", output_type: 1, order_by: "observation_date", sort_order: "asc", count: 2, offset: 0, limit: 1000, observations: [{ date: "2023-01-01", realtime_start: "2024-01-01", realtime_end: "2024-02-14", value: "100" }, { date: "2023-01-01", realtime_start: "2024-02-15", realtime_end: "2024-12-31", value: "101" }] }, secondary: { seriess: [{ id: "TEST", units: "Index" }] } },
+  // Python stdlib FORMAT_ALONE LZMA of two big-endian >IIIff records:
+  // (1000,110002,110000,1.25,2.5), (1000,110003,110001,0,1).
+  { id: "SRC-09", title: "Dukascopy daily BI5", rows: 2, fields: { day: "2024-01-02" }, bi5: "XQAAgAD//////////wAAYAxRSLjEeRkikuXI+KX0n0e0Ps79kv99xu7iJYUhn/2+VAA=" },
+  { id: "SRC-19", title: "EODHD daily", rows: 1, fields: { symbol: "SYNTHETIC_old.US", currency: "USD", start: "2024-01-01", end: "2024-01-31" }, data: [{ date: "2024-01-02", open: 100, high: 103, low: 99, close: 102, adjusted_close: 50.5, volume: 2000 }] },
+];
+async function providerUpload(fixture, malformed = false) {
+  await route("sources"); await page.getByLabel("Search catalogue", { exact: true }).fill(fixture.id);
+  const card = page.locator(`[data-source="${fixture.id}"]`);
+  await card.getByText(`Import ${fixture.title} file`, { exact: true }).click();
+  const form = page.locator(`#source-import-${fixture.id}`);
+  const buffer = malformed ? Buffer.from("{}") : fixture.bi5 ? Buffer.from(fixture.bi5, "base64") : Buffer.from(JSON.stringify(fixture.data));
+  await form.locator(`#field-${fixture.id}-file`).setInputFiles({ name: `SYNTHETIC-${fixture.id}.${fixture.bi5 && !malformed ? "bi5" : "json"}`, mimeType: "application/octet-stream", buffer });
+  if (fixture.secondary) await form.locator(`#field-${fixture.id}-series-file`).setInputFiles({ name: "SYNTHETIC-series.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(fixture.secondary)) });
+  for (const [key, value] of Object.entries(fixture.fields)) await form.locator(`#field-${fixture.id}-${key}`).fill(value);
+  await form.getByLabel("Provider export licence / access rights", { exact: true }).fill("Synthetic browser fixture, generated locally; no provider data or rights claim");
+  await form.getByLabel(/I confirm my right to store and use this provider export/).check();
+  const responsePromise = page.waitForResponse(response => response.url().endsWith(`/api/sources/${fixture.id}/import`) && response.request().method() === "POST");
+  await form.getByRole("button", { name: `Import ${fixture.title} export`, exact: true }).click();
+  const response = await responsePromise;
+  return { response, form };
+}
+async function providerProof() {
+  let probes = 0;
+  const track = request => { if (/\/api\/sources\/[^/]+\/probe$/u.test(request.url())) probes += 1; };
+  page.on("request", track);
+  await route("settings");
+  const entries = [["SRC-07", "FRED", randomBytes(16).toString("hex")], ["SRC-18", "Sharadar", `SYNTHETIC_${randomBytes(12).toString("hex")}`], ["SRC-20", "Trading Economics", `SYNTHETIC_${randomBytes(12).toString("hex")}`]];
+  for (const [id, name, key] of entries) {
+    const form = page.locator(`#connection-form-${id}`); await form.waitFor();
+    assert.equal(await form.locator('input[type="checkbox"]:checked').count(), 0);
+    const field = form.getByLabel(`${name} API key`, { exact: true });
+    assert.equal(await field.getAttribute("type"), "password"); assert.equal(await field.inputValue(), "");
+    await field.fill(key);
+    await form.getByLabel(`I confirm the ${name} entitlement permits this requested data access.`, { exact: true }).check();
+    await form.getByLabel(`I confirm this bounded ${name} access adds no incremental charge.`, { exact: true }).check();
+    await form.getByRole("button", { name: `Save ${name} connection`, exact: true }).click();
+    await page.getByText(new RegExp(`${id} configuration saved privately`)).waitFor();
+    assert.equal(await field.inputValue(), "");
+    const metadata = await (await page.request.get(`${base}/api/connections`)).json();
+    assert.ok(!JSON.stringify(metadata).includes(key));
+    assert.equal(metadata.connections.find(item => item.catalogue_id === id).masked, "********");
+  }
+  await screenshot("30-provider-settings-masked");
+  check("FRED, Sharadar and Trading Economics synthetic keys save privately with empty fields, checked declarations and masked status");
+  await route("sources");
+  for (const [id] of entries) await page.locator(`[data-source="${id}"]`).getByRole("button", { name: "Test configured source", exact: true }).waitFor();
+  await page.locator('[data-source="SRC-06"]').getByRole("button", { name: "Probe public endpoint", exact: true }).waitFor();
+  check("Only explicit configured-owner and public G17 diagnostic actions are exposed; no test action is automatically triggered");
+  for (const [id, name] of entries) {
+    await route("settings");
+    await page.getByRole("button", { name: `Revoke ${name} connection`, exact: true }).click();
+    await page.getByText(`${id} connection revoked.`, { exact: true }).waitFor();
+  }
+  const previous = new Set((await (await page.request.get(`${base}/api/data-operations`)).json()).operations.map(item => item.id));
+  for (const fixture of providerExports) {
+    const { response, form } = await providerUpload(fixture);
+    assert.equal(response.status(), 201); const result = await response.json();
+    assert.equal(result.status, "SUCCEEDED", JSON.stringify(result));
+    assert.equal(result.record_count, fixture.rows); assert.equal(result.quality, "PENDING");
+    assert.equal(result.source_status, "CANDIDATE"); assert.equal(result.evidence_mode, "OWNER_SUPPLIED");
+    assert.equal(result.datasets.length, fixture.secondary ? 2 : 1);
+    assert.ok(result.datasets.every(item => /^sha256:[a-f0-9]{64}$/u.test(item.raw_digest)));
+    await form.getByText("SUCCEEDED", { exact: true }).waitFor();
+    await form.getByText(`Inspect ${Math.min(10, fixture.rows)} preview records`, { exact: true }).click();
+    assert.equal(await form.getByRole("table", { name: "Provider operation preview" }).locator("tbody tr").count(), fixture.rows);
+    await screenshot(`31-provider-${fixture.id}-preview`);
+    check(`${fixture.id}: real ${fixture.rows}-record synthetic provider import, immutable raw references, typed preview and unverified quality`);
+  }
+  const failed = await providerUpload(providerExports[3], true);
+  assert.equal(failed.response.status(), 201); assert.equal((await failed.response.json()).status, "FAILED");
+  await failed.form.getByText("FAILED", { exact: true }).waitFor();
+  await screenshot("32-provider-failed-import");
+  const operations = (await (await page.request.get(`${base}/api/data-operations`)).json()).operations;
+  providerOperationIds = operations.filter(item => !previous.has(item.id)).map(item => item.id);
+  assert.equal(providerOperationIds.length, 5);
+  assert.equal(probes, 0); page.off("request", track);
+  check("Malformed export remains a FAILED operation; save/revoke/import workflows made zero provider-probe requests");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noPageOverflow("Mobile provider import390px"); await screenshot("33-mobile-provider-import");
+  await page.setViewportSize({ width: 1440, height: 1080 });
+}
+async function providerAccessProof(reader = false) {
+  const operations = (await (await page.request.get(`${base}/api/data-operations`)).json()).operations;
+  assert.ok(!operations.some(item => providerOperationIds.includes(item.id)));
+  await route("sources"); await page.getByLabel("Search catalogue", { exact: true }).fill("SRC-19");
+  if (reader) {
+    assert.equal(await page.locator('#source-import-SRC-19').count(), 0);
+    const current = await apiSession();
+    const denied = await page.request.post(`${base}/api/sources/SRC-19/import`, { headers: { "X-QH-Request": "1", "X-CSRF-Token": current.csrf }, data: { content_base64: Buffer.from("[]").toString("base64"), metadata: {} } });
+    assert.equal(denied.status(), 403);
+    check("Reader cannot import provider exports; owner operation history remains private");
+  } else {
+    const { response } = await providerUpload(providerExports[3]);
+    assert.equal(response.status(), 201); assert.equal((await response.json()).status, "SUCCEEDED");
+    check("Researcher can import its own provider export while owner operation history remains private");
+  }
 }
 async function marketsProof() {
   await route("markets");
@@ -433,6 +536,7 @@ try {
   if (connectionsEnabled) await connectionProof();
   if (phaseB) await phaseBProof();
   if (marketsEnabled) await marketsProof();
+  if (providersEnabled) await providerProof();
   await route("project"); await page.getByRole("heading", { name: "Project checkpoint", exact: true }).waitFor(); await screenshot("07-project-status");
   await route("overview"); await context.setOffline(true);
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
@@ -455,6 +559,7 @@ try {
   check("Researcher cannot read owner job IDs/list or users through the API");
   if (connectionsEnabled) await deniedConnectionProof();
   if (marketsEnabled) await deniedInstrumentProof();
+  if (providersEnabled) await providerAccessProof();
   if (phaseB) {
     const privateDatasets = (await (await page.request.get(`${base}/api/datasets`)).json()).datasets;
     assert.ok(!privateDatasets.some(dataset => dataset.dataset_id === importedDataset.dataset_id));
@@ -472,6 +577,7 @@ try {
   await screenshot("11-reader-restrictions"); check("Reader cannot submit jobs or read another user's result even through direct API requests");
   if (connectionsEnabled) await deniedConnectionProof();
   if (marketsEnabled) await deniedInstrumentProof();
+  if (providersEnabled) await providerAccessProof(true);
   if (phaseB) {
     await route("data"); await page.getByText(/Your reader role can inspect datasets/).waitFor();
     assert.equal(await page.getByRole("button", { name: "Import dataset", exact: true }).count(), 0);

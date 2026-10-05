@@ -85,6 +85,7 @@ def test_schema_catalog_is_complete_and_meta_valid() -> None:
         "experiment.schema.json",
         "instrument.schema.json",
         "pattern.schema.json",
+        "publication.schema.json",
         "pit-selection-config.schema.json",
         "raw-capture.schema.json",
         "research-backlog.schema.json",

@@ -57,6 +57,14 @@ class Backtest(Input):
     annual_financing_rate: Annotated[str, Field(pattern=r"^0(\.[0-9]{1,6})?$")] = "0"
 
 
+class StudyRequest(Input):
+    study_id: Annotated[str, Field(pattern=r"^(CRP-(0[1-9]|10)|ENS-COV|META-OOF)$")]
+    scenario: Literal["POSITIVE", "NULL", "SENSITIVITY"] = "POSITIVE"
+    parameter: Annotated[
+        str | None, Field(pattern=r"^-?[0-9]{1,8}(\.[0-9]{1,10})?$")
+    ] = None
+
+
 class ImportInstrument(Input):
     symbol: Annotated[str, Field(min_length=1, max_length=32)]
     asset_class: Literal["EQUITY", "FX_SPOT"]
@@ -85,6 +93,14 @@ class DatasetUpload(Input):
 
 class ConnectionInput(Input):
     values: dict[str, str | bool]
+
+
+class SourceUpload(Input):
+    content_base64: Annotated[str, Field(min_length=1, max_length=2_666_668)]
+    series_metadata_base64: Annotated[
+        str | None, Field(min_length=1, max_length=2_666_668)
+    ] = None
+    metadata: dict[str, str | bool | int | None]
 
 
 class InstrumentInterval(Input):
@@ -150,7 +166,14 @@ class LocalBoundary:
                 return
         limit = (
             3_000_000
-            if scope["path"] == "/api/datasets" and scope["method"] == "POST"
+            if scope["method"] == "POST"
+            and (
+                scope["path"] == "/api/datasets"
+                or (
+                    scope["path"].startswith("/api/sources/")
+                    and scope["path"].endswith("/import")
+                )
+            )
             else 65536
         )
         chunks: list[bytes] = []
@@ -465,6 +488,36 @@ def create_app(
     def jobs(request: Request) -> list[dict[str, object]]:
         return [asdict(job) for job in state.jobs(authenticated(request).user)]
 
+    @app.get("/api/studies")
+    def studies(request: Request) -> dict[str, object]:
+        from quant_hunter.web.studies import catalogue
+
+        authenticated(request)
+        return {
+            "studies": catalogue(),
+            "evidence_mode": "SYNTHETIC",
+            "empirical_validation": "MISSING",
+        }
+
+    @app.post("/api/studies/jobs", status_code=202)
+    def enqueue_study(payload: StudyRequest, request: Request) -> dict[str, object]:
+        from quant_hunter.web.studies import request_config
+
+        current = authenticated(request, mutation=True)
+        if current.user.role not in ("owner", "researcher"):
+            raise HTTPException(403, "Researcher role required")
+        if worker is None or not worker.alive:
+            raise HTTPException(503, "Research worker is unavailable")
+        try:
+            config = request_config(
+                payload.study_id, payload.scenario, payload.parameter
+            )
+        except ValueError as error:
+            raise HTTPException(
+                422, "Study parameter is outside the declared bounds"
+            ) from error
+        return asdict(state.enqueue(current.user, config))
+
     @app.post("/api/jobs", status_code=202)
     def enqueue(payload: Backtest, request: Request) -> dict[str, object]:
         current = authenticated(request, mutation=True)
@@ -546,6 +599,40 @@ def create_app(
             "limit": limit,
             "offset": offset,
         }
+
+    @app.post("/api/sources/{catalogue_id}/import", status_code=201)
+    def source_file_import(
+        catalogue_id: str, payload: SourceUpload, request: Request
+    ) -> JsonRecord:
+        user = authenticated(request, mutation=True).user
+        if user.role not in ("owner", "researcher"):
+            raise HTTPException(403, "Researcher role required")
+        try:
+            content = base64.b64decode(payload.content_base64, validate=True)
+            metadata_bytes = (
+                base64.b64decode(payload.series_metadata_base64, validate=True)
+                if payload.series_metadata_base64 is not None
+                else None
+            )
+        except (binascii.Error, ValueError) as exc:
+            raise HTTPException(422, "File encoding is invalid") from exc
+        if not 0 < len(content) + len(metadata_bytes or b"") <= 2_000_000:
+            raise HTTPException(413, "Combined files must contain 1 to 2,000,000 bytes")
+        try:
+            return data_services().import_source(
+                user,
+                catalogue_id,
+                content,
+                cast(JsonRecord, payload.metadata),
+                series_metadata=metadata_bytes,
+            )
+        except AccessError:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                422,
+                "Source import rejected; inspect its recorded failure and the required source format. Availability and rights remain unverified.",
+            ) from exc
 
     @app.get("/api/datasets/{dataset_id}")
     def dataset_detail(dataset_id: str, request: Request) -> JsonRecord:

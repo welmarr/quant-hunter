@@ -102,3 +102,44 @@ instrument metadata, append a ticker correction, exercise stale-write rejection,
 compare historical local-knowledge snapshots, and inspect real NYSE early-close
 and FX weekend/DST schedules. Researcher/reader checks cover shared reads and
 owner-only writes. These checks make no external provider requests.
+
+Sources also provides actual local export workflows for BEA NIPA JSON, ALFRED
+observation and matching series-metadata JSON, Dukascopy daily BI5, and EODHD
+daily JSON. Forms use the closed provider-specific metadata contract and enforce
+the combined 2,000,000-byte file bound before upload. The results remain private
+data operations with raw references, parsed previews and PENDING quality; they
+are not added to the OHLC dataset library or enabled for historical backtesting.
+No acquisition occurs during import. File selection and declarations clear on
+navigation; an account change during file reading prevents submission.
+
+Settings includes FRED v2, Sharadar and Trading Economics private keys alongside
+SEC and Alpaca. Rights and no-incremental-charge declarations start unchecked.
+Saved keys are masked, never prefilled or revealed, and never placed in browser
+storage. Explicit owner tests are available only for configured sources. Public
+G.17 joins BLS and ECB as a manually triggered bounded diagnostic. No source is
+queried automatically and a successful diagnostic does not establish historical
+availability, coverage, licensing approval or empirical validity.
+
+`QH_E2E_PROVIDERS=1` adds synthetic configuration/revocation for the three new
+keyed providers, four real local API import workflows (including both ALFRED
+files), actual previews and immutable references, a retained malformed-export
+failure, role isolation and mobile layout. The test uses generated fixtures and
+nonfunctional synthetic keys only, never clicks any provider probe, and checks
+that no probe request occurred. Run only against the separate test installation;
+this flag writes private test configuration and owned synthetic import records.
+The harness records actual execution evidence when run; its presence alone is
+not a claim that these optional checks have passed.
+
+The Studies view exposes ten sourced CRP mathematical studies and two explicitly
+synthetic comparison baselines. Each submission freezes a new Item8 experiment,
+counts one variant and shows actual computed signals, fitted model, accounting,
+comparison, source digests and limitations. Positive, null and sensitivity
+controls never become an empirical-replication claim. Parameter values change
+the computation; invalid or failed fits remain counted and inspectable.
+
+Run `node study-smoke.mjs` against a separate configured test instance using the
+same D-only account/artifact environment as browser-smoke.mjs. It executes all
+twelve positive controls, three expected null failures and one sensitivity
+variant, checks actual canonical results and privacy, and records mobile and
+reader evidence. The 2026-10-05 run passed 20 assertions and 18 screenshots with
+no external requests. See TEST_REPORT.md for precise artifact locations.

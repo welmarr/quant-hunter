@@ -1,4 +1,6 @@
 "use strict";
+const connectionNames = { "SRC-01": "SEC", "SRC-02": "Alpaca", "SRC-07": "FRED", "SRC-18": "Sharadar", "SRC-20": "Trading Economics" };
+const sourceImportNames = { "SRC-05": "BEA NIPA", "SRC-07": "ALFRED vintages", "SRC-09": "Dukascopy daily BI5", "SRC-19": "EODHD daily" };
 const SVG_NS = "http://www.w3.org/2000/svg";
 const root = document.getElementById("app");
 let session = { needs_owner: false, user: null, csrf: null };
@@ -20,7 +22,7 @@ let datasetRequest = 0;
 let datasetsLoading = false;
 let view = parseView();
 let draft = { market: "EQUITY", initial_cash: "10000", quantity: "10", lookback: 1, commission: "1", slippage_bps: "0", annual_financing_rate: "0" };
-const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
+const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
 const paths = {
     overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
     sources: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
@@ -83,7 +85,8 @@ function numeric(value, digits = 2) {
 }
 function percent(value) { const formatted = numeric(value); return formatted === "—" ? formatted : `${formatted}%`; }
 function shortId(id) { return id.length > 18 ? `${id.slice(0, 8)}…${id.slice(-6)}` : id; }
-function marketName(market) { return market === "EQUITY" ? "Equities" : market === "FX_SPOT" ? "Spot FX" : market; }
+function marketName(market) { return market === "EQUITY" ? "Equities" : market === "FX_SPOT" ? "Spot FX" : market ?? "—"; }
+function jobLabel(job) { return job.config.kind === "CRP_STUDY" ? `${job.config.study_id} · ${job.config.scenario}` : marketName(job.config.market); }
 function dateLabel(value) {
     if (!value)
         return "—";
@@ -98,7 +101,7 @@ function metadataText(value) {
 }
 function parseView() {
     const hash = window.location.hash.slice(1);
-    return ["overview", "sources", "data", "markets", "backtests", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
+    return ["overview", "sources", "data", "markets", "backtests", "studies", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
 }
 function navigate(next) {
     if (view === next && document.getElementById("workspace-view")) {
@@ -389,7 +392,7 @@ function renderView(focus = false) {
         region.append(heading("Connecting to your local installation", viewNames[view], "Loading the current account's workspace…"));
         return;
     }
-    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
+    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
     views[view](region);
     if (focus) {
         const title = region.querySelector("h1");
@@ -455,6 +458,7 @@ function renderSources(region) {
             cards.replaceChildren();
             filtered.forEach(source => {
                 const item = panel(source.name, source.catalogue_id, statusBadge(display(source.implementation_status)));
+                item.box.dataset.source = source.catalogue_id;
                 item.body.append(el("div", "status-row", badge(metadataText(source.markets)), badge(display(source.status))));
                 const description = el("dl", "definition-list source-facts");
                 [["Authentication", metadataText(source.authentication)], ["Capabilities", metadataText(source.capabilities)], ["Rights / licensing", metadataText(source.license_notes)], ["Historical timing", metadataText(source.pit_notes)], ["Cost classification", metadataText(source.cost_class)], ["Cost basis", metadataText(source.cost_basis)], ["Rate limit", metadataText(source.rate_limit)], ["Documentation reviewed", display(source.documentation_reviewed_on)], ["Coverage verified", source.coverage_verified === true ? "Yes, according to the catalogue" : "Unverified"]].forEach(([key, value]) => description.append(el("dt", "", key), el("dd", "", value)));
@@ -470,7 +474,7 @@ function renderSources(region) {
                     }
                 }
                 catch { /* Invalid catalogue links are not made clickable. */ }
-                const requiresConfiguration = ["SRC-01", "SRC-02"].includes(source.catalogue_id);
+                const requiresConfiguration = Object.hasOwn(connectionNames, source.catalogue_id);
                 const connection = ownerConnections?.find(item => item.catalogue_id === source.catalogue_id);
                 if (requiresConfiguration) {
                     if (session.user?.role !== "owner")
@@ -481,7 +485,7 @@ function renderSources(region) {
                         item.body.append(el("div", "status-row probe-note", statusBadge(connection?.state ?? "NOT_CONFIGURED"), badge("EXTERNAL VALIDATION UNVERIFIED")), el("div", "form-actions", button("Manage private connection", () => navigate("settings"), "secondary compact", "settings")));
                 }
                 const configuredProbe = requiresConfiguration && session.user?.role === "owner" && connection?.state === "CONFIGURED";
-                if ((["SRC-04", "SRC-08"].includes(source.catalogue_id) && session.user?.role !== "reader") || configuredProbe) {
+                if ((["SRC-04", "SRC-06", "SRC-08"].includes(source.catalogue_id) && session.user?.role !== "reader") || configuredProbe) {
                     const probeResult = el("div");
                     const label = configuredProbe ? "Test configured source" : "Probe public endpoint";
                     const probe = button(label, () => {
@@ -490,8 +494,7 @@ function renderSources(region) {
                         probeResult.replaceChildren(notice("A bounded provider request is running. Its actual result or failure will be retained."));
                         void api(`/sources/${encodeURIComponent(source.catalogue_id)}/probe`, {}).then(result => {
                             if (pageEpoch === epoch && probeResult.isConnected) {
-                                const outcome = record(result);
-                                probeResult.replaceChildren(el("div", "", el("div", "status-row probe-note", statusBadge(display(outcome.status))), outcome.status === "FAILED" ? notice(display(outcome.error_code), "error") : null, el("pre", "json-view", JSON.stringify(result, null, 2))));
+                                probeResult.replaceChildren(sourceOperationResult(result));
                             }
                         }).catch(error => { if (pageEpoch === epoch && probeResult.isConnected)
                             probeResult.replaceChildren(notice(readableError(error), "error")); }).finally(() => {
@@ -502,6 +505,14 @@ function renderSources(region) {
                         });
                     }, "secondary compact", "refresh");
                     item.body.append(el("div", "form-actions", probe), el("p", "field-hint probe-note", configuredProbe ? "Sends one bounded diagnostic using the private configuration. Saving alone never connects. A successful response does not verify full coverage, licensing, or historical timing." : "Makes one fixed, small public query. Limits: one probe per user per minute; BLS also has a persistent installation-wide daily quota. A successful probe does not verify full source coverage."), probeResult);
+                }
+                if (Object.hasOwn(sourceImportNames, source.catalogue_id)) {
+                    if (session.user?.role === "reader")
+                        item.body.append(notice("An owner or researcher can import an authorized provider export. Your account can inspect only its accessible operation history."));
+                    else if (session.user?.role === "owner" && ownerConnections === null && !connectionError)
+                        item.body.append(el("p", "small muted", "Preparing the local import form…"));
+                    else
+                        item.body.append(sourceImportForm(source.catalogue_id, epoch, operations.body));
                 }
                 cards.append(item.box);
             });
@@ -535,7 +546,7 @@ async function loadDataOperations(target, epoch) {
             return;
         }
         const rows = response.operations.map(operation => {
-            const detail = el("details", "operation-detail", el("summary", "", shortId(operation.id)), el("pre", "json-view", JSON.stringify({ result: operation.result, error: operation.error }, null, 2)));
+            const detail = el("details", "operation-detail", el("summary", "", shortId(operation.id)), operation.result ? sourceOperationResult(operation.result) : el("pre", "json-view", JSON.stringify({ error: operation.error }, null, 2)));
             const date = new Date(Number(operation.created_at_unix) * 1000);
             return [detail, operation.kind, display(operation.catalogue_id), statusBadge(operation.status), Number.isFinite(date.valueOf()) ? date.toISOString() : "—"];
         });
@@ -546,6 +557,153 @@ async function loadDataOperations(target, epoch) {
         if (pageEpoch === epoch && target.isConnected)
             target.replaceChildren(notice(readableError(error), "error"));
     }
+}
+function sourceOperationResult(value) {
+    const result = record(value);
+    const output = el("div", "provider-result", el("div", "status-row probe-note", statusBadge(display(result.status)), result.quality ? badge(`QUALITY ${display(result.quality)}`) : null, result.evidence_mode ? badge(display(result.evidence_mode)) : null));
+    if (result.status === "FAILED")
+        output.append(notice(display(result.error_code ?? result.error), "error"));
+    const facts = el("dl", "definition-list");
+    [["Records parsed", result.record_count], ["Source ID", result.source_id], ["Source status", result.source_status], ["Raw SHA-256", result.raw_digest], ["Summary SHA-256", result.diagnostic_summary_digest], ["Retrieved at", result.retrieved_at]].forEach(([key, item]) => { if (item !== undefined)
+        facts.append(el("dt", "", display(key)), el("dd", String(key).includes("SHA") || key === "Source ID" ? "mono" : "", display(item))); });
+    output.append(facts);
+    if (Array.isArray(result.limitations))
+        output.append(notice(result.limitations.map(display).join(" · ")));
+    if (Array.isArray(result.preview) && result.preview.length) {
+        const rows = result.preview.slice(0, 10).map(record);
+        const columns = [...new Set(rows.flatMap(row => Object.keys(row)))];
+        output.append(el("details", "data-disclosure", el("summary", "", `Inspect ${rows.length} preview records`), table(columns, rows.map(row => columns.map(key => metadataText(row[key]))), "Provider operation preview")));
+    }
+    output.append(el("details", "data-disclosure", el("summary", "", "Immutable references and exact response"), el("pre", "json-view", JSON.stringify(value, null, 2))));
+    return output;
+}
+async function base64File(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const pieces = [];
+    for (let start = 0; start < bytes.length; start += 32768)
+        pieces.push(String.fromCharCode(...bytes.subarray(start, start + 32768)));
+    return btoa(pieces.join(""));
+}
+function sourceImportForm(id, epoch, operations) {
+    const owner = session.user?.id;
+    const form = el("form");
+    form.id = `source-import-${id}`;
+    const title = sourceImportNames[id];
+    const file = field(`${title} export file`, `${id}-file`, "", { type: "file", hint: id === "SRC-09" ? "A daily UTC-milliseconds BI5 archive. Hour-based archives do not match this profile." : "An existing sanitized provider JSON export. Remove credential fields and URL tokens before submitting." });
+    file.input.accept = id === "SRC-09" ? ".bi5,.lzma,application/octet-stream" : ".json,application/json";
+    file.input.dataset.privateField = "true";
+    const info = el("p", "field-hint");
+    info.setAttribute("aria-live", "polite");
+    const secondary = id === "SRC-07" ? field("ALFRED series metadata file", `${id}-series-file`, "", { type: "file", hint: "The matching series metadata JSON, with one series ID and its units." }) : null;
+    if (secondary) {
+        secondary.input.accept = ".json,application/json";
+        secondary.input.dataset.privateField = "true";
+    }
+    const updateFiles = () => { info.textContent = [file.input.files?.[0], secondary?.input.files?.[0]].filter((item) => !!item).map(item => `${item.name} · ${item.size.toLocaleString()} bytes`).join(" · "); };
+    file.input.addEventListener("change", updateFiles);
+    secondary?.input.addEventListener("change", updateFiles);
+    const controls = {};
+    const grid = el("div", "form-grid");
+    const add = (key, label, value = "", type = "text", hint = "", required = true) => {
+        const input = field(label, `${id}-${key}`, value, { type, required, hint });
+        input.input.maxLength = 200;
+        controls[key] = input.input;
+        grid.append(input.box);
+        return input.input;
+    };
+    if (id === "SRC-05") {
+        const tableId = add("table", "BEA table", "", "text", "For example, T10101. Must match the file.");
+        tableId.pattern = "T[0-9]{5,7}";
+        add("series_id", "BEA series code", "", "text", "For example, A191RL. Must match the declared export.");
+        add("unit", "BEA unit", "", "text", "Use the exact CL_UNIT from the export.");
+        const multiplier = add("unit_multiplier", "BEA unit multiplier", "0", "number", "Integer power of ten from UNIT_MULT; not a currency conversion.");
+        multiplier.min = "-12";
+        multiplier.max = "12";
+        multiplier.step = "1";
+        add("start", "Observation start", "", "date");
+        add("end", "Observation end", "", "date");
+        add("vintage", "Declared vintage (optional)", "", "date", "A declaration does not authenticate historical availability.", false);
+    }
+    else if (id === "SRC-07") {
+        add("series_id", "ALFRED series ID");
+        add("unit", "ALFRED units", "", "text", "Must match the series metadata export.");
+        add("start", "Observation start", "", "date");
+        add("end", "Observation end", "", "date");
+        add("realtime_start", "Vintage range start", "", "date");
+        add("realtime_end", "Vintage range end", "", "date");
+    }
+    else if (id === "SRC-09") {
+        const scales = { EURUSD: 100000, GBPUSD: 100000, AUDUSD: 100000, NZDUSD: 100000, USDCHF: 100000, USDCAD: 100000, USDJPY: 1000, EURJPY: 1000, GBPJPY: 1000 };
+        const pair = selectField("Dukascopy currency pair", `${id}-pair`, Object.keys(scales).map(value => ({ value, text: value })), "EURUSD");
+        controls.pair = pair.input;
+        grid.append(pair.box);
+        add("day", "UTC archive day", "", "date");
+        const scale = add("point_scale", "Declared integer price scale", "100000", "number", "Price integers are divided by this pair-specific scale.");
+        scale.readOnly = true;
+        pair.input.addEventListener("change", () => { scale.value = String(scales[pair.input.value]); });
+    }
+    else {
+        const symbol = add("symbol", "EODHD symbol", "", "text", "Include the market suffix, for example AAPL.US. Symbol binding remains declared.");
+        symbol.pattern = "[A-Za-z0-9][A-Za-z0-9_.\\-]{0,30}\\.[A-Z]{2,8}";
+        const currency = add("currency", "Declared currency", "USD");
+        currency.maxLength = 3;
+        currency.pattern = "[A-Z]{3}";
+        add("start", "Observation start", "", "date");
+        add("end", "Observation end", "", "date");
+        const listing = selectField("Declared listing status", `${id}-listing_status`, [{ value: "UNKNOWN", text: "Unknown" }, { value: "ACTIVE", text: "Declared active" }, { value: "DELISTED", text: "Declared delisted" }], "UNKNOWN");
+        controls.listing_status = listing.input;
+        grid.append(full(listing.box));
+    }
+    const rights = field("Provider export licence / access rights", `${id}-declared_license`, "", { hint: "State the source-specific rights and restrictions that apply to these submitted bytes." });
+    rights.input.maxLength = 200;
+    const confirm = declaration("I confirm my right to store and use this provider export, and it contains no credentials or tokens.", `${id}-license_confirmed`);
+    const result = el("div");
+    result.setAttribute("aria-live", "polite");
+    const submit = el("button", "button", `Import ${title} export`);
+    submit.type = "submit";
+    form.append(notice("This local operation retains submitted raw bytes and a bounded parsed preview. Quality remains PENDING, source status remains CANDIDATE, and historical availability is unverified. It does not add a backtest-ready OHLC dataset."), file.box);
+    if (secondary)
+        form.append(secondary.box);
+    form.append(info, grid, rights.box, confirm.box, el("div", "form-actions", submit), result);
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const selected = file.input.files?.[0], supplement = secondary?.input.files?.[0];
+        if (!selected || (secondary && !supplement))
+            return;
+        if (selected.size === 0 || selected.size + (supplement?.size ?? 0) > 2_000_000) {
+            result.replaceChildren(notice("The combined files must contain 1 to 2,000,000 bytes.", "error"));
+            return;
+        }
+        const metadata = { declared_license: rights.input.value.trim(), license_confirmed: confirm.input.checked };
+        Object.entries(controls).forEach(([key, input]) => { metadata[key] = key === "unit_multiplier" || key === "point_scale" ? Number(input.value) : key === "vintage" && !input.value ? null : input.value.trim(); });
+        const current = () => pageEpoch === epoch && form.isConnected && session.user?.id === owner;
+        submit.disabled = true;
+        form.setAttribute("aria-busy", "true");
+        result.replaceChildren(notice("Reading the selected local files…"));
+        try {
+            const content = await base64File(selected), extra = supplement ? await base64File(supplement) : null;
+            if (!current())
+                return;
+            result.replaceChildren(notice("Importing and validating the provider export…"));
+            const response = await api(`/sources/${id}/import`, { content_base64: content, metadata, series_metadata_base64: extra });
+            if (!current())
+                return;
+            result.replaceChildren(sourceOperationResult(response));
+            clearPrivateInputs(form);
+            updateFiles();
+        }
+        catch (error) {
+            if (current())
+                result.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            submit.disabled = false;
+            form.setAttribute("aria-busy", "false");
+            if (current())
+                void loadDataOperations(operations, epoch);
+        }
+    });
+    return el("details", "data-disclosure", el("summary", "", `Import ${title} file`), form);
 }
 function renderData(region) {
     const epoch = pageEpoch;
@@ -1133,6 +1291,114 @@ function backtestForm() {
     });
     return form;
 }
+function renderStudies(region) {
+    const epoch = pageEpoch;
+    region.append(heading("From formulas to evidence", "Mathematical studies", "Run the ten research domains and two ensemble comparisons on declared synthetic inputs. Each request creates a separately counted experiment."), syntheticNotice());
+    region.append(notice("These are mathematical demonstrations. No historical replication or empirical validation is established. Null controls can produce zero signals, cost drag or a retained failed fit."));
+    const selector = panel("Choose a declared study", "Inspect the method and its limits before submitting one variant");
+    selector.body.append(el("p", "loading-message", "Loading implemented methods…"));
+    const history = panel("Your study jobs", "Positive, null and sensitivity runs remain separate records");
+    history.body.id = "job-list";
+    history.body.className = "";
+    const detail = el("div");
+    detail.id = "run-detail";
+    region.append(selector.box, history.box, detail);
+    updateJobList();
+    renderSelectedResult();
+    void api("/studies").then(response => {
+        if (pageEpoch !== epoch || !selector.box.isConnected)
+            return;
+        const definitions = response.studies;
+        if (!definitions.length) {
+            selector.body.replaceChildren(empty("No methods available", "The server has no study definitions."));
+            return;
+        }
+        const form = el("form");
+        form.id = "study-form";
+        const method = selectField("Study method", "study-method", definitions.map(item => ({ value: item.study_id, text: `${item.study_id} · ${item.title}` })), definitions[0].study_id);
+        const scenario = selectField("Study scenario", "study-scenario", [{ value: "POSITIVE", text: "Positive mathematical control" }, { value: "NULL", text: "Null control" }, { value: "SENSITIVITY", text: "Predeclared sensitivity" }], "POSITIVE");
+        const parameter = field("Declared parameter", "study-parameter", "", { type: "number", step: "any", hint: "Changing this parameter creates another counted variant. No search or automatic retry runs." });
+        const facts = el("div");
+        facts.id = "study-method-facts";
+        const message = el("div");
+        message.setAttribute("aria-live", "polite");
+        const submit = el("button", "button", icon("experiments"), "Run study");
+        submit.type = "submit";
+        const showDefinition = () => {
+            const chosen = definitions.find(item => item.study_id === method.input.value);
+            parameter.input.min = String(chosen.parameter_min);
+            parameter.input.max = String(chosen.parameter_max);
+            parameter.input.value = String(scenario.input.value === "SENSITIVITY" ? chosen.sensitivity_parameter : chosen.parameter_default);
+            facts.replaceChildren(el("dl", "definition-list", el("dt", "", "Implemented scope"), el("dd", "", chosen.implemented_scope), el("dt", "", "Named variant"), el("dd", "", chosen.variant), el("dt", "", "Parameter"), el("dd", "", `${chosen.parameter_name} · ${chosen.parameter_min} to ${chosen.parameter_max}`), el("dt", "", "Null behavior"), el("dd", "", chosen.null_behavior), el("dt", "", "Cost convention"), el("dd", "", chosen.cost_model)));
+            if (chosen.paper_url) {
+                const link = el("a", "button secondary compact", "Original method reference", icon("arrow"));
+                const url = new URL(chosen.paper_url);
+                if (url.protocol === "https:" && !url.username && !url.password) {
+                    link.href = url.href;
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    facts.append(link);
+                }
+            }
+            else
+                facts.append(el("p", "small muted", "Project-defined comparison baseline; no paper reproduction claimed."));
+            facts.append(el("details", "data-disclosure", el("summary", "", "Declared assumptions"), el("ul", "", ...chosen.assumptions.map(item => el("li", "", item)))));
+        };
+        method.input.addEventListener("change", showDefinition);
+        scenario.input.addEventListener("change", showDefinition);
+        showDefinition();
+        const reader = session.user?.role === "reader";
+        if (reader)
+            submit.disabled = true;
+        form.append(el("div", "form-grid", full(method.box), scenario.box, parameter.box), facts);
+        if (reader)
+            form.append(notice("Reader role can inspect the catalogue but cannot submit studies."));
+        form.append(el("div", "form-actions", submit), message);
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            submit.disabled = true;
+            message.replaceChildren(notice("Submitting one registered study…"));
+            try {
+                const job = await api("/studies/jobs", { study_id: method.input.value, scenario: scenario.input.value, parameter: parameter.input.value });
+                if (pageEpoch !== epoch || !form.isConnected)
+                    return;
+                jobs = [job, ...jobs];
+                selectedId = job.id;
+                selectedDetail = { job, run: null };
+                dataLoaded = true;
+                message.replaceChildren(notice("Study queued. Its result and permanent experiment identity will appear below."));
+                updateJobList();
+                renderSelectedResult();
+                startPolling();
+                void loadSelectedDetail();
+            }
+            catch (error) {
+                if (pageEpoch === epoch && form.isConnected)
+                    message.replaceChildren(notice(readableError(error), "error"));
+            }
+            finally {
+                submit.disabled = reader;
+            }
+        });
+        selector.body.replaceChildren(form);
+    }).catch(error => { if (pageEpoch === epoch && selector.box.isConnected)
+        selector.body.replaceChildren(notice(readableError(error), "error"), button("Retry methods", () => renderView(), "secondary")); });
+}
+function studyResult(result) {
+    const output = el("div");
+    output.id = "study-result";
+    output.append(el("h3", "", `${result.study_id} · ${result.scenario}`), badge(display(result.assessment)), el("p", "", display(result.implemented_scope)));
+    const metrics = Object.entries(result.metrics ?? {});
+    if (metrics.length)
+        output.append(table(["Computed metric", "Exact returned value"], metrics.map(([key, value]) => [key, metadataText(value)]), "Actual study metrics"));
+    output.append(el("dl", "definition-list", el("dt", "", "Training cutoff (UTC)"), el("dd", "mono", display(result.train_end)), el("dt", "", "Decision (UTC)"), el("dd", "mono", display(result.decision_at)), el("dt", "", "Target interval (UTC)"), el("dd", "mono", `${display(result.target_start)} → ${display(result.target_end)}`)));
+    for (const [title, value] of [["Signals", result.signals], ["Fitted model", result.fitted_model], ["Single-period accounting", result.accounting], ["Declared comparison", result.comparison]]) {
+        if (value !== null && value !== undefined)
+            output.append(el("details", "data-disclosure", el("summary", "", title), title === "Single-period accounting" ? notice("Dimensionless return and wealth-index arithmetic; no cash settlement, broker fills or multi-period performance claim.") : null, el("pre", "json-view", JSON.stringify(value, null, 2))));
+    }
+    output.append(el("ul", "", ...(result.limitations ?? []).map(item => el("li", "", item))));
+    return output;
+}
 function updateJobList() {
     const target = document.getElementById("job-list");
     if (!target)
@@ -1141,7 +1407,7 @@ function updateJobList() {
         target.replaceChildren(el("p", "loading-message", "Loading recorded jobs…"));
         return;
     }
-    const rows = view === "overview" ? jobs.slice(0, 6) : jobs;
+    const rows = view === "overview" ? jobs.slice(0, 6) : view === "studies" ? jobs.filter(job => job.config.kind === "CRP_STUDY") : view === "backtests" ? jobs.filter(job => job.config.kind !== "CRP_STUDY") : jobs;
     if (!rows.length) {
         target.replaceChildren(empty("Your research record starts here", "No jobs are visible to this account yet. Run a synthetic backtest to inspect a complete execution and accounting trail.", view !== "backtests" ? launchButton() : undefined));
         return;
@@ -1153,15 +1419,16 @@ function updateJobList() {
         const actions = el("div", "status-row", open);
         if (job.status.toLowerCase() === "queued" && session.user?.role !== "reader")
             actions.append(button("Cancel", () => { void cancelJob(job.id); }, "tertiary compact"));
-        return [actions, marketName(job.config.market), statusBadge(job.status), el("span", "mono", job.experiment_id ? shortId(job.experiment_id) : "Pending registration")];
+        return [actions, jobLabel(job), statusBadge(job.status), el("span", "mono", job.experiment_id ? shortId(job.experiment_id) : "Pending registration")];
     });
     target.replaceChildren(table(["Job / inspect", "Market", "Job state", "Experiment"], values, "Recorded backtest jobs"));
 }
 async function openJob(id) {
     selectedId = id;
     selectedDetail = null;
-    if (view !== "backtests" && view !== "portfolio") {
-        navigate("backtests");
+    const destination = jobs.find(job => job.id === id)?.config.kind === "CRP_STUDY" ? "studies" : "backtests";
+    if (view !== destination && !(view === "portfolio" && destination === "backtests")) {
+        navigate(destination);
     }
     else
         renderSelectedResult();
@@ -1221,6 +1488,10 @@ function renderSelectedResult() {
     const result = run?.result;
     if (!result) {
         report.body.append(notice(active(job) ? "The worker is processing this recorded job. Results will appear when the server publishes them." : "No result artifact is available for this job. Its status and any failure reason remain visible."));
+    }
+    else if (result.kind === "SYNTHETIC_STUDY_RESULT") {
+        report.body.append(studyResult(result), el("div", "form-actions", button("Download result JSON", () => downloadResult(job, run), "secondary", "download")), el("details", "data-disclosure", el("summary", "", "Inspect exact result and provenance"), el("pre", "json-view", JSON.stringify(run, null, 2))));
+        target.append(report.box);
     }
     else {
         const summary = result.summary;
@@ -1324,7 +1595,7 @@ function renderExperiments(region) {
 }
 function renderPortfolio(region) {
     region.append(heading("Accounting, made inspectable", "Simulated portfolio", "Cash, equity and fills for one recorded backtest. Independent runs are not combined into a portfolio."), syntheticNotice());
-    const completed = jobs.filter(complete);
+    const completed = jobs.filter(job => complete(job) && job.config.kind !== "CRP_STUDY");
     if (!completed.length) {
         region.append(empty("No completed run to inspect", "Complete a synthetic backtest to view the recorded cash and equity path.", launchButton()));
         return;
@@ -1362,7 +1633,7 @@ function renderSettings(region) {
     }
     else
         region.append(notice("Only owners can view or create other accounts. Ask an owner to make access changes."));
-    const connections = panel("Private source connections", "Local configuration for SEC and Alpaca market data · live credentials forbidden");
+    const connections = panel("Private source connections", "Local identification and data-provider access · live credentials forbidden");
     region.append(connections.box);
     if (session.user?.role === "owner") {
         connections.body.id = "connections-panel";
@@ -1416,13 +1687,13 @@ async function loadConnections(target, epoch, success) {
         [["Private vault", response.private_root], ["Initialized", response.initialized ? "Yes" : "No"], ["Live credentials", response.live_credentials], ["Connection limit", response.limit]].forEach(([key, value]) => facts.append(el("dt", "", key), el("dd", key === "Private vault" ? "mono" : "", value)));
         target.append(facts, notice("Saving keeps configuration private and makes no provider request. Use the explicit test action in Sources only when access and any costs are authorized."));
         const cards = el("div", "grid-two");
-        for (const id of ["SRC-01", "SRC-02"]) {
+        for (const id of Object.keys(connectionNames)) {
             const metadata = response.connections.find(connection => connection.catalogue_id === id);
-            const item = panel(id === "SRC-01" ? "SEC identification" : "Alpaca market data", id, statusBadge(metadata?.state ?? "NOT_CONFIGURED"));
+            const item = panel(id === "SRC-01" ? "SEC identification" : `${connectionNames[id]} data access`, id, statusBadge(metadata?.state ?? "NOT_CONFIGURED"));
             item.box.dataset.connection = id;
             item.body.append(el("dl", "definition-list", el("dt", "", "Stored value"), el("dd", "mono", metadata?.masked ?? "—"), el("dt", "", "Revision"), el("dd", "", display(metadata?.revision)), el("dt", "", "External validation"), el("dd", "", "Unverified")), connectionForm(id, target, epoch));
             if (metadata?.state === "CONFIGURED") {
-                const revoke = button(id === "SRC-01" ? "Revoke SEC connection" : "Revoke Alpaca connection", () => {
+                const revoke = button(`Revoke ${connectionNames[id]} connection`, () => {
                     clearPrivateInputs(target);
                     revoke.disabled = true;
                     void api(`/connections/${id}/revoke`, {}).then(() => { if (pageEpoch === epoch)
@@ -1474,7 +1745,7 @@ function connectionForm(id, target, epoch) {
         form.append(el("div", "form-grid", full(organization.box), full(email.box), full(cik.box)), rights.box);
         values = () => ({ organization: organization.input.value.trim(), contact_email: email.input.value.trim(), cik: cik.input.value, license_confirmed: rights.input.checked });
     }
-    else {
+    else if (id === "SRC-02") {
         const key = privateField("Alpaca key ID", "alpaca_key_id", "Paper-account or read-only market-data credentials only. No live-account credentials.", 256);
         key.input.minLength = 8;
         const secret = privateField("Alpaca secret key", "alpaca_secret_key", "Used only by the server. This field is never prefilled or revealed.", 256);
@@ -1486,7 +1757,19 @@ function connectionForm(id, target, epoch) {
         form.append(el("div", "form-grid", full(key.box), full(secret.box), full(source.box)), entitlement.box, cost.box);
         values = () => ({ key_id: key.input.value, secret_key: secret.input.value, credential_source: source.input.value, entitlement_confirmed: entitlement.input.checked, no_incremental_charge: cost.input.checked });
     }
-    const submit = el("button", "button", id === "SRC-01" ? "Save SEC connection" : "Save Alpaca connection");
+    else {
+        const name = connectionNames[id];
+        const key = privateField(`${name} API key`, `${id}-api-key`, id === "SRC-07" ? "The FRED v2 key: exactly 32 lowercase letters or digits. ALFRED file imports need no configured key." : "Use only an existing authorized data entitlement. Saving does not acquire a subscription or contact the provider.", id === "SRC-07" ? 32 : 128);
+        key.input.minLength = id === "SRC-07" ? 32 : 8;
+        if (id === "SRC-07")
+            key.input.pattern = "[a-z0-9]{32}";
+        const entitlement = declaration(`I confirm the ${name} entitlement permits this requested data access.`, `${id}-entitlement`);
+        const cost = declaration(`I confirm this bounded ${name} access adds no incremental charge.`, `${id}-no-charge`);
+        fields.push(key.input);
+        form.append(key.box, entitlement.box, cost.box);
+        values = () => ({ api_key: key.input.value, entitlement_confirmed: entitlement.input.checked, no_incremental_charge: cost.input.checked });
+    }
+    const submit = el("button", "button", `Save ${connectionNames[id]} connection`);
     submit.type = "submit";
     const message = el("div", "notice");
     message.hidden = true;

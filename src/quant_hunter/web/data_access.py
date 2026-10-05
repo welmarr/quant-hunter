@@ -32,6 +32,17 @@ class SourceProber(Protocol):
     def probe(self, catalogue_id: str) -> JsonRecord: ...
 
 
+class SourceFileImporter(Protocol):
+    def import_file(
+        self,
+        catalogue_id: str,
+        payload: bytes,
+        metadata: JsonRecord,
+        *,
+        series_metadata: bytes | None = None,
+    ) -> JsonRecord: ...
+
+
 class DataAccess:
     """SQLite controls visibility; immutable services remain data authority.
 
@@ -47,9 +58,11 @@ class DataAccess:
         runtime: Path,
         importer: DatasetImporter,
         prober: SourceProber,
+        source_importer: SourceFileImporter | None = None,
     ) -> None:
         self.state, self.runtime = state, runtime
         self.importer, self.prober = importer, prober
+        self.source_importer = source_importer
         with state.connection() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS data_ownership (
@@ -226,9 +239,21 @@ class DataAccess:
             raise
 
     def probe(self, user: User, catalogue_id: str) -> JsonRecord:
-        if catalogue_id in ("SRC-01", "SRC-02") and user.role != "owner":
+        if (
+            catalogue_id in ("SRC-01", "SRC-02", "SRC-07", "SRC-18", "SRC-20")
+            and user.role != "owner"
+        ):
             raise AccessError("Owner role required for configured source access")
-        if catalogue_id not in ("SRC-01", "SRC-02", "SRC-04", "SRC-08"):
+        if catalogue_id not in (
+            "SRC-01",
+            "SRC-02",
+            "SRC-04",
+            "SRC-06",
+            "SRC-07",
+            "SRC-08",
+            "SRC-18",
+            "SRC-20",
+        ):
             raise AccessError("This connector is not implemented")
         operation_id = self._begin(user, "PROBE", catalogue_id)
         try:
@@ -239,6 +264,41 @@ class DataAccess:
                 operation_id,
                 result=result,
                 error=str(result.get("error_code", "SourceProbeFailed"))
+                if result.get("status") == "FAILED"
+                else None,
+            )
+            return result
+        except Exception as exc:
+            self._finish(operation_id, error=type(exc).__name__)
+            raise
+
+    def import_source(
+        self,
+        user: User,
+        catalogue_id: str,
+        payload: bytes,
+        metadata: JsonRecord,
+        *,
+        series_metadata: bytes | None = None,
+    ) -> JsonRecord:
+        if self.source_importer is None or catalogue_id not in (
+            "SRC-05",
+            "SRC-07",
+            "SRC-09",
+            "SRC-19",
+        ):
+            raise AccessError("This source file importer is not implemented")
+        if not 0 < len(payload) + len(series_metadata or b"") <= 2_000_000:
+            raise AccessError("Source upload exceeds permitted size")
+        operation_id = self._begin(user, "SOURCE_IMPORT", catalogue_id)
+        try:
+            result = self.source_importer.import_file(
+                catalogue_id, payload, metadata, series_metadata=series_metadata
+            )
+            self._finish(
+                operation_id,
+                result=result,
+                error=str(result.get("error_code", "SourceImportFailed"))
                 if result.get("status") == "FAILED"
                 else None,
             )

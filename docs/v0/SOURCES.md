@@ -96,10 +96,11 @@ The transport permits only the exact official BLS path and the constrained ECB
 query form. It uses no proxy, redirect following, decompression, credential or
 automatic retry. DNS answers must all be public; the selected address is pinned
 while TLS verifies the official hostname. Response size is capped at 2,000,000
-bytes. Connection/TLS sockets time out after ten seconds; response reading has a
-ten-second deadline. Operating-system DNS resolution has its own timeout and is
-not claimed to be interruptible by this client. The application should run calls
-off the async event loop and expose cancellation between bounded operations.
+bytes. Each request runs in a resource-bounded child with a twenty-second parent
+wall deadline covering process startup, DNS, connection, TLS, headers and body.
+Expiry terminates and reaps the child with bounded cleanup. Socket and body
+timeouts remain additional limits. See SOURCE_HTTP_BOUNDARY.md for the exact
+process, IPC, resource and cleanup contract.
 
 HTTP 401/403, 404, 429, 5xx, redirects and timeouts become sanitized error codes.
 Numeric Retry-After values are retained without sleeping/retrying; HTTP-date

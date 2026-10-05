@@ -6,13 +6,6 @@ import argparse
 from dataclasses import asdict
 from pathlib import Path
 
-import uvicorn
-
-from quant_hunter.sources import list_sources
-from quant_hunter.web.api import create_app
-from quant_hunter.web.lease import RuntimeLease
-from quant_hunter.web.runtime import Runtime, fixture_catalog
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -22,6 +15,16 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--private-root", type=Path)
     args = parser.parse_args()
+    # Spawn imports this module as __mp_main__ before the worker can establish
+    # its native memory limit. Keep application/data dependencies in the server
+    # entry function so disposable HTTPS children retain room for real TLS.
+    import uvicorn
+
+    from quant_hunter.sources import list_sources
+    from quant_hunter.web.api import create_app
+    from quant_hunter.web.lease import RuntimeLease
+    from quant_hunter.web.runtime import Runtime, fixture_catalog
+
     repository, runtime = args.repository.resolve(), args.runtime.resolve()
     lease = RuntimeLease(runtime)
     lease.acquire()

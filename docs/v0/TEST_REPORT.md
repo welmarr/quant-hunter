@@ -283,3 +283,159 @@ independently reviewed the owner/API/persistence integration and ran real-browse
 flows. This is cross-agent software review, not external professional approval.
 REG-001–020 and REG-F01–F04 retain their scientific and host meanings. None of
 these changes create sealed release, production promotion or live-order authority.
+
+The saved checkpoint `796771c81a7c49768ebe7040730c88707c98827b` passed
+[hosted run 37278264340](https://github.com/welmarr/quant-hunter/actions/runs/37278264340):
+Windows 1,460 passed, one POSIX-only skip, one warning in 453.17 seconds; Ubuntu
+1,460 passed, one Windows-DPAPI skip, one warning in 179.30 seconds, **92.09%**
+combined coverage. Source/research integration after this commit is separate
+unfinished work and cannot inherit that full-gate result.
+
+
+## Provider workflows, mathematical Studies and reviewed research cores
+
+Parent commit: `796771c81a7c49768ebe7040730c88707c98827b`; actual dirty runtime
+source snapshots remain the execution authority. This checkpoint is IN_PROGRESS
+until its complete regression and exact-commit hosted CI results are recorded.
+No historical or empirical research claim follows from synthetic verification.
+
+- Integrated reviewed macro/priority parsers, encrypted FRED/Sharadar/Trading
+  Economics configuration, bounded materialization and BEA/ALFRED/BI5/EODHD
+  imports. The corrected provider/source/connection slice passed 135 tests; the
+  subsequent provider/partition/legacy-Lab slice passed 81. A first comparison
+  incorrectly required Decimal trailing zeroes, helper fixture mistakes were
+  corrected, and a synthetic key made of repeated `a` bytes collided with the
+  synthetic source SHA in a test-only no-key assertion. These failures remain in
+  `.local/v0-phase-c-proof`; production errors were not hidden as successes.
+- The provider Chrome proof passed **57 checks, 32 screenshots, zero errors**
+  at 08:17:28.280–08:18:10.145 UTC. It saved/revoked nonfunctional synthetic keys,
+  imported four actual file formats, retained malformed input failure, checked
+  privacy and mobile layout and made no provider probe requests. Its first run
+  used incorrect unprefixed form IDs; retained failure artifacts show this
+  harness error. Corrected evidence is under
+  `.local/v0-phase-d-proof/providers-browser-second/browser-proof.json`.
+- Ten CRP mathematical methods plus ENS-COV and META-OOF run through the actual
+  preregistration/freeze/attempt/result path. Preparation does not fit a model.
+  Recorded training partitions, actual random seed, method/citation/assumption/
+  cost metadata and metrics/baselines are checked against immutable inputs.
+  Independent review found and corrected cadence, cutoff and seed mismatches;
+  twelve positive, null and sensitivity variants remain distinct counted attempts.
+  ENS/META use truthful source-documentation descriptions without inventing a
+  primary paper URL. A fixture mutation initially removed `strategy_id` rather
+  than the canonical `object_id`; its four retained failures were corrected.
+  The final focused workflow/binding run passed **36 tests**, one existing
+  Starlette warning, in 192.48 seconds (`study-workflow-2.txt/xml`).
+- Actual Studies browser proof passed **20 checks, 18 screenshots, zero errors
+  and zero external requests** at 10:38:44.836–10:40:23.669 UTC. It executed all
+  twelve positive controls, three expected null failures and a separately
+  counted sensitivity variant, inspected actual result digests/metrics, and
+  checked reader denial and 390px mobile layout. Evidence is
+  `.local/v0-phase-d-proof/studies-browser-first/study-proof.json`.
+- Reviewed pure cores include 66 Decimal accounting tests, 69 classical pattern
+  tests and 105 publication tests. Pattern benchmark evidence uses explicitly
+  synthetic 2015–2024 schedules: 977,640 equity plus 3,756,960 FX rows, 4,734,600
+  total, 8.82 seconds and 119.6 MB observed peak memory. Approximate budgets
+  8/32/128 retained 0/25/100 percent recall and 8/6/0 false negatives against
+  their small oracle. This is measured synthetic throughput, not empirical
+  validation or a completed persistent corpus product. Detailed contracts and
+  independent-review boundaries are in PATTERNLAB.md, ACCOUNTING.md and
+  PUBLICATIONS.md. Owned publication APIs and the durable paper service remain
+  separate product integration work.
+- The four source transports now use resource-bounded spawned workers with a
+  twenty-second parent deadline covering startup/DNS through response body.
+  The isolated transport batch passed **443 tests**, 97.15% combined coverage;
+  the new module reached 98.11%. Independent review ran all **26** new deadline
+  tests successfully. Actual web.main G17 acquisition at 10:47:58 UTC returned
+  quarantined NETWORK_FAILURE after **5.654 seconds**, no retained raw bytes.
+  This is a retained unsuccessful acquisition. Native-entry diagnosis is pending;
+  network success is not inferred from synthetic fixtures or the HTTP200 wrapper.
+- Independent cross-item review found that generic EXP/BACKLOG references reject
+  valid PAPER identities although the PAPER registry itself works. A minimal
+  common-schema correction and conformance tests are required before closure.
+- A stopped-runtime backup restored to a distinct D-only directory with **436
+  byte-identical files** and matching counts: five users, 21 jobs, 15 data
+  operations and six owned datasets. SQLite integrity passed. Private vaults
+  and master keys were excluded; the original runtime is preserved. Archive
+  SHA-256: `a62cbd715cae69bf38c623cdbf698ad596a7bb0bc11bdcc0697b1caf0da8036b`.
+  Evidence: `.local/v0-phase-d-proof/restoration-proof.json`. Restored UI proof
+  for this checkpoint is still required.
+- Current lock check, Ruff check/format, strict mypy, TypeScript and frontend
+  build all passed (`static-gate.json`). The initial full run collected 2,251
+  tests and is running. No full-checkpoint success is claimed yet. All output,
+  temporary files, dependency caches, raw data and browser profiles stay on D:.
+
+Cross-agent review is software review, not external professional certification.
+No host/sealed-data/stage/promotion gate, source license or provider entitlement
+has been approved by this checkpoint. Every current correctness finding must
+be corrected and retested; it cannot be deferred merely by recording it here.
+
+The failed native G17 request prompted a no-network production-entry diagnosis.
+Spawning the actual heavy `quant_hunter.web.main` module consumed 297,476,096
+private bytes before its 256 MiB child limit; creating the actual TLS trust
+context then raised SSLError. A minimal isolated fix moves application imports
+inside main() after argument parsing. Its fresh child used 24,694,784 bytes before
+limits and 25,563,136 after loading 84 trusted CAs, without increasing limits.
+The exact native regression failed against the old entry and passed with the
+fix; 27 native/deadline tests passed together. Root integration, complete
+regression and a new explicit real acquisition remain required. Isolated proof:
+`.tools/v0-worktrees/ui/.tools/native_source_diagnostic/tls-proof-before.json`
+and `tls-proof-after.json`. The original failed acquisition is preserved.
+
+The initial frozen full gate completed: **2,250 passed, one POSIX-mode skip on
+Windows, one existing Starlette warning, 93.07% combined coverage, 1,169.33s**.
+Text/XML are `full-1.txt/xml` under `.local/v0-phase-d-proof`. The reviewed generic
+PAPER-reference and native-main fixes were then integrated. Root Ruff required
+only first-party import ordering; it was corrected without moving imports out
+of main(). **175 targeted tests passed under -W error in 31.94s**; Ruff check,
+format (212 files) and strict mypy (157 files) passed. The new frozen complete
+gate includes 2,289 tests and remains pending until recorded below.
+
+A distinct restored native application with the correction made one explicit
+new public G17 acquisition at **11:07:49 UTC**: **SUCCEEDED in 1.7451166s**, six
+observations, immutable raw SHA-256
+`cffccc27526bce9168f6dbeca2908b7c9a78805e3fe3abcbcd6018509143ae90`.
+Source status remains CANDIDATE and quality PENDING; available_at is unknown and
+point_in_time_eligible is false. The failed earlier acquisition remains intact.
+This verifies actual TLS/network/materialization through the production entry,
+not licensing, historical timing or research admissibility. Exact evidence is
+`.local/v0-phase-d-proof/native-g17-corrected.json`. Entry-source SHA-256 is
+`ba4c048ef35cd9921909d437e615d466081e6db03b139288ace92fe469ee0cdd`;
+transport-process SHA-256 remains
+`9bd9e94c9875eb6c76b2ce6c827b13e1ce361134de8790a99ec985563fb7dcd1`.
+
+The corrected distinct restored instance passed the full provider/import/market
+browser workflow: **57 checks, 32 screenshots, zero errors**,
+11:08:51.782–11:10:02.296 UTC. It then passed the separate Studies workflow:
+**20 checks, 18 screenshots, zero errors and zero external requests**. Both
+proofs retain actual timestamps, screenshot hashes, private experiment IDs and
+result evidence under `.local/v0-phase-d-proof/restored-browser/` and
+`restored-studies/`. These are separate from the original-instance proofs.
+
+Distribution inspection passed: wheel **113 members**, source archive **269**;
+no runtime, vault, credential file, Git metadata, dependency cache or generated
+cache was included. Five required new/updated served/source modules were
+present and byte-identical to root. The builder warns that its D-only uv cache
+is within the repository; actual archive membership verified its exclusion.
+Wheel SHA-256 `b3d8c7f85031739dcf350347e8dbee654488e5a155d34cbab6d9ecd7df5ee139`;
+source archive SHA-256
+`13da1c77666f8fb5f00e561db59dcdc49dbe4b6bf20e62a80ca9f06c05664c6d`.
+Evidence is `distribution-build.txt` and `distribution-proof.json` under the
+same private proof directory. The source archive predates this documentation
+append; its source-code bytes match the frozen tested implementation.
+
+
+Final corrected frozen gate: **2,288 passed, one POSIX-only skip on Windows,
+one existing Starlette warning, 93.07% statement/branch coverage in 998.05s**.
+The unchanged 90% threshold passed. Text/XML: `.local/v0-phase-d-proof/final.txt`
+and `final.xml`. All131 frozen source/config/schema/frontend hashes matched
+again after completion. Lock/Ruff/format/strict mypy and prior unchanged
+TypeScript/build checks passed. Both review findings are corrected and covered
+by the full suite; independent cross-item review found no additional material
+failure in the reviewed scope. Exact saved-commit hosted CI remains required.
+
+The 2,288-test gate covers the provider/Studies product workflows and reviewed
+pure publication/pattern/accounting cores. It does not cover the isolated
+publication-owned API/UI draft, persistent paper service, broker journal, large
+corpus product or data-quality/validation adapters that are being developed
+for subsequent checkpoints. No deferred current-checkpoint failure is hidden
+inside those remaining mission requirements.

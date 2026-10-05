@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/welmarr/quant-hunter/schemas/v1/publication.schema.json",
+  "title": "Quant Hunter Publication",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "paper_id", "revision", "previous_revision_digest", "created_at", "updated_at", "manifest_digest", "code_revision", "environment_digest"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "paper_id": {"$ref": "common.schema.json#/$defs/paper_id"},
+    "revision": {"$ref": "common.schema.json#/$defs/revision"},
+    "previous_revision_digest": {"oneOf": [{"type": "null"}, {"$ref": "common.schema.json#/$defs/digest"}]},
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "updated_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "manifest_digest": {"$ref": "common.schema.json#/$defs/digest"},
+    "code_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "environment_digest": {"$ref": "common.schema.json#/$defs/digest"}
+  }
+}

@@ -22,8 +22,15 @@ SEC/Alpaca read-only clients, canonical instrument history, market calendars and
 bounded aggregation. After correcting two regression failures, its full gate
 passed 1,460 tests with one platform skip and 92.33% coverage. A separate restored
 instance passed 48 browser checks plus five account-isolation assertions.
-The exact new saved commit still requires hosted CI. See `v0/TEST_REPORT.md`
-for exact scope, failures and evidence. The remaining mission remains required in
+Saved checkpoint `796771c` passed hosted CI on both platforms: 1,460 tests,
+one platform-specific skip each, 92.09% Ubuntu coverage. Subsequent reviewed
+macro/priority adapters, twelve governed synthetic study workflows and reviewed
+publication/pattern/accounting cores are integrated. Provider browser checks
+passed 57 cases; Studies passed 20, including positive controls and retained
+failures, also on a separately restored instance. The corrected full regression
+passed2,288 tests, one platform skip and93.07% coverage; exact-commit hosted CI
+remains pending. Publication/pattern/paper product integration remains unfinished. See `v0/TEST_REPORT.md` for exact scope,
+failures and evidence. The remaining mission remains required in
 `v0/REQUIREMENTS.md`. No empirical or host gate is
 closed by these software checks.
 

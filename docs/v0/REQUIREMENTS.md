@@ -291,3 +291,18 @@ the complete regression status. CREDENTIALS.md documents the separate private
 key recovery procedure. These are IN_PROGRESS contributions to V0-012/013/019,
 the source/security/data requirements and Phase B/C; no entire research domain,
 PatternLab or paper-execution requirement is satisfied by this checkpoint.
+
+
+## Source and governed Studies evidence update (2026-10-05)
+
+Priority source private configuration/local-export workflows now have 57 actual
+browser checks. Twelve sourced or explicitly synthetic comparison studies have
+20 browser checks, including retained null failures and counted sensitivity;
+their mathematics run through Item8 with exact partitions, seeds and method
+bindings. Publication, classical PatternLab and event-accounting cores are
+integrated with focused tests and review. This progresses the corresponding
+source/scientific-library/strategy/validation/UI requirements; it does not mark
+an entire research domain empirically validated. Full regression, PAPER generic
+reference correction, native TLS startup correction and subsequent owned
+publication/pattern/paper workflows remain in progress. All 246 requirement IDs
+are retained; later requirements are not removed to fit a checkpoint.

@@ -31,6 +31,7 @@ from quant_hunter.identity import RegistryKind, RegistryStore, Revision
 from quant_hunter.lab.records import (
     FAMILY_NAME,
     LIMITATION,
+    STUDY_FAMILY_NAME,
     experiment_record,
     require_record,
     research_record,
@@ -92,8 +93,41 @@ def _require_bindings(
         raise ExperimentIntegrityError(f"{context} disagrees with registered authority")
 
 
-def _partitions(start: datetime, end: datetime) -> JsonRecord:
+def _partitions(
+    start: datetime, end: datetime, config: Mapping[str, JsonValue] | None = None
+) -> JsonRecord:
     midpoint = start + (end - start) / 2
+    explicit = {"training_start", "train_end", "training_end_exclusive"}
+    if config is not None and (
+        config.get("kind") == "CRP_STUDY" or explicit.intersection(config)
+    ):
+        if not explicit.issubset(config):
+            raise LabValidationError("Explicit training bounds must be complete")
+        training_start = _time(config["training_start"])
+        train_end = _time(config["train_end"])
+        midpoint = _time(config["training_end_exclusive"])
+        if (
+            training_start != start
+            or not start <= train_end < midpoint < end
+            or midpoint != train_end + timedelta(microseconds=1)
+        ):
+            raise LabValidationError(
+                "Explicit training bounds disagree with dataset coverage"
+            )
+        if config.get("kind") == "CRP_STUDY":
+            decision, target_start, target_end, available = (
+                _time(config.get(key))
+                for key in (
+                    "decision_at",
+                    "target_start",
+                    "target_end",
+                    "target_available_at",
+                )
+            )
+            if not midpoint <= decision < target_start <= target_end <= available < end:
+                raise LabValidationError(
+                    "Study evaluation must follow its completed training partition"
+                )
     return {
         "training": {"start": _stamp(start), "end": _stamp(midpoint)},
         "validation": {"start": _stamp(midpoint), "end": _stamp(end)},
@@ -170,7 +204,38 @@ class LabService:
             raise LabValidationError(
                 "Dataset end must follow start by at least two microseconds"
             )
-        partitions = _partitions(start, end)
+        partitions = _partitions(start, end, frozen_config)
+        method = None
+        if "software_method" in frozen_config:
+            method = require_record(frozen_config["software_method"], "Software method")
+            if (
+                set(method)
+                != {
+                    "implemented_scope",
+                    "source_citations",
+                    "assumptions",
+                    "cost_model",
+                }
+                or any(
+                    not isinstance(method[k], str)
+                    or not 1 <= len(cast(str, method[k])) <= 2000
+                    for k in ("implemented_scope", "cost_model")
+                )
+                or any(
+                    not isinstance(method[k], list)
+                    or not 1 <= len(cast(list[JsonValue], method[k])) <= 20
+                    or any(
+                        not isinstance(value, str) or not 1 <= len(value) <= 2000
+                        for value in cast(list[JsonValue], method[k])
+                    )
+                    for k in ("source_citations", "assumptions")
+                )
+            ):
+                raise LabValidationError("Invalid software method declaration")
+        random_seed = frozen_config.get("random_seed", 0)
+        if type(random_seed) is not int or not 0 <= random_seed <= 2**32 - 1:
+            raise LabValidationError("Invalid declared random seed")
+        family_name = STUDY_FAMILY_NAME if method is not None else FAMILY_NAME
         frozen_config["evidence_mode"] = "SYNTHETIC"
         configuration_bytes = _safe_document(frozen_config)
         with _REGISTRATION_LOCK:
@@ -178,7 +243,7 @@ class LabService:
             configuration = self.objects.publish(configuration_bytes)
             raw = self.objects.publish(dataset)
             source = self.registry.allocate(
-                RegistryKind.SOURCE, source_record(timestamp)
+                RegistryKind.SOURCE, source_record(timestamp, study=method is not None)
             )
             schema = self.objects.publish(
                 canonicalize_json(
@@ -232,6 +297,8 @@ class LabService:
                 source.object_id,
                 registered_dataset.object_id,
                 configuration.digest,
+                family_name=family_name,
+                method=method,
             )
             strategy = self.registry.allocate(
                 RegistryKind.STRATEGY,
@@ -244,6 +311,7 @@ class LabService:
                     name=name,
                     configuration_digest=configuration.digest,
                     family=False,
+                    method=method,
                 ),
             )
             manifest: JsonRecord = {
@@ -278,6 +346,8 @@ class LabService:
                 code_revision=self.code_revision,
                 partitions=partitions,
                 name=name,
+                method=method,
+                random_seed=random_seed,
             )
             draft = self.lifecycle.create_draft(payload, created_at=timestamp)
             registered = self.lifecycle.register(
@@ -299,13 +369,20 @@ class LabService:
             return draft.object_id
 
     def _family(
-        self, timestamp: str, source_id: str, dataset_id: str, config_digest: str
+        self,
+        timestamp: str,
+        source_id: str,
+        dataset_id: str,
+        config_digest: str,
+        *,
+        family_name: str = FAMILY_NAME,
+        method: JsonRecord | None = None,
     ) -> str:
         matching = [
             object_id
             for object_id, revisions in self.registry.verify_all().items()
             if object_id.startswith("FAM-")
-            and revisions[-1].record.get("name") == FAMILY_NAME
+            and revisions[-1].record.get("name") == family_name
         ]
         if len(matching) > 1:
             raise ExperimentIntegrityError(
@@ -323,9 +400,10 @@ class LabService:
                 source_id=source_id,
                 dataset_id=dataset_id,
                 code_revision=self.code_revision,
-                name=FAMILY_NAME,
+                name=family_name,
                 configuration_digest=config_digest,
                 family=True,
+                method=method,
             ),
             uuid_factory=lambda: family_uuid,
         )
@@ -392,12 +470,17 @@ class LabService:
                 "Dataset bytes differ from registered identity"
             )
         config = self._read_document(cast(str, manifest["configuration_digest"]))
+        _require_bindings(
+            head.record,
+            {"random_seed": config.get("random_seed", 0)},
+            "Declared random seed",
+        )
         start = _time(config.get("dataset_start"))
         end = _time(config.get("dataset_end"))
         if end - start < timedelta(microseconds=2):
             raise ExperimentIntegrityError("Retained dataset interval is malformed")
         _require_bindings(
-            manifest, {"partitions": _partitions(start, end)}, "Temporal plan"
+            manifest, {"partitions": _partitions(start, end, config)}, "Temporal plan"
         )
         _require_bindings(
             dataset_revision.record,
@@ -433,6 +516,33 @@ class LabService:
         strategy = self.registry.verify_object(cast(str, manifest["strategy_id"]))[
             0
         ].record
+        if "software_method" in config:
+            method = require_record(config["software_method"], "Software method")
+            _require_bindings(
+                strategy,
+                {
+                    "mathematical_definition": method["implemented_scope"],
+                    "source_citations": method["source_citations"],
+                    "assumptions": method["assumptions"],
+                    "transaction_cost_sensitivity": method["cost_model"],
+                },
+                "Declared strategy method",
+            )
+            _require_bindings(
+                head.record,
+                {
+                    "feature_definitions": method["implemented_scope"],
+                    "label_definitions": "Typed target with distinct start, end and actual availability in frozen bytes; unused diagnostic targets are explicit",
+                    "execution_cost_assumptions": [method["cost_model"]],
+                    "evaluation_metrics": [
+                        "Actual method signals, fitted parameters and numerical metrics specified by frozen implementation"
+                    ],
+                    "baselines": [
+                        "Declared null and sensitivity scenarios are separate experiments; no empirical superiority claim"
+                    ],
+                },
+                "Declared experiment method",
+            )
         _require_bindings(
             strategy,
             {

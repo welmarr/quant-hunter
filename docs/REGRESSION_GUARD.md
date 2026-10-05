@@ -25,6 +25,15 @@ change requires an accepted decision and explicit independent review.
 
 ## Implemented and Reviewed Invariants
 
+The subsequent V0 source/study integration is in progress under DEC-0041/0042.
+PAPER uses the same governed registry as INSTRUMENT. Synthetic studies freeze
+their actual training cutoffs, generator seeds and method/cost/label declarations;
+verified reads reject coherent rehashed contradictions. Every requested scenario
+or parameter remains a counted Item 8 variant, with failed/null outcomes retained.
+Publication reading, pattern results and software checks grant no scientific
+promotion. The next complete regression and hosted CI remain required; prior
+checkpoint success cannot cover these new files.
+
 The V0 import/source/recovery checkpoint rechecks REG-001–020 as applicable:
 immutable raw and registry history, exact configuration/source graph binding,
 retained unknown timing/rights, unchanged Item 8 authority, separate operational
