@@ -445,6 +445,58 @@ def test_existing_sidecar_cannot_hide_behind_missing_file_error(
     assert journal.read_bytes() == b"retained-invalid-sidecar"
 
 
+def test_recreated_optional_journal_is_revalidated_before_database_access(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    storage = vault(tmp_path)
+    storage.set_secret("alpaca", "paper", "api_key", SECRET)
+    journal = storage.database.with_name(storage.database.name + "-journal")
+    original = protection.permissions
+    checks = 0
+
+    def recreated(path: Path, *, directory: bool) -> None:
+        nonlocal checks
+        if path == journal:
+            checks += 1
+            if checks == 1:
+                # The first writer's missing lstat has completed, while a new
+                # writer already created the next private journal at this name.
+                protection.publish_private(journal, b"")
+                raise FileNotFoundError("journal disappeared before replacement")
+        original(path, directory=directory)
+
+    monkeypatch.setattr(protection, "permissions", recreated)
+    assert storage.list_masked()[0]["revision"] == 1
+    assert checks >= 2
+    assert storage.with_secret(
+        "alpaca", "paper", "api_key", lambda value: value == SECRET
+    )
+
+
+def test_recreated_optional_journal_does_not_skip_type_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    storage = vault(tmp_path)
+    journal = storage.database.with_name(storage.database.name + "-journal")
+    original = protection.permissions
+    checks = 0
+
+    def replaced(path: Path, *, directory: bool) -> None:
+        nonlocal checks
+        if path == journal:
+            checks += 1
+            if checks == 1:
+                journal.mkdir()
+                raise FileNotFoundError("unsafe replacement after disappearing file")
+        original(path, directory=directory)
+
+    monkeypatch.setattr(protection, "permissions", replaced)
+    with pytest.raises(VaultError, match="PRIVATE_PATH_TYPE"):
+        storage.list_masked()
+    assert checks == 2
+    assert journal.is_dir()
+
+
 def test_invalid_sidecar_type_still_fails_before_database_access(
     tmp_path: Path,
 ) -> None:

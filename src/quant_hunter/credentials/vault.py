@@ -124,14 +124,20 @@ class CredentialVault:
         protection.permissions(self.database, directory=False)
         for suffix in ("-journal", "-wal", "-shm"):
             sidecar = self.database.with_name(self.database.name + suffix)
-            try:
-                protection.permissions(sidecar, directory=False)
-            except FileNotFoundError:
-                # SQLite DELETE journals can vanish when another admitted writer
-                # commits. Only a genuinely absent optional sidecar is allowed;
-                # existing unsafe paths and broken links must still fail closed.
-                if os.path.lexists(sidecar):
-                    raise
+            for attempt in range(4):
+                try:
+                    protection.permissions(sidecar, directory=False)
+                    break
+                except FileNotFoundError:
+                    # DELETE journals may disappear and then be recreated by
+                    # another admitted writer before lexists runs. A recreated
+                    # path must pass every permission/type/link check afresh;
+                    # its mere existence never makes it safe. Persistent churn
+                    # remains a bounded failure before opening the database.
+                    if not os.path.lexists(sidecar):
+                        break
+                    if attempt == 3:
+                        raise
         db = sqlite3.connect(self.database, timeout=10, isolation_level=None)
         db.row_factory = sqlite3.Row
         try:
