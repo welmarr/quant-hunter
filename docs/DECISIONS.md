@@ -720,3 +720,32 @@ Until the first two values are recorded, budget headroom remains `UNKNOWN` and n
   `v0/SOURCES.md`; `v0/TEST_REPORT.md`; `tests/test_v0_imports.py`;
   `tests/test_v0_sources.py`; operational and restore tests.
 - **Owner and approver:** Owner's explicit continuous V0 mission, 2026-10-05.
+
+
+## DEC-0043 — Private publication product and shared resource admission
+
+Date: 2026-10-05. Status: accepted for the authorized V0 software profile.
+
+Expose canonical PAPER records through authenticated private ownership, immutable
+CAS revisions, bounded explicit document attachment/extraction/retrieval, reading
+status and owned EXP links. Source access, reading declarations, annotations and
+empirical reproduction remain separate facts. Ten previously reviewed source
+suggestions are available without automatic registration, downloading or reading.
+Registering one is explicit; a later annotation failure retains the created
+owned reference. No publication operation changes Item8 or scientific gates.
+
+Data and publication operations share a two-active SQLite admission bound. Both
+free-space and cumulative-cap checks reserve64MB for these possible concurrent
+operations; independent review found the prior32MB free-space reserve inconsistent
+with the two-operation bound. All default body limits remain unchanged except the
+exact PAPER attachment route, bounded6MB JSON/four MB decoded document. Native PDF
+and HTTPS workers retain their existing process/time/byte limits. Startup recovery
+runs only under the exclusive runtime lease and never replays unknown attempts.
+
+Root tests exercised actual main-module PDF spawn and six operational integration
+cases, including the corrected reserve boundary and private reference catalogue.
+Real browser evidence covers generated text/PDF, hostile title text, CAS409,
+owned EXP links, reader403 and390px layout. Separate restoration reproduced780
+archive-managed files exactly. Agent review accepted ownership/async isolation and
+closed the reserve finding; complete regression and saved-commit CI remain gates.
+This decision establishes no host, licensing, historical or profitability claim.

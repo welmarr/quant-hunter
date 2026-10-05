@@ -2,6 +2,52 @@
 
 Date: 2026-10-05. Status: IN_PROGRESS; V0 is not delivered.
 
+## Current resume authority — publication local gate passed
+
+The latest publication product gate passed 2,327 tests, one platform skip,
+one existing warning, 93.19% coverage in 1,162.32 seconds. All 135 frozen
+source/config/schema/frontend hashes matched afterwards. Packaging verified
+115 wheel members and 275 source-archive members; exact source bytes match and
+private data/caches are excluded. Desktop/mobile publication browser proof
+passed 12 checks; prior publication backup restored 780 managed files exactly.
+See TEST_REPORT.md for unsuccessful checks and corrections.
+
+Parent HEAD is 8c6eabb808fdb45115d91e2c2287c479623c96f7, verified on origin;
+its hosted run 37304844386 passed Windows and Ubuntu. Save/push this coherent
+publication checkpoint on version-0 and verify its exact CI. Do not infer the
+next commit from this documentation. Git remains the current commit authority.
+
+Next: integrate independently reviewed quality/research-validation, Pattern
+corpus/product, notifications and paper engine in coherent product batches.
+Quality UI draft is `.tools/v0-drafts/quality-ui.ts`, strict TypeScript PASS.
+Quality API adapter is under independent isolated implementation/review;
+copy only its frozen owned files when ready. Pattern product's five hostile
+review findings are closed; corrected 137-test suite passes at91.55% new-layer
+coverage. Its actual disk two-asset synthetic decade benchmark scanned
+4,734,600 rows in49.71s, peak135,426,048bytes, disk207,704,648bytes.
+Approximate recall is measured, never presented as exhaustive. Paper engine
+85tests/review and notification126tests/root review pass; product adapters are
+still unfinished. Telegram core remains disabled; no external message sent.
+
+Agent worktrees are D-only `.tools/v0-worktrees/{lifecycle,simulation,ui}`;
+root remains sole integrator/Git writer. Preserve all isolated work. Runtime
+paper recovery must protect only verified owned active EXP IDs from generic
+orphan failure; unknown operations must never silently replay. Paper state uses
+its separate `paper.sqlite3` and needs exact allowlisted backup integration.
+Notification purpose must never be mislabeled PAPER_OR_READ_ONLY; proposed
+separate scope design is `.tools/v0-drafts/notification-integration.md`.
+
+The current test server on8766 uses `.local/v0-publication-restored` with private
+root `D:\QuantHunterPrivate\v0-publication-restored-tests`. Recheck exact process
+command lines and active operation/job counts before stopping it. Do not rely
+on old PIDs in the retained earlier notes below. The earlier full run was
+interrupted for review fixes; only corrected-full.txt/xml is the final gate.
+
+V0 remains IN_PROGRESS. Continue through every remaining requirement; no
+historical profitability, empirical replication, sealed holdout, host enforcement,
+Stage1 or live-money gate has been passed. Earlier notes below retain chronology
+and are superseded by this current resume section where status has advanced.
+
 Owner reiterated: use only D: for all project writes, datasets, dependency
 caches, temporary files, logs, private vaults and test/browser artifacts.
 Set UV_CACHE_DIR/UV_PYTHON_INSTALL_DIR, TEMP/TMP and NPM_CONFIG_CACHE to their
@@ -9,11 +55,17 @@ documented D:\quant-hunter\.tools locations for every tool process. Existing
 installed applications and the supplied original document may be read in place;
 do not create project output on C: or move/delete unrelated user files.
 
-Last saved executable checkpoint: `796771c81a7c49768ebe7040730c88707c98827b`,
-verified on origin/version-0. Hosted run 37278264340 passed 1,460 tests per OS,
-one platform-specific skip each; Ubuntu coverage was 92.09%. The earlier 9b74dd6 clean-clone launcher/browser proof
-passed 20 checks. Work after 796771c must be reconciled separately; it is not
-covered by that CI.
+Last saved executable checkpoint: `0541337699a246762fdaae1b83819b9ecbc18301`,
+verified on origin/version-0. Exact hosted run 37303138649: Ubuntu PASS (2,288 tests, 92.91%); Windows
+cancelled at its old ten-minute cap after 1,596 passes and no failing test.
+CI-only repair 8c6eabb808fdb45115d91e2c2287c479623c96f7 is saved/pushed;
+Windows now has thirty minutes with every check preserved. Follow-up exact
+run 37304844386 PASSED both platforms:2,288tests each,one platform skip,one
+warning;Ubuntu92.91%;Windows774.37s. See CI_CAPACITY.md.
+Local corrected regression passed 2,288 tests, one platform skip, one existing
+warning and 93.07% coverage. Prior 796771c hosted run 37278264340 passed 1,460
+tests per OS, one platform-specific skip each and 92.09% Ubuntu coverage.
+The earlier 9b74dd6 clean-clone launcher/browser proof passed 20 checks.
 
 Working and integration branch: `version-0` (tracking `origin/version-0`).
 Immutable saved branch: `work-before-v0`, locally/remotely verified at
@@ -63,7 +115,7 @@ The corrected final regression passed2,288 tests, one platform skip, one
 existing warning and93.07% coverage in998.05s. All131 source/config/schema/
 frontend hashes matched after completion. The restored provider workflow passed
 57 checks and Studies20, both with zero errors. This coherent checkpoint is
-ready to commit/push; exact saved-commit hosted CI must still be verified.
+saved and remotely verified at 0541337; exact hosted CI must still be verified.
 
 An initial real G17 acquisition at 10:47:58 UTC failed because production main
 imports exceeded the child memory limit before TLS. Its failure remains retained.
@@ -136,3 +188,22 @@ manifest over up to1024 exact owned parents, streamed one bounded parent at a
 time; retain all parents/reports, gaps/overlaps and actual row/byte counts.
 Existing single upload/parser limits stay bounded; large corpus intake needs an
 explicit multi-file/partition product flow, not only a synthetic benchmark.
+
+Publication product integration now passes 41 prior focused tests plus six
+new runtime/native-PDF checks, and actual browser11checks/3screens/zeroerrors
+on the distinct PhaseD restored runtime. Full regression is RUNNING; this
+product work remains uncommitted. Root source hashes are frozen in
+.local/v0-publication-proof/frozen-source-manifest.json. The first extra test
+fixture incorrectly placed its private vault under the application; corrected
+to a separate configured path without weakening isolation. No credentials
+were created. Server8766 launcher16716 uses actual snapshot with0541337parent.
+Both old PhaseC/D test servers were verified idle and stopped. Browser proof
+includes generated native PDF extraction, exact revision/reading separation,
+owned EXP link, hostile-title text, CAS409 and reader403.
+
+Corrected publication source frozen135hashes; full regression session46480
+is running after7focusedPASS and12actualbrowserchecks. Earlier firstfullrun
+was explicitly interruptedforreviewfixes, retained as incomplete. Root-owned
+notification independentrun126PASS12.91s;quality/validation overlayrun120PASS
+130.13s, both-Werror. Initial independentruns had wrongmodulepaths and failed
+collection; correctedtransparentimportoverlays used currentrootfoundation.

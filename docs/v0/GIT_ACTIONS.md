@@ -65,3 +65,22 @@ history rewrite, main merge, branch deletion or destructive cleanup was used.
 58. `git status --short --branch` | READ-ONLY | Inspect all preserved checkpoint changes before staging | Result: Confirmed version-0 without divergence and the next integration changes.
 59. `git diff --stat` | READ-ONLY | Review tracked checkpoint scope | Result: 33 tracked files changed; expected LF-normalization warnings only; new files remain separately listed by status.
 60. `git diff --check` | READ-ONLY | Check tracked patch whitespace before saving | Result: Passed; expected LF-normalization warnings only.
+61. `git status --short --branch` | READ-ONLY | Confirm version-0 and checkpoint scope before staging | Result: Confirmed version-0 and expected checkpoint scope.
+62. `git diff --check` | READ-ONLY | Validate final tracked patch whitespace | Result: Passed; LF normalization warnings only
+63. `git add -- artifacts/status.json docs frontend pyproject.toml schemas src tests uv.lock` | LOCAL WRITE | Stage reviewed V0 code, tests and documentation while excluding private runtime data/caches | Result: Passed
+64. `git diff --cached --name-only` | READ-ONLY | Inspect exact staged file membership | Result: 103 staged paths; no secrets, private datasets or caches.
+65. `git diff --cached --check` | READ-ONLY | Verify staged patch whitespace | Result: Passed
+66. `git commit -m "feat: integrate governed studies and priority source workflows"` | LOCAL WRITE | Save fully tested V0 source/research checkpoint | Result: Created 0541337699a246762fdaae1b83819b9ecbc18301; 103 files changed.
+67. `git push origin version-0` | REMOTE WRITE | Back up the tested checkpoint on the authorized integration branch | Result: Pushed version-0 from 796771c to 0541337.
+68. `git rev-parse HEAD main work-before-v0` | READ-ONLY | Record saved checkpoint and verify unchanged local protected tips | Result: HEAD 0541337; main c350c26 and work-before-v0 7346cf4 unchanged.
+69. `git ls-remote --heads origin version-0 work-before-v0 main` | READ-ONLY | Verify remote backup and preserved branch tips | Result: Origin version-0 0541337; main e0ba326 and work-before-v0 7346cf4 unchanged.
+70. `git diff -- .github/workflows/quality.yml` | READ-ONLY | Review the bounded Windows CI capacity correction | Result: Reviewed Windows-only 10→30 minute timeout; all test commands unchanged.
+71. `git add -- .github/workflows/quality.yml docs/v0/CI_CAPACITY.md` | LOCAL WRITE | Stage only reviewed CI capacity correction and retained evidence | Result: Staged only workflow and CI_CAPACITY.md.
+72. `git diff --cached --check` | READ-ONLY | Verify staged CI repair whitespace | Result: Passed.
+73. `git commit -m "ci: allow expanded Windows regression suite to finish"` | LOCAL WRITE | Save reviewed CI capacity correction without omitting tests | Result: Created 8c6eabb808fdb45115d91e2c2287c479623c96f7; two scoped files.
+74. `git push origin version-0` | REMOTE WRITE | Back up CI repair on the authorized integration branch | Result: Pushed version-0 from 0541337 to 8c6eabb.
+75. `git rev-parse HEAD` | READ-ONLY | Record exact CI repair commit | Result: 8c6eabb808fdb45115d91e2c2287c479623c96f7.
+76. `git ls-remote --heads origin version-0 work-before-v0 main` | READ-ONLY | Verify remote CI repair and preserved backup/main | Result: Remote version-0 8c6eabb; work-before-v0 7346cf4 and main e0ba326 unchanged.
+77. `git status --short` | READ-ONLY | Inspect publication checkpoint before selective commit | Result: Publication source, tests, frontend and documentation modified; ignored private data excluded.
+78. `git diff --check` | READ-ONLY | Check publication checkpoint whitespace | Result: Passed.
+79. `git diff --stat` | READ-ONLY | Review publication checkpoint scope | Result: Reviewed publication runtime/API/frontend/tests and evidence documentation.

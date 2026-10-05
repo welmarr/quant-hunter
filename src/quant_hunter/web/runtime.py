@@ -16,6 +16,7 @@ from quant_hunter.config import JsonRecord, JsonValue, canonicalize_json
 from quant_hunter.imports import ImportService
 from quant_hunter.lab import LabService
 from quant_hunter.markets.registry import InstrumentRegistry
+from quant_hunter.publications import PublicationService
 from quant_hunter.simulation import Costs, SimulationConfig, simulate, synthetic_fixture
 from quant_hunter.sources import SourceProbeService
 from quant_hunter.sources.equity_probes import EquityProbeService
@@ -23,6 +24,7 @@ from quant_hunter.sources.providers import ProviderService
 from quant_hunter.storage import ImmutableObjectStore
 from quant_hunter.web.connections import Connections, SourceRouter, default_private_root
 from quant_hunter.web.data_access import DataAccess
+from quant_hunter.web.publication_access import PublicationAccess
 from quant_hunter.web.state import AppState
 
 
@@ -137,9 +139,21 @@ class Runtime:
             providers,
         )
 
+        self.publications = PublicationAccess(
+            self.state,
+            PublicationService(
+                self.lab.registry,
+                self.lab.objects,
+                code_revision=code_revision,
+                environment_digest=self.lab.environment_digest,
+            ),
+            capacity=self.data._capacity,
+        )
+
     def recover(self) -> None:
         """Never rerun an unknown interrupted attempt. Retain failure and require retry."""
         self.data.recover()
+        self.publications.recover()
         for job in self.state.interrupted():
             if job.experiment_id:
                 run = self.lab.recover_run(job.experiment_id)

@@ -86,7 +86,8 @@ class DataAccess:
     def _capacity(self) -> None:
         usage = shutil.disk_usage(self.runtime)
         reserve = max(20 * 1024**3, usage.total * 15 // 100)
-        if usage.free - 32_000_000 < reserve:
+        # Admission permits two resource operations across data/publications.
+        if usage.free - 64_000_000 < reserve:
             raise AccessError("Data operation refused: disk reserve would be breached")
         budget_root = next(
             (p for p in (self.runtime, *self.runtime.parents) if p.name == ".local"),
@@ -104,12 +105,21 @@ class DataAccess:
         operation_id = secrets.token_hex(16)
         with self.state.connection() as db:
             db.execute("BEGIN IMMEDIATE")
-            if (
+            active = int(
                 db.execute(
                     "SELECT COUNT(*) FROM data_operations WHERE status='RUNNING'"
                 ).fetchone()[0]
-                >= 2
-            ):
+            )
+            if db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' "
+                "AND name='publication_operations'"
+            ).fetchone():
+                active += int(
+                    db.execute(
+                        "SELECT COUNT(*) FROM publication_operations WHERE status='RUNNING'"
+                    ).fetchone()[0]
+                )
+            if active >= 2:
                 raise AccessError("Data operations busy; wait for completion")
             # At most 2 GB raw imports under this initial profile. No automatic
             # deletion or widening of the mission's cumulative download bound.

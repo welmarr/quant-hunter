@@ -110,6 +110,17 @@ protection.
 
 ## Maintenance Rule
 
+V0 publication checkpoint cross-item review (2026-10-05) preserves REG-001–REG-014
+and the remaining applicable foundation invariants: source attachments and extracted
+text remain immutable, PAPER revisions use canonical CAS, EXP links require current
+private ownership and Item8 identity, failed operations remain retained, and neither
+reading declarations nor successful extraction confer empirical/holdout authority.
+The full existing suite plus publication integration passed 2,327 tests, one
+platform skip, one existing warning and93.19% coverage. Native-main PDF extraction,
+two shared operation slots with64MB reserve, reader/cross-owner denials and exact
+attachment-only request size were independently reviewed. This does not implement
+REG-F03/F04 or close their stage/host gates. See DEC-0043 and v0/TEST_REPORT.md.
+
 Update this catalog whenever a reviewed change creates, strengthens, supersedes,
 or intentionally changes an invariant. Keep historical reasoning in
 `docs/DECISIONS.md` and risk observations in `docs/RISK_REGISTER.md`. Do not

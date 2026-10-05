@@ -439,3 +439,52 @@ publication-owned API/UI draft, persistent paper service, broker journal, large
 corpus product or data-quality/validation adapters that are being developed
 for subsequent checkpoints. No deferred current-checkpoint failure is hidden
 inside those remaining mission requirements.
+
+
+## Publication product integration — 2026-10-05, local gate passed
+
+Base executable checkpoint0541337; CI-only correction8c6eabb. Root integrates
+private PublicationAccess/routes into Runtime/main/API, adds reference cards and
+safe frontend workflows, preserves Item8 EXP ownership, and shares two resource
+slots with DataAccess. Exact64MB reserve correction recorded in DEC-0043.
+
+Executed commands:
+
+- `.venv\Scripts\pytest.exe tests/test_v0_publication_workflows.py tests/test_v0_data_access.py tests/test_v0_native_source_spawn.py -q --no-cov`:41passed, one existing Starlette warning,115.30s.
+- `.venv\Scripts\pytest.exe tests/test_v0_publication_integration.py -q --no-cov -W error`: corrected7passed,17.47s; actual production-main PDF child, runtime recovery/store binding, both shared-admission paths, exact upload-only body allowance, authenticated10-reference catalogue and64MB floor.
+- `ruff check .`, `ruff format --check .`, `mypy src tests`:PASS;217formatted files,161typed Python files. TypeScript build and browser syntax check pass.
+- `node frontend/publication-smoke.mjs`: initial11checks/3screens/zeroerrors, then separately restored11checks. Corrected reference-card workflow12checks/3screens/zeroerrors/zeroexternalrequests. Actual generated PDF SHA256ee30ed9ed77fbabf56409bc0d72dde455f4f7561ec49364a68088f6e935630c1.
+
+Proof roots are `.local/v0-publication-proof/{browser-initial,restored-browser,corrected-browser-2}`.
+The private archive `.local/backups/publication-20261005.qhbackup` has SHA256
+4202a2ee70583e6ab59f666b1ebc222aacc41229a275edbd0d2a3dd41f145737.
+Its780archive-managed files match exactly in a new destination; application
+SQLite integrity and counts match (7users,40jobs,9datasets,26data operations,
+1owned PAPER,11publication operations). Recreated worker.lock is intentionally
+excluded from the archive count. No vault or credential backup is implied.
+
+Retained unsuccessful checks: first five integration fixtures failed because
+the test private-root path overlapped the application, then passed with a distinct
+private-root configuration; the production PDF test passed in that first run.
+The first corrected-browser launch preceded server readiness and got connection
+refused; no application error was logged, ready-state returned200, and the next
+bounded run passed12checks. The first full regression was explicitly interrupted
+at24% to apply review corrections; it is incomplete, not a pass. Its log remains
+`full.txt`. The corrected frozen full suite passed **2,327 tests, one POSIX-only
+skip, one existing Starlette warning, and 93.19% combined statement/branch
+coverage in 1,162.32 seconds** (`corrected-full.txt/xml`). All 135 source,
+configuration, schema and frontend hashes matched after completion against
+`corrected-frozen-source-manifest.json`. No check or coverage threshold was
+removed. Independent review closed the shared-resource reserve and reference
+catalogue findings; its own focused runtime/route checks passed. The hosted
+saved-commit check remains required after this checkpoint is pushed.
+
+Publication distribution inspection: wheel and source archive contain the five
+required publication/runtime/frontend modules byte for byte. No private runtime,
+vault, caches, node_modules or Git metadata is included. Member counts/hashes:
+- `quant_hunter-0.1.0-py3-none-any.whl`: 115 members; SHA-256 `a3fd6110bce685c8eedefb3cfa2e70ebe19a6bf48ac7c3b5acbeea2ba382b74e`.
+- `quant_hunter-0.1.0.tar.gz`: 275 members; SHA-256 `e9bc778e6acee9b1f4a85a52b61417b7952af23118dee871a20c495b69609f7a`.
+Proof: `.local/v0-publication-proof/distribution-proof.json`; build log retained.
+The first archive-inspection helper attempted to parse uv's one-byte `.gitignore`
+sentinel as a tar archive and failed; the corrected helper explicitly selects
+only `.whl` and `.tar.gz` outputs. No distribution contents were changed.

@@ -20,3 +20,12 @@ Ubuntu retains its ten-minute limit. A separate agent reviewed the configuration
 change and found no exclusions or weakening of checks; its review is a software
 cross-check, not professional certification. Exact follow-up CI must pass before
 claiming hosted Windows compatibility for the next saved checkpoint.
+
+
+Exact follow-up commit8c6eabb808fdb45115d91e2c2287c479623c96f7 completed
+[run37304844386](https://github.com/welmarr/quant-hunter/actions/runs/37304844386)
+successfully on both platforms. Windows:2,288passed,one platform skip,one existing
+warning,774.37s. Ubuntu:2,288passed,one platform skip,one warning,200.26s and92.91%
+coverage; static checks passed. Remote version-0 matches8c6eabb, saved backup
+7346cf4 and main e0ba326 remain unchanged. This verifies the saved checkpoint,
+not the later uncommitted publication product.

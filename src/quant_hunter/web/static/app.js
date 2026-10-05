@@ -22,7 +22,7 @@ let datasetRequest = 0;
 let datasetsLoading = false;
 let view = parseView();
 let draft = { market: "EQUITY", initial_cash: "10000", quantity: "10", lookback: 1, commission: "1", slippage_bps: "0", annual_financing_rate: "0" };
-const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
+const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", publications: "Publications", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
 const paths = {
     overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
     sources: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
@@ -101,7 +101,7 @@ function metadataText(value) {
 }
 function parseView() {
     const hash = window.location.hash.slice(1);
-    return ["overview", "sources", "data", "markets", "backtests", "studies", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
+    return ["overview", "sources", "data", "markets", "backtests", "studies", "publications", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
 }
 function navigate(next) {
     if (view === next && document.getElementById("workspace-view")) {
@@ -132,7 +132,8 @@ class ApiError extends Error {
 async function api(path, payload) {
     const requestingUser = session.user?.id;
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 15000);
+    const timeout = /^\/publications(?:\/|$)/.test(path) || /^\/sources\/[^/]+\/probe$/.test(path) ? 30000 : 15000;
+    const timer = window.setTimeout(() => controller.abort(), timeout);
     try {
         const headers = { Accept: "application/json" };
         if (payload !== undefined) {
@@ -148,7 +149,7 @@ async function api(path, payload) {
         if (!response.ok) {
             const content = record(body);
             const detail = record(content.error);
-            const message = typeof content.error === "string" ? content.error : typeof detail.message === "string" ? detail.message : typeof content.detail === "string" ? content.detail : typeof content.message === "string" ? content.message : `The local service returned an error (${response.status}).`;
+            const message = typeof content.error === "string" ? content.error : typeof detail.message === "string" ? detail.message : typeof content.detail === "string" ? content.detail : typeof record(content.detail).code === "string" ? String(record(content.detail).code) : typeof content.message === "string" ? content.message : `The local service returned an error (${response.status}).`;
             if (response.status === 401 && session.user) {
                 stopPolling();
                 session = { needs_owner: false, user: null, csrf: null };
@@ -392,7 +393,7 @@ function renderView(focus = false) {
         region.append(heading("Connecting to your local installation", viewNames[view], "Loading the current account's workspace…"));
         return;
     }
-    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
+    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, publications: region => { region.append(publicationView()); }, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
     views[view](region);
     if (focus) {
         const title = region.querySelector("h1");
@@ -1970,3 +1971,339 @@ async function boot() {
 window.addEventListener("hashchange", () => { clearMessage(); renderView(true); });
 window.addEventListener("pagehide", stopPolling);
 void boot();
+function paperTextarea(label, name, value, max = 4000) {
+    const input = el("textarea");
+    input.id = `field-${name}`;
+    input.name = name;
+    input.value = value;
+    input.maxLength = max;
+    input.rows = 3;
+    const caption = el("label", "", label);
+    caption.htmlFor = input.id;
+    return { box: el("div", "field", caption, input), input };
+}
+function publicationView() {
+    const epoch = pageEpoch;
+    const owner = session.user?.id;
+    const valid = () => epoch === pageEpoch && owner === session.user?.id && region.isConnected;
+    const region = el("div");
+    const collection = panel("Private publications", "Your references, source access and reading declarations remain separate.");
+    const operations = panel("Publication operations", "Retained successes, failures and interruptions; no automatic replay.");
+    const detail = el("div");
+    detail.id = "publication-detail";
+    let offset = 0;
+    let selected = null;
+    let selection = 0;
+    const create = panel("Add a publication", "Register a DOI or public HTTPS reference before attaching or retrieving content.");
+    const form = el("form");
+    form.id = "publication-create";
+    const ref = field("DOI or public HTTPS URL", "publication_reference", "", { hint: "No credential URLs. Adding a reference does not fetch content." });
+    const submit = el("button", "button primary", "Register reference");
+    submit.type = "submit";
+    const formError = el("div");
+    formError.setAttribute("aria-live", "polite");
+    form.append(ref.box, submit, formError);
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!valid())
+            return;
+        submit.disabled = true;
+        try {
+            const value = ref.input.value.trim();
+            const paper = await api("/publications", value.startsWith("https://") ? { url: value } : { doi: value });
+            if (!valid())
+                return;
+            ref.input.value = "";
+            offset = 0;
+            await load();
+            await select(paper.paper_id);
+        }
+        catch (error) {
+            if (valid())
+                formError.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            submit.disabled = false;
+        }
+    });
+    create.body.append(form);
+    region.append(heading("Scientific library", "Publication library", "Inspect source material, document its method and link your own governed experiments. Reading a paper or running synthetic code does not validate a market result."));
+    if (session.user?.role !== "reader")
+        region.append(create.box);
+    const references = panel("Canonical source references", "Ten reviewed methodological source cards. Registering a suggestion creates your private record; it does not download a document or declare reading.");
+    region.append(references.box, collection.box, detail, operations.box);
+    async function loadReferences() {
+        try {
+            const catalog = await api("/publication-reference-catalog");
+            if (!valid())
+                return;
+            references.body.replaceChildren();
+            for (const source of catalog.references) {
+                const card = el("details", "data-disclosure", el("summary", "", `${source.domain} · ${source.metadata.title}`));
+                card.append(el("p", "", String(source.dossier.signal_formula)), el("p", "", String(source.dossier.limitations)), notice("Source text unavailable in this record · UNREAD · empirical reproduction not established"));
+                const feedback = el("div");
+                feedback.setAttribute("aria-live", "polite");
+                const register = button(`Register ${source.domain} reference`, () => { void registerSource(); }, "secondary");
+                async function registerSource() {
+                    if (!valid())
+                        return;
+                    register.disabled = true;
+                    let created = null;
+                    try {
+                        created = await api("/publications", { metadata: source.metadata });
+                        if (!valid())
+                            return;
+                        await api(`/publications/${encodeURIComponent(created.paper_id)}`, { expected_digest: created.revision_digest, dossier: source.dossier });
+                        if (!valid())
+                            return;
+                        offset = 0;
+                        await load();
+                        await select(created.paper_id);
+                        feedback.replaceChildren(notice("Private reference and method notes retained. Source text still requires explicit attachment or retrieval."));
+                    }
+                    catch (error) {
+                        if (!valid())
+                            return;
+                        if (created) {
+                            await load();
+                            await select(created.paper_id);
+                        }
+                        if (valid())
+                            feedback.replaceChildren(notice(`${readableError(error)}${created ? " The created reference remains saved; inspect its current revision below." : ""}`, "error"));
+                    }
+                    finally {
+                        register.disabled = false;
+                    }
+                }
+                if (session.user?.role !== "reader")
+                    card.append(register);
+                card.append(feedback);
+                references.body.append(card);
+            }
+        }
+        catch (error) {
+            if (valid())
+                references.body.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    async function load() {
+        collection.body.replaceChildren(el("p", "loading-message", "Loading private references…"));
+        try {
+            const [result, history] = await Promise.all([
+                api(`/publications?limit=25&offset=${offset}`),
+                api("/publication-operations"),
+            ]);
+            if (!valid())
+                return;
+            const items = result.publications;
+            collection.body.replaceChildren(items.length ? table(["Publication", "Access", "Reading", "Reproduction"], items.map(p => [button(p.metadata.title, () => { void select(p.paper_id); }, "link-button"), p.text_access, p.reading.status, p.reproduction.status]), "Owned publication references") : empty("No private references on this page", "Register a reference to start a permanent publication record."));
+            const previous = button("Previous publications", () => { offset = Math.max(0, offset - 25); void load(); }, "secondary");
+            previous.disabled = offset === 0;
+            const next = button("Next publications", () => { offset += 25; void load(); }, "secondary");
+            next.disabled = items.length < 25 || offset >= 475;
+            collection.body.append(el("div", "form-actions", previous, next));
+            operations.body.replaceChildren(history.operations.length ? table(["Operation", "State", "Publication", "Failure reason"], history.operations.map(op => [op.kind, statusBadge(op.status), op.paper_id ?? "Not allocated", op.error ?? "None"]), "Private publication operations") : empty("No publication operations", "Explicit actions and their outcomes will be retained here."));
+        }
+        catch (error) {
+            if (valid())
+                collection.body.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    async function select(id) {
+        const request = ++selection;
+        detail.replaceChildren(el("p", "loading-message", "Loading immutable publication revision…"));
+        try {
+            const paper = await api(`/publications/${encodeURIComponent(id)}`);
+            if (!valid() || request !== selection)
+                return;
+            selected = paper;
+            renderPaper(paper);
+        }
+        catch (error) {
+            if (valid() && request === selection)
+                detail.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    function renderPaper(paper) {
+        const paperId = paper.paper_id;
+        const digest = paper.revision_digest;
+        const current = () => valid() && selected?.paper_id === paperId && selected.revision_digest === digest;
+        const report = panel(paper.metadata.title, `${paperId} · revision ${paper.revision}`, badge(paper.text_access));
+        const errorBox = el("div");
+        errorBox.setAttribute("aria-live", "polite");
+        const meta = el("dl", "definition-list");
+        for (const [key, value] of [["Authors", paper.metadata.authors.join(", ")], ["DOI", paper.metadata.doi ?? "Unspecified"], ["Source URL", paper.metadata.url ?? "Unspecified"], ["Version", paper.metadata.version], ["Exact revision", digest]])
+            meta.append(el("dt", "", key), el("dd", "mono", value));
+        report.body.append(meta, errorBox);
+        async function mutate(suffix, payload, control) {
+            if (!current())
+                return;
+            control.disabled = true;
+            errorBox.replaceChildren();
+            try {
+                await api(`/publications/${encodeURIComponent(paperId)}${suffix}`, { expected_digest: digest, ...payload });
+                if (!current())
+                    return;
+                await load();
+                await select(paperId);
+            }
+            catch (error) {
+                if (current())
+                    errorBox.replaceChildren(notice(readableError(error), "error"), button("Refresh retained publication state", () => { void select(paperId); }, "secondary"));
+            }
+            finally {
+                control.disabled = false;
+            }
+        }
+        const textButton = button("Inspect extracted text", () => { void showText(); }, "secondary");
+        textButton.disabled = !paper.text;
+        const textArea = el("div");
+        textArea.id = "publication-text";
+        async function showText() {
+            try {
+                const content = await api(`/publications/${encodeURIComponent(paperId)}/text`);
+                if (current())
+                    textArea.replaceChildren(el("pre", "json-view", JSON.stringify(content, null, 2)));
+            }
+            catch (error) {
+                if (current())
+                    textArea.replaceChildren(notice(readableError(error), "error"));
+            }
+        }
+        report.body.append(textButton, textArea);
+        if (session.user?.role !== "reader") {
+            const metadataForm = el("form");
+            metadataForm.id = "publication-metadata";
+            const title = field("Publication title", "publication_title", paper.metadata.title);
+            const authors = field("Authors (semicolon-separated)", "publication_authors", paper.metadata.authors.join("; "));
+            const year = field("Publication year", "publication_year", paper.metadata.year?.toString() ?? "", { type: "number", min: "1500", max: "2100", step: "1", required: false });
+            const doi = field("DOI", "publication_doi", paper.metadata.doi ?? "", { required: false });
+            const primaryUrl = field("Primary HTTPS reference", "publication_url", paper.metadata.url ?? "", { type: "url", required: false });
+            const version = field("Publication version", "publication_version", paper.metadata.version);
+            const saveMetadata = el("button", "button secondary", "Save publication metadata");
+            saveMetadata.type = "submit";
+            metadataForm.append(title.box, authors.box, year.box, doi.box, primaryUrl.box, version.box, saveMetadata);
+            metadataForm.addEventListener("submit", event => { event.preventDefault(); void mutate("", { metadata: { title: title.input.value.trim(), authors: authors.input.value.split(";").map(v => v.trim()).filter(Boolean), year: year.input.value ? Number(year.input.value) : null, doi: doi.input.value.trim() || null, url: primaryUrl.input.value.trim() || null, version: version.input.value.trim() } }, saveMetadata); });
+            report.body.append(el("details", "data-disclosure", el("summary", "", "Edit bibliographic metadata"), metadataForm));
+            const attachment = el("form");
+            attachment.id = "publication-attachment";
+            const file = field("PDF or UTF-8 text", "publication_file", "", { type: "file" });
+            file.input.accept = ".pdf,.txt";
+            const rights = field("Declared document license or access permission", "publication_license", "");
+            const attach = el("button", "button secondary", "Attach immutable document");
+            attach.type = "submit";
+            attachment.append(file.box, rights.box, attach);
+            attachment.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const input = file.input.files?.[0];
+                if (!input || input.size > 4_000_000) {
+                    errorBox.replaceChildren(notice("Select a PDF or UTF-8 text file of at most 4,000,000 bytes.", "error"));
+                    return;
+                }
+                attach.disabled = true;
+                try {
+                    const bytes = new Uint8Array(await input.arrayBuffer());
+                    if (!current())
+                        return;
+                    let binary = "";
+                    for (let i = 0; i < bytes.length; i += 8192)
+                        binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+                    await mutate("/attachment", { content_base64: btoa(binary), media_type: input.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "text/plain", declared_license: rights.input.value.trim() }, attach);
+                }
+                catch (error) {
+                    if (current())
+                        errorBox.replaceChildren(notice(readableError(error), "error"));
+                }
+                finally {
+                    file.input.value = "";
+                    attach.disabled = false;
+                }
+            });
+            report.body.append(el("details", "data-disclosure", el("summary", "", "Attach a source document"), attachment));
+            const extract = el("form");
+            extract.id = "publication-extract";
+            const start = field("First page (1-based)", "publication_page", "1", { type: "number", min: "1", max: "200", step: "1" });
+            const count = field("Page count", "publication_pages", "50", { type: "number", min: "1", max: "50", step: "1" });
+            const extractButton = el("button", "button secondary", "Extract selected pages");
+            extractButton.type = "submit";
+            extractButton.disabled = !paper.document;
+            extract.append(start.box, count.box, extractButton);
+            extract.addEventListener("submit", event => { event.preventDefault(); void mutate("/extract", { page_start: Number(start.input.value) - 1, page_count: Number(count.input.value) }, extractButton); });
+            report.body.append(el("details", "data-disclosure", el("summary", "", "Extract text with bounded resources"), extract));
+            const reading = el("form");
+            reading.id = "publication-reading";
+            const state = selectField("Declared reading status", "publication_reading", ["UNREAD", "PARTIAL", "FULL"].map(value => ({ value, text: value })), paper.reading.status);
+            const note = paperTextarea("Reading note", "publication_reading_note", paper.reading.note ?? "", 2000);
+            const pages = field("Pages actually read (comma-separated)", "publication_read_pages", paper.reading.pages.join(","), { required: false });
+            const readButton = el("button", "button secondary", "Save reading declaration");
+            readButton.type = "submit";
+            reading.append(notice("Full text access does not mean full reading. Declare only pages you actually read; the server verifies access and text identity."), state.box, note.box, pages.box, readButton);
+            reading.addEventListener("submit", event => {
+                event.preventDefault();
+                const unread = state.input.value === "UNREAD";
+                void mutate("", { reading: { status: state.input.value, reader: unread ? null : session.user?.username, note: unread ? null : note.input.value.trim(), text_digest: unread ? null : paper.text?.text_digest, pages: unread ? [] : pages.input.value.split(",").filter(v => v.trim()).map(Number) } }, readButton);
+            });
+            report.body.append(el("details", "data-disclosure", el("summary", "", "Declare reading status"), reading));
+            const dossier = el("form");
+            dossier.id = "publication-dossier";
+            const fields = [["question", "Research question"], ["universe", "Universe"], ["data", "Data and vintages"], ["signal_formula", "Signal or equation"], ["horizon", "Horizon"], ["estimation", "Estimation"], ["portfolio", "Portfolio construction"], ["costs", "Costs"], ["protocol", "Validation protocol"], ["metrics", "Metrics"], ["reported_results", "Results reported by the source"], ["reproduced_results", "Results actually reproduced"], ["limitations", "Limitations"], ["deviations", "Implementation deviations"], ["variant", "Variant identity"], ["disposition_reason", "Selection or rejection reason"]];
+            const inputs = fields.map(([key, label]) => { const f = paperTextarea(label, `publication_${key}`, String(paper.dossier[key] ?? "UNKNOWN")); dossier.append(f.box); return { key, input: f.input }; });
+            const disposition = selectField("Disposition", "publication_disposition", ["CANDIDATE", "SELECTED", "REJECTED", "DEFERRED"].map(value => ({ value, text: value })), String(paper.dossier.disposition));
+            const saveDossier = el("button", "button secondary", "Save methodological dossier");
+            saveDossier.type = "submit";
+            dossier.append(disposition.box, saveDossier);
+            dossier.addEventListener("submit", event => { event.preventDefault(); void mutate("", { dossier: { ...Object.fromEntries(inputs.map(({ key, input }) => [key, input.value.trim()])), disposition: disposition.input.value, equation_links: paper.dossier.equation_links } }, saveDossier); });
+            report.body.append(el("details", "data-disclosure", el("summary", "", "Method, equations and limitations"), dossier));
+            const equations = el("form");
+            equations.id = "publication-equations";
+            const equationInputs = [];
+            const equationRows = el("div");
+            function equationRow(value = {}) {
+                if (equationInputs.length >= 64)
+                    return;
+                const index = equationInputs.length + 1;
+                const section = field(`Equation or source section ${index}`, `equation_section_${index}`, String(value.section ?? ""));
+                const fn = field(`Implementation function ${index}`, `equation_function_${index}`, String(value.function ?? ""));
+                const assumptions = paperTextarea(`Equation assumptions ${index}`, `equation_assumptions_${index}`, String(value.assumptions ?? ""), 1000);
+                const oracle = field(`Independent oracle or test reference ${index}`, `equation_oracle_${index}`, String(value.oracle ?? ""));
+                const row = el("fieldset", "", el("legend", "", `Equation mapping ${index}`), section.box, fn.box, assumptions.box, oracle.box);
+                equationInputs.push({ section: section.input, function: fn.input, assumptions: assumptions.input, oracle: oracle.input });
+                equationRows.append(row);
+            }
+            const existingEquations = Array.isArray(paper.dossier.equation_links) ? paper.dossier.equation_links : [];
+            existingEquations.forEach(value => equationRow(record(value)));
+            const saveEquations = el("button", "button secondary", "Save equation mappings");
+            saveEquations.type = "submit";
+            equations.append(equationRows, button("Add equation mapping", () => equationRow(), "secondary"), saveEquations);
+            equations.addEventListener("submit", event => { event.preventDefault(); void mutate("", { dossier: { ...paper.dossier, equation_links: equationInputs.map(value => Object.fromEntries(Object.entries(value).map(([key, input]) => [key, input.value.trim()]))) } }, saveEquations); });
+            report.body.append(el("details", "data-disclosure", el("summary", "", "Map equations to implementation and oracles"), equations));
+            const links = el("form");
+            links.id = "publication-reproduction";
+            const linked = field("Owned experiment IDs (comma-separated)", "publication_experiments", paper.reproduction.experiment_ids.join(","), { required: false });
+            const reproduction = selectField("Reproduction evidence", "publication_reproduction_status", ["NOT_ATTEMPTED", "SYNTHETIC_SOFTWARE_ONLY", "LINKED_EXPERIMENTS"].map(value => ({ value, text: value })), paper.reproduction.status);
+            const linkButton = el("button", "button secondary", "Save experiment links");
+            linkButton.type = "submit";
+            links.append(notice("Only your actual recorded experiments can be linked. A link confers no scientific validation."), reproduction.box, linked.box, linkButton);
+            links.addEventListener("submit", event => { event.preventDefault(); void mutate("", { reproduction: { status: reproduction.input.value, experiment_ids: linked.input.value.split(",").map(v => v.trim()).filter(Boolean) } }, linkButton); });
+            report.body.append(el("details", "data-disclosure", el("summary", "", "Link governed experiments"), links));
+            const remote = el("form");
+            remote.id = "publication-fetch";
+            const url = field("Primary document HTTPS URL", "publication_fetch_url", paper.metadata.url ?? "", { type: "url" });
+            const license = field("Declared remote document license", "publication_fetch_license", "");
+            const fetchButton = el("button", "button secondary", "Fetch this public document");
+            fetchButton.type = "submit";
+            remote.append(notice("This explicit action makes a bounded external request. No private or credential URL, redirect, automatic retry or protected-document bypass is supported."), url.box, license.box, fetchButton);
+            remote.addEventListener("submit", event => { event.preventDefault(); void mutate("/fetch", { url: url.input.value.trim(), declared_license: license.input.value.trim() }, fetchButton); });
+            const metadata = button("Retrieve DOI metadata from Crossref", () => { void mutate("/metadata/retrieve", {}, metadata); }, "secondary");
+            metadata.disabled = !paper.metadata.doi;
+            report.body.append(el("details", "data-disclosure", el("summary", "", "Explicit public retrieval"), metadata, remote));
+        }
+        report.body.append(el("details", "data-disclosure", el("summary", "", "Exact immutable manifest"), el("pre", "json-view", JSON.stringify(paper, null, 2))));
+        detail.replaceChildren(report.box);
+    }
+    queueMicrotask(() => { if (valid()) {
+        void load();
+        void loadReferences();
+    } });
+    return region;
+}

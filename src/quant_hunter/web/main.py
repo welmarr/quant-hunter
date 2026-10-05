@@ -43,6 +43,7 @@ def main() -> None:
             sources=[asdict(source) for source in list_sources()],
             connections=runner.connections,
             instruments=runner.instruments,
+            publications=runner.publications,
         )
         uvicorn.run(
             app, host="127.0.0.1", port=args.port, access_log=False, log_level="warning"

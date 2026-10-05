@@ -28,8 +28,15 @@ macro/priority adapters, twelve governed synthetic study workflows and reviewed
 publication/pattern/accounting cores are integrated. Provider browser checks
 passed 57 cases; Studies passed 20, including positive controls and retained
 failures, also on a separately restored instance. The corrected full regression
-passed2,288 tests, one platform skip and93.07% coverage; exact-commit hosted CI
-remains pending. Publication/pattern/paper product integration remains unfinished. See `v0/TEST_REPORT.md` for exact scope,
+passed 2,288 tests, one platform skip and 93.07% coverage. Checkpoint 0541337
+is saved and remotely verified; run 37303138649 passed Ubuntu; Windows timed out before completion.
+CI sizing repair 8c6eabb is saved/pushed; follow-up run37304844386 passed on both platforms (2,288tests each;Ubuntu92.91%).
+The private publication product now passes its full local gate: 2,327 tests,
+one platform skip, one existing warning, 93.19% coverage and 135 unchanged
+source hashes. Desktop/mobile browser proof passed 12 checks; an earlier
+publication snapshot restored 780 archive-managed files exactly in a distinct
+runtime. The next saved publication commit still requires hosted CI.
+Pattern/paper and quality product integration remains unfinished. See `v0/TEST_REPORT.md` for exact scope,
 failures and evidence. The remaining mission remains required in
 `v0/REQUIREMENTS.md`. No empirical or host gate is
 closed by these software checks.

@@ -2,8 +2,8 @@
   "mission": "Quant Hunter V0",
   "status": "IN_PROGRESS",
   "date": "2026-10-05",
-  "reference_commit": "796771c81a7c49768ebe7040730c88707c98827b",
-  "reference_semantics": "Prior saved CI-verified checkpoint; current corrected local checkpoint passed2288tests/93.07% and restored browser57+20; next saved-commit CI pending",
+  "reference_commit": "8c6eabb808fdb45115d91e2c2287c479623c96f7",
+  "reference_semantics": "Saved parent CI-only correction; publication product local gate passed; this new publication checkpoint must be pushed and exact hosted CI verified.",
   "branch": "version-0",
   "host_evidence": "BLOCKED_EXTERNAL",
   "data_mode": "SYNTHETIC backtests; separate HISTORICAL_REAL acquisition and uploader-declared imports",
@@ -36,7 +36,7 @@
     {
       "name": "Paper library and ten sourced CRP implementations",
       "status": "IN_PROGRESS",
-      "evidence": "Ten CRP and two comparison studies execute actual mathematics through Item8; 36 workflow/binding tests and 20 browser checks passed. Publication core integrated; owned application workflow pending. No empirical replication."
+      "evidence": "Ten CRP and two comparison studies execute actual mathematics through Item8. Owned publication library, reference cards, immutable PDF/text extraction, reading declarations, dossier/equation editing and private EXP links are verified by 12 browser checks, native PDF execution and the 2,327-test full gate. Source text availability and empirical replication remain separate and unverified where absent."
     },
     {
       "name": "Fifteen PatternLab families",
@@ -46,7 +46,7 @@
     {
       "name": "Bounded multi-scale pattern search and benchmarks",
       "status": "IN_PROGRESS",
-      "evidence": "Synthetic 2015\u20132024 schedules scanned 4,734,600 rows with bounded candidates; small-corpus exact/approximate recall retained. Persistent corpus/search UI remains required."
+      "evidence": "Synthetic 2015–2024 schedules scanned 4,734,600 rows with bounded candidates; small-corpus exact/approximate recall retained. Persistent corpus/search UI remains required."
     },
     {
       "name": "Equity/FX accounting and costs",
@@ -66,7 +66,7 @@
     {
       "name": "Persistent local paper execution and risk",
       "status": "IN_PROGRESS",
-      "evidence": "Durable paper engine author tests passed 83 cases; independent review in progress before root integration. Live trading remains disabled."
+      "evidence": "Durable paper engine passes 85 tests and independent review in isolation; owned runtime/API workflow is being implemented. Live trading remains disabled."
     },
     {
       "name": "Paper broker adapters and contract tests",
@@ -75,8 +75,8 @@
     },
     {
       "name": "Local notifications and optional Telegram",
-      "status": "NOT_STARTED",
-      "evidence": "No external messages sent"
+      "status": "IN_PROGRESS",
+      "evidence": "Isolated local inbox and disabled-by-default Telegram core independently pass 126 tests; private vault-purpose and product integration remain. No external messages sent."
     },
     {
       "name": "Worker restart/cancellation/recovery",
@@ -100,12 +100,12 @@
     }
   ],
   "tests": {
-    "final_regression": "PASS: 1460 tests, one Linux-only skip, one warning,92.33% coverage in583.60 seconds",
-    "browser": "PASS: 48 restored-instance checks,26 screenshots,zero errors; five delayed-response isolation assertions",
+    "final_regression": "PASS: 2327 tests, one platform skip, one existing warning, 93.19% coverage, 1162.32s; all135 source/config/frontend hashes unchanged; independent review closed.",
+    "browser": "PASS: publication corrected12checks/3screens/zeroerrors; separate restored11checks; exact780archive-managedfiles and SQLite integrity/counts match.",
     "lint_types_build": "PASS: lock, Ruff, mypy, TypeScript; distribution verification in TEST_REPORT.md",
-    "hosted_ci": "PASS: 796771c run37278264340;1460 tests each OS,one platform-specific skip each,92.09% Ubuntu coverage",
+    "hosted_ci": "PASS:8c6eabb run37304844386;2288tests perOS,oneplatformskip/onewarning,Ubuntu92.91%;Windows774.37s. Publication work not yetcovered.",
     "empirical_validation": "NONE",
-    "current_checkpoint": "PASS:2288tests,one platform skip,one warning,93.07%,998.05s; all131source hashes unchanged; lock/Ruff/mypy/TypeScript/build and private distribution checksPASS",
-    "current_browser": "PASS:separate restored instance provider57checks/32screens and Studies20checks/18screens;zero errors"
+    "current_checkpoint": "PASS: 2327 tests, one platform skip, one existing warning, 93.19% coverage, 1162.32s; all135 source/config/frontend hashes unchanged; independent review closed.",
+    "current_browser": "PASS: publication corrected12checks/3screens/zeroerrors; separate restored11checks; exact780archive-managedfiles and SQLite integrity/counts match."
   }
 }

@@ -6,6 +6,7 @@ import base64
 import binascii
 import hmac
 import json
+import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -29,6 +30,8 @@ from quant_hunter.markets.registry import InstrumentRegistry
 from quant_hunter.sources.transport import SourceError
 from quant_hunter.web.connections import Connections
 from quant_hunter.web.data_access import DataAccess
+from quant_hunter.web.publication_access import PublicationAccess
+from quant_hunter.web.publication_routes import install_publication_routes
 from quant_hunter.web.state import AccessError, AppState, Role, Session
 
 
@@ -165,7 +168,12 @@ class LocalBoundary:
                 )(scope, receive, send)
                 return
         limit = (
-            3_000_000
+            6_000_000
+            if scope["method"] == "POST"
+            and re.fullmatch(
+                r"/api/publications/PAPER-[0-9a-f-]{36}/attachment", scope["path"]
+            )
+            else 3_000_000
             if scope["method"] == "POST"
             and (
                 scope["path"] == "/api/datasets"
@@ -243,6 +251,7 @@ def create_app(
     sources: list[dict[str, object]] | None = None,
     connections: Connections | None = None,
     instruments: InstrumentRegistry | None = None,
+    publications: PublicationAccess | None = None,
 ) -> FastAPI:
     """Create app without starting jobs or loading any external provider."""
     from quant_hunter.web.worker import Worker
@@ -287,6 +296,8 @@ def create_app(
         if owner and session.user.role != "owner":
             raise HTTPException(403, "Owner role required")
         return session
+
+    install_publication_routes(app, authenticated, publications)
 
     @app.exception_handler(AccessError)
     async def access_error(request: Request, exc: AccessError) -> JSONResponse:
