@@ -128,3 +128,11 @@ compact plan digests; they cannot combine unrelated experiment or temporal
 identities. They do not prove that an executor consumed either plan and do not
 allocate or mutate an experiment. Simulation output cannot create
 `EVALUATED` or `DECIDED`; only the Item 8 append-only lifecycle may do so.
+
+### EXP-0001 — ETF time-series trend (first real-data experiment)
+
+- Registered/frozen: 2026-11-04, `research/EXP-0001-etf-trend/PREREGISTRATION.md` (commit `2bb8e07`), outside the Item 8 runtime chain.
+- Data: Yahoo Finance monthly adjusted closes, 10 ETFs, retrieved 2026-11-04T04:38Z, raw sha256 `dbaac38c...`.
+- Variants counted: 2 (P1, S1).
+- Holdout 2017-01..2026-10 evaluated once: PASS on the pre-registered drawdown criterion; no Sharpe improvement vs buy-and-hold (CI spans 0).
+- Status: DECIDED — defensive overlay, not an edge. See `research/EXP-0001-etf-trend/RESULTS.md`.
