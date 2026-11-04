@@ -23,6 +23,7 @@ from quant_hunter.credentials.errors import VaultError
 
 T = TypeVar("T")
 PURPOSE = "PAPER_OR_READ_ONLY"
+NOTIFICATIONS_ONLY = "NOTIFICATIONS_ONLY"
 MAX_SECRET_BYTES = 8192
 MAX_VERSIONS = 10_000
 MAX_KEY_FILES = 256
@@ -64,7 +65,12 @@ class CredentialVault:
     research isolation and grants no network or trading authority.
     """
 
-    def __init__(self, private_root: Path, application_root: Path) -> None:
+    def __init__(
+        self, private_root: Path, application_root: Path, *, purpose: str = PURPOSE
+    ) -> None:
+        if purpose not in (PURPOSE, NOTIFICATIONS_ONLY):
+            raise VaultError("CREDENTIAL_SCOPE_FORBIDDEN")
+        self.purpose = purpose
         protection.safe_path(private_root)
         protection.safe_path(application_root)
         if private_root.is_relative_to(
@@ -88,7 +94,9 @@ class CredentialVault:
                 "CREATE TABLE IF NOT EXISTS vault_meta (singleton INTEGER PRIMARY KEY CHECK(singleton=1), schema_version INTEGER NOT NULL, vault_id TEXT NOT NULL, active_key TEXT NOT NULL, protection TEXT NOT NULL)"
             )
             db.execute(
-                "CREATE TABLE IF NOT EXISTS credentials (provider TEXT NOT NULL, account TEXT NOT NULL, slot TEXT NOT NULL, purpose TEXT NOT NULL CHECK(purpose='PAPER_OR_READ_ONLY'), revision INTEGER NOT NULL, enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), updated_at TEXT NOT NULL, PRIMARY KEY(provider,account,slot))"
+                "CREATE TABLE IF NOT EXISTS credentials (provider TEXT NOT NULL, account TEXT NOT NULL, slot TEXT NOT NULL, purpose TEXT NOT NULL CHECK(purpose='"
+                + self.purpose
+                + "'), revision INTEGER NOT NULL, enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), updated_at TEXT NOT NULL, PRIMARY KEY(provider,account,slot))"
             )
             db.execute(
                 "CREATE TABLE IF NOT EXISTS credential_versions (provider TEXT NOT NULL, account TEXT NOT NULL, slot TEXT NOT NULL, revision INTEGER NOT NULL, key_id TEXT NOT NULL, ciphertext BLOB NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(provider,account,slot,revision))"
@@ -97,6 +105,18 @@ class CredentialVault:
                 "CREATE TABLE IF NOT EXISTS credential_events (sequence INTEGER PRIMARY KEY, action TEXT NOT NULL, provider TEXT, account TEXT, slot TEXT, created_at TEXT NOT NULL)"
             )
             meta = db.execute("SELECT * FROM vault_meta WHERE singleton=1").fetchone()
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS vault_scope (singleton INTEGER PRIMARY KEY CHECK(singleton=1), purpose TEXT NOT NULL CHECK(purpose IN ('PAPER_OR_READ_ONLY','NOTIFICATIONS_ONLY')))"
+            )
+            scope = db.execute("SELECT purpose FROM vault_scope").fetchall()
+            if not scope:
+                # Every pre-extension vault is legacy, even if it has no secrets.
+                bound = PURPOSE if meta is not None else self.purpose
+                if bound != self.purpose:
+                    raise VaultError("VAULT_PURPOSE_MISMATCH")
+                db.execute("INSERT INTO vault_scope VALUES(1,?)", (bound,))
+            elif len(scope) != 1 or scope[0][0] != self.purpose:
+                raise VaultError("VAULT_PURPOSE_MISMATCH")
             if meta is None:
                 if (
                     db.execute("SELECT COUNT(*) FROM credential_versions").fetchone()[0]
@@ -153,6 +173,9 @@ class CredentialVault:
             db.close()
 
     def _meta(self, db: sqlite3.Connection) -> sqlite3.Row:
+        scope = db.execute("SELECT purpose FROM vault_scope").fetchall()
+        if len(scope) != 1 or scope[0][0] != self.purpose:
+            raise VaultError("VAULT_PURPOSE_MISMATCH")
         row = db.execute("SELECT * FROM vault_meta WHERE singleton=1").fetchone()
         if (
             row is None
@@ -214,9 +237,8 @@ class CredentialVault:
         except ValueError, UnicodeError:
             raise VaultError("KEY_INTEGRITY") from None
 
-    @staticmethod
     def _binding(
-        meta: sqlite3.Row, row: sqlite3.Row | dict[str, object], key_id: str
+        self, meta: sqlite3.Row, row: sqlite3.Row | dict[str, object], key_id: str
     ) -> JsonRecord:
         return {
             "format": _FORMAT,
@@ -225,7 +247,7 @@ class CredentialVault:
             "provider": cast(str, row["provider"]),
             "account": cast(str, row["account"]),
             "slot": cast(str, row["slot"]),
-            "purpose": PURPOSE,
+            "purpose": self.purpose,
             "revision": cast(int, row["revision"]),
         }
 
@@ -310,7 +332,7 @@ class CredentialVault:
         purpose: str = PURPOSE,
     ) -> JsonRecord:
         provider, account, slot = map(_identifier, (provider, account, slot))
-        if purpose != PURPOSE:
+        if purpose != self.purpose:
             raise VaultError("LIVE_CREDENTIAL_SCOPE_FORBIDDEN")
         if not isinstance(secret, bytes) or not 1 <= len(secret) <= MAX_SECRET_BYTES:
             raise VaultError("INVALID_SECRET_SIZE_OR_TYPE")
@@ -348,7 +370,7 @@ class CredentialVault:
             )
             db.execute(
                 "INSERT INTO credentials VALUES(?,?,?,?,?,1,?) ON CONFLICT(provider,account,slot) DO UPDATE SET revision=excluded.revision,enabled=1,updated_at=excluded.updated_at",
-                (provider, account, slot, PURPOSE, revision, stamp),
+                (provider, account, slot, self.purpose, revision, stamp),
             )
             self._event(db, "SET", provider, account, slot)
             row = db.execute(
@@ -411,7 +433,7 @@ class CredentialVault:
             for slot in names:
                 row = db.execute(
                     "SELECT v.* FROM credentials c JOIN credential_versions v USING(provider,account,slot,revision) WHERE c.provider=? AND c.account=? AND c.slot=? AND c.enabled=1 AND c.purpose=?",
-                    (provider, account, slot, PURPOSE),
+                    (provider, account, slot, self.purpose),
                 ).fetchone()
                 if row is None:
                     raise VaultError("CREDENTIAL_NOT_CONFIGURED")

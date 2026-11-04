@@ -115,14 +115,16 @@ def metadata_document(value: Mapping[str, JsonValue]) -> JsonRecord:
     ):
         raise ImportValidationError("UNSUPPORTED_CURRENCY")
     market = instrument["asset_class"]
-    if market not in ("EQUITY", "FX_SPOT"):
+    if market not in ("EQUITY", "ETF", "FX_SPOT"):
         raise ImportValidationError("UNSUPPORTED_MARKET")
     if market == "FX_SPOT" and (
         base == quote or symbol not in {base + quote, base + "/" + quote}
     ):
         raise ImportValidationError("FX_SYMBOL_CURRENCY_MISMATCH")
-    if market == "EQUITY" and "/" in symbol:
+    if market in ("EQUITY", "ETF") and "/" in symbol:
         raise ImportValidationError("INVALID_EQUITY_SYMBOL")
+    if market == "ETF" and base != quote:
+        raise ImportValidationError("ETF_CURRENCY_MISMATCH")
     step = decimal_value(instrument.get("quantity_step", "1"))
     restrictions = text(
         record.get("declared_restrictions", "UNKNOWN; no redistribution approved"),

@@ -75,8 +75,10 @@ class Instrument:
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[A-Z0-9._/-]{1,32}", self.symbol):
             raise SimulationError("symbol must be a bounded uppercase identifier")
-        if self.asset_class not in {"EQUITY", "FX_SPOT"}:
-            raise SimulationError("only synthetic EQUITY and FX_SPOT are supported")
+        if self.asset_class not in {"EQUITY", "ETF", "FX_SPOT"}:
+            raise SimulationError(
+                "only synthetic EQUITY, ETF and FX_SPOT are supported"
+            )
         if any(
             re.fullmatch(r"[A-Z]{3}", currency) is None
             for currency in (self.base_currency, self.quote_currency)
@@ -84,6 +86,8 @@ class Instrument:
             raise SimulationError("currencies must be three-letter uppercase codes")
         if self.asset_class == "FX_SPOT" and self.base_currency == self.quote_currency:
             raise SimulationError("FX base and quote currencies must differ")
+        if self.asset_class == "ETF" and self.base_currency != self.quote_currency:
+            raise SimulationError("cash ETF base and quote currencies must match")
         _decimal(self.quantity_step, "quantity_step", positive=True)
 
 
@@ -385,8 +389,8 @@ def synthetic_fixture(
     the following open of 101. One-unit commissions leave 10008 from 10000.
     The FX case has a nonzero explicit spread, EUR units and USD valuation.
     """
-    if asset_class == "EQUITY":
-        instrument = Instrument("SYNTH-EQUITY", "EQUITY", "USD", "USD")
+    if asset_class in {"EQUITY", "ETF"}:
+        instrument = Instrument("SYNTH-" + asset_class, asset_class, "USD", "USD")
         rows = (
             ("99", "99", "99"),
             ("99", "99", "100"),

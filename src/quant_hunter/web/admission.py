@@ -17,6 +17,7 @@ def resource_counts(db: sqlite3.Connection) -> tuple[int, int]:
         for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
     }
     active = queued = 0
+    borrowed: set[str] = set()
     if "resource_readers" in tables:
         readers = int(db.execute("SELECT COUNT(*) FROM resource_readers").fetchone()[0])
         active += readers
@@ -60,4 +61,37 @@ def resource_counts(db: sqlite3.Connection) -> tuple[int, int]:
             queued += int(count)
             if status in ("STARTING", "STEPPING", "RECOVERING"):
                 active += int(count)
-    return active, queued
+    if {
+        "resource_paper_links",
+        "resource_readers",
+        "paper_jobs",
+        "qhp_halt_events",
+    } <= tables:
+        # A proof reader occupies an active slot while borrowing only its exact
+        # still-paused task's existing queue reservation. Stale/orphan links do
+        # not reduce the count. Native work never runs with this reader held.
+        borrowed.update(
+            str(row[0])
+            for row in db.execute(
+                "SELECT p.id FROM resource_paper_links l "
+                "JOIN resource_readers r ON r.id=l.reader_id "
+                "JOIN paper_jobs p ON p.id=l.paper_job_id "
+                "JOIN qhp_halt_events h ON h.revision=l.halt_revision "
+                "WHERE p.owner_id=l.paper_owner_id AND p.status='PAUSED' "
+                "AND p.revision=l.workflow_revision AND h.digest=l.halt_digest "
+                "AND h.revision=(SELECT MAX(revision) FROM qhp_halt_events) "
+                "AND h.revision % 2 = 1"
+            )
+        )
+    if {"resource_resume_links", "resource_readers", "paper_jobs"} <= tables:
+        borrowed.update(
+            str(row[0])
+            for row in db.execute(
+                "SELECT p.id FROM resource_resume_links l "
+                "JOIN resource_readers r ON r.id=l.reader_id "
+                "JOIN paper_jobs p ON p.id=l.paper_job_id "
+                "WHERE p.owner_id=l.paper_owner_id AND r.owner_id=l.paper_owner_id "
+                "AND p.status='PAUSED' AND p.revision=l.workflow_revision"
+            )
+        )
+    return active, queued - len(borrowed)

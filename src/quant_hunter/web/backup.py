@@ -28,6 +28,16 @@ MAX_TOTAL = 30_000_000_000
 MAX_FILE = 64 * 1024**2
 MAX_FILES = 50_000
 MARKER = "restore.incomplete"
+PAPER_DATABASES = {
+    "paper.sqlite3": (
+        1363693616,
+        {"accounts", "heads", "commands", "protocol_rejections"},
+    ),
+    "paper-brokers.sqlite3": (
+        1363690033,
+        {"account_bindings", "actions", "receipts", "heads"},
+    ),
+}
 
 
 class BackupError(ValueError):
@@ -76,7 +86,7 @@ def _relative(name: str) -> str:
         )
     ):
         raise BackupError("Invalid archive member path")
-    if name != "application.sqlite3" and not (
+    if name not in {"application.sqlite3", *PAPER_DATABASES} and not (
         name.startswith("research/artifacts/")
         or name.startswith("research/registries/")
     ):
@@ -106,6 +116,22 @@ def _sqlite(path: Path) -> None:
         try:
             if db.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
                 raise BackupError("SQLite integrity check failed")
+            if path.name in PAPER_DATABASES:
+                identity, required_tables = PAPER_DATABASES[path.name]
+                tables = {
+                    row[0]
+                    for row in db.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                    )
+                }
+                if (
+                    db.execute("PRAGMA application_id").fetchone()[0] != identity
+                    or db.execute("PRAGMA user_version").fetchone()[0] != 1
+                    or tables != required_tables
+                    or db.execute("PRAGMA foreign_key_check").fetchone() is not None
+                ):
+                    raise BackupError("Unsupported paper database identity or schema")
+                return
             if db.execute("SELECT MAX(version) FROM migrations").fetchone()[0] not in (
                 1,
                 2,
@@ -145,6 +171,9 @@ def create_backup(runtime: Path, archive: Path, code_revision: str) -> JsonRecor
     lease.acquire()
     try:
         _sqlite(runtime / "application.sqlite3")
+        for name in PAPER_DATABASES:
+            if (runtime / name).exists():
+                _sqlite(runtime / name)
         files: list[Path] = []
         total = 0
         for path in sorted(runtime.rglob("*")):
@@ -350,6 +379,9 @@ def restore_backup(archive: Path, destination: Path) -> JsonRecord:
                     output.flush()
                     os.fsync(output.fileno())
             _sqlite(destination / "application.sqlite3")
+            for name in PAPER_DATABASES:
+                if (destination / name).exists():
+                    _sqlite(destination / name)
             marker.unlink()
             return manifest
         finally:

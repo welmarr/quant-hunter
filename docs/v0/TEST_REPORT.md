@@ -580,3 +580,99 @@ cores; it does not include the still-isolated Pattern/validation/paper/notificat
 product adapters or owner-administration drafts. Independent review covered
 quality/reader/admission and Pattern core graph controls. Saved-commit hosted CI
 is still required after push; no local result is substituted for that run.
+
+
+## Research, paper and operations integration — current uncommitted work
+
+Saved parent d76ff686 passed exact hosted run37375966992 on Ubuntu and Windows:
+2,608tests, one platform skip, one existing warning per platform; Ubuntu92.82%.
+This does not certify subsequent uncommitted product integration.
+
+Actual browser evidence in `.local/v0-research-product-proof`: research browser4
+passed8 checks (three screenshots); product-browser1 passed9 (historical chart,
+comparison without new EXP, owner maintenance/session revocation, backup command
+preparation and private/reader boundaries); paper-browser2 passed5 (actual paper
+creation/activation, partial fills/accounting, offline broker protocol, global
+halt/clear and verified portfolio desktop/mobile). All report zero JavaScript
+errors and zero external requests. Artificial historical chart input is only a
+chart-admission test, not evidence of real historical research performance.
+
+Preserved failures: research browser1 expected the wrong response status;
+browser2 exposed a stale Pattern preview race; browser3 exposed busy validation
+reads incorrectly returned as403 and stopping polling. Corrected reads return
+503 with Retry-After and bounded read-only UI retries. Ownership still returns403.
+Paper browser1 exposed HTML decimal step/min incompatibility with defaults; no
+paper session was created. Decimal fields now use step=any while server validation
+remains strict. Browser2 passed against that correction. The first full regression
+was interrupted for this demonstrated source correction and retains FAIL with an
+explicit interruption note; no successful full result is inferred from it.
+
+The corrected frozen full2 started2026-10-05T23:17:29Z. Read its exact result,
+coverage and unchanged-source manifest before claiming a pass. Static gates
+passed Ruff, strict mypy over256source/testfiles, TypeScript/build and all257file
+format checks. Integrated halt/resume/ETF import/paper mutation regressions passed
+19tests in118.27s;13ETF engine tests passed1.77s;3notification scheduler tests
+passed17.34s. Busy validation and paper-reader admission regressions also pass.
+Independent halt review passed7tests; portfolio author42tests98.03% and independent
+7tests passed. Full exact-source regression, cross-invariant review, packaging,
+operational restoration and hosted CI remain separate required checks.
+
+
+Current native recovery proof: after verifying zero active/queued jobs, source
+operations, paper steps and readers, stopped only the identified8767 test-server
+processes. Created a new private archive and restored to distinct
+`.local/v0-research-product-restored`, preserving the original runtime.
+All254managed files match the manifest; application.sqlite3, paper.sqlite3 and
+paper-brokers.sqlite3 are byte-identical and pass integrity_check. Archive SHA256
+651de6faec78fd3e15000d9df865ff432859bbb6cc4e6915123efeee21070692.
+Counts include4users,7jobs,20data operations,7quality ownerships,4Pattern
+preparations,5Pattern receipts,1paper session/24events,1broker operation and8local
+notification events. Private vaults are separate and absent from the archive.
+`restore-proof.json` records the comparison. Restored browser evidence is still
+running: its first harness used a nonexistent evidence URL; the second navigated
+to the same hash after API logout and retained stale frontend state. Both failures
+are preserved. The corrected harness uses the real CSRF verify route and visible
+Sign out action. Do not claim its full pass until its result exists.
+
+
+Corrected restored-browser3 completed with7passes,3screenshots,zero browser
+errors andzero external requests. Actual UI sign-out/re-login confirmed the reader
+cannot access the owner's restored Pattern or paper portfolio. Retained native
+PAUSED/killed state, cleared global halt, original fills/positions, exact Pattern
+and validation graphs, offline broker evidence and local inbox remain readable.
+The distinct private root has external notification configuration disabled.
+
+
+Frozen research-product distribution check verified all Python module bytes plus
+shipped app.js/styles.css against both archives. Wheel168members SHA256
+f4656d5fb8c7faa20e9b497833e01ae7e23f6b5a054f4ec1df85803d1a2e9deb;
+source archive394members SHA256
+b75d42fd5a7c69dda2b999f9a50c897d3f8851a4509ce8e8d43d05b4104387ac.
+Private runtimes, three SQLite stores, vaults/keys, local artifacts, dependency
+caches and browser credentials are excluded. Both builds used installed locked
+hatchling, with no new dependency or download. Source-archive construction took
+several minutes walking the large local checkout; no incomplete archive is
+claimed as verified. Future uncommitted slices need a fresh distribution check.
+
+Actual ETF browser verification completed on the restored instance:
+`etf-browser-2/etf-browser-proof.json` passed3checks, with zero browser errors
+and zero external requests. Independent cash oracles both matched: commission1
+produced10008 under EXP-01a10e76-0384-71b6-9ac3-c239d26f05fe; commission2
+produced10006 under EXP-01a10e76-929b-737e-b77e-3b92f6bcaa9c. Both executions
+remain separately registered synthetic experiments, not empirical returns.
+Desktop and390px screenshots have retained SHA256 hashes; mobile visual review
+confirmed readable accounting and bounded horizontally scrollable tables.
+The first harness incorrectly expected HTTP200 instead of the actual accepted202;
+its created job was retained and reused for verification rather than resubmitted.
+The harness failure remains in etf-browser-1. No failed attempt was erased.
+
+Frozen full-2 cross-item source review by the simulation agent found no new
+material blocker in the21identified source/document paths. The retained dossier
+is .tools/v0-drafts/root-full2-simulation-cross-review.md with exact reviewed
+hashes in root-full2-simulation-reviewed-hashes.json. Review covers active2/queue8
+admission, exact halt/resume reservation links and proof locking; Item8/source/
+producer and historical report binding; distinct cash-ETF accounting; owned
+portfolio/native evidence; paper-only broker boundaries; and stopped three-DB
+backup/private-vault exclusion. This was a scoped code read, not a new test run
+or professional certification. Full-2 is still the exact-source execution gate;
+remaining isolated features require their own integrated review/tests/CI.

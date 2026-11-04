@@ -6,6 +6,7 @@ const root = document.getElementById("app");
 let session = { needs_owner: false, user: null, csrf: null };
 let jobs = [];
 let fixtures = [];
+let pendingWorkflowJob = null;
 let selectedId = null;
 let selectedDetail = null;
 let pollTimer;
@@ -22,7 +23,7 @@ let datasetRequest = 0;
 let datasetsLoading = false;
 let view = parseView();
 let draft = { market: "EQUITY", initial_cash: "10000", quantity: "10", lookback: 1, commission: "1", slippage_bps: "0", annual_financing_rate: "0" };
-const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", publications: "Publications", quality: "Data quality", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
+const viewNames = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", publications: "Publications", quality: "Data quality", patterns: "PatternLab", validation: "Validation", notifications: "Notifications", operations: "Operations", paper: "Execution", historical: "Historical charts", comparison: "Compare runs", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
 const paths = {
     overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
     sources: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
@@ -85,8 +86,9 @@ function numeric(value, digits = 2) {
 }
 function percent(value) { const formatted = numeric(value); return formatted === "—" ? formatted : `${formatted}%`; }
 function shortId(id) { return id.length > 18 ? `${id.slice(0, 8)}…${id.slice(-6)}` : id; }
-function marketName(market) { return market === "EQUITY" ? "Equities" : market === "FX_SPOT" ? "Spot FX" : market ?? "—"; }
-function jobLabel(job) { return job.config.kind === "CRP_STUDY" ? `${job.config.study_id} · ${job.config.scenario}` : marketName(job.config.market); }
+function marketName(market) { return market === "EQUITY" ? "Equities" : market === "ETF" ? "Cash ETFs" : market === "FX_SPOT" ? "Spot FX" : market ?? "—"; }
+function jobLabel(job) { if (job.config.kind && job.config.kind !== "CRP_STUDY")
+    return job.config.kind.replaceAll("_", " "); return job.config.kind === "CRP_STUDY" ? `${job.config.study_id} · ${job.config.scenario}` : marketName(job.config.market); }
 function dateLabel(value) {
     if (!value)
         return "—";
@@ -101,7 +103,7 @@ function metadataText(value) {
 }
 function parseView() {
     const hash = window.location.hash.slice(1);
-    return ["overview", "sources", "data", "markets", "backtests", "studies", "publications", "quality", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
+    return ["overview", "sources", "data", "markets", "backtests", "studies", "publications", "quality", "patterns", "validation", "notifications", "operations", "paper", "historical", "comparison", "experiments", "portfolio", "settings", "project"].includes(hash) ? hash : "overview";
 }
 function navigate(next) {
     if (view === next && document.getElementById("workspace-view")) {
@@ -132,7 +134,7 @@ class ApiError extends Error {
 async function api(path, payload) {
     const requestingUser = session.user?.id;
     const controller = new AbortController();
-    const timeout = /^\/quality(?:\/|$)/.test(path) ? 120000 : /^\/publications(?:\/|$)/.test(path) || /^\/sources\/[^/]+\/probe$/.test(path) ? 30000 : 15000;
+    const timeout = /^\/(quality|patterns|validations|jobs|paper|paper-brokers)(?:\/|$)/.test(path) ? 120000 : /^\/publications(?:\/|$)/.test(path) || /^\/sources\/[^/]+\/probe$/.test(path) ? 30000 : 15000;
     const timer = window.setTimeout(() => controller.abort(), timeout);
     try {
         const headers = { Accept: "application/json" };
@@ -311,7 +313,7 @@ function renderShell() {
         link.href = `#${key}`;
         link.dataset.view = key;
         link.addEventListener("click", () => { sidebar.classList.remove("nav-open"); toggle.setAttribute("aria-expanded", "false"); });
-        (["settings", "project"].includes(key) ? workspace : research).append(link);
+        (["settings", "notifications", "operations", "project"].includes(key) ? workspace : research).append(link);
     });
     nav.append(el("p", "eyebrow", "Research"), research, el("div", "nav-divider"), el("p", "eyebrow", "Workspace"), workspace);
     sidebar.append(nav, el("div", "sidebar-bottom", el("div", "local-label", el("span", "dot"), "Local installation"), el("p", "sidebar-note", "Evidence before conviction.", el("br"), "Every result has a provenance."), el("div", "side-version", "V0 · IN DEVELOPMENT")));
@@ -393,7 +395,7 @@ function renderView(focus = false) {
         region.append(heading("Connecting to your local installation", viewNames[view], "Loading the current account's workspace…"));
         return;
     }
-    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, publications: region => { region.append(publicationView()); }, quality: region => { region.append(qualityView()); }, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
+    const views = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, publications: region => { region.append(publicationView()); }, quality: region => { region.append(qualityView()); }, patterns: region => { region.append(patternView()); }, validation: region => { region.append(validationView()); }, notifications: region => { region.append(notificationsView()); }, operations: region => { region.append(operationsView()); }, paper: region => { region.append(paperHaltPanel(), paperView(), paperBrokerPanel()); }, historical: region => { region.append(historicalView()); }, comparison: region => { region.append(comparisonView()); }, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
     views[view](region);
     if (focus) {
         const title = region.querySelector("h1");
@@ -853,7 +855,7 @@ function datasetForm(epoch) {
     const mode = selectField("Declared evidence mode", "evidence_mode", [{ value: "SYNTHETIC", text: "SYNTHETIC · generated observations" }, { value: "HISTORICAL", text: "HISTORICAL · user-supplied, unverified" }], "SYNTHETIC");
     const symbol = field("Instrument symbol", "import_symbol", "", { hint: "One instrument per file. Use uppercase symbols; FX must match its declared currency pair." });
     symbol.input.maxLength = 32;
-    const market = selectField("Asset class", "asset_class", [{ value: "EQUITY", text: "Equities" }, { value: "FX_SPOT", text: "Spot FX" }], "EQUITY");
+    const market = selectField("Asset class", "asset_class", [{ value: "EQUITY", text: "Equities" }, { value: "ETF", text: "Cash ETF" }, { value: "FX_SPOT", text: "Spot FX" }], "EQUITY");
     const base = field("Base currency", "base_currency", "USD");
     base.input.maxLength = 3;
     base.input.pattern = "[a-zA-Z]{3}";
@@ -1236,7 +1238,7 @@ function renderBacktests(region) {
 function backtestForm() {
     const form = el("form");
     form.id = "backtest-form";
-    const market = selectField("Market fixture", "market", [{ value: "EQUITY", text: "Equities · synthetic" }, { value: "FX_SPOT", text: "Spot FX · synthetic" }], draft.market);
+    const market = selectField("Market fixture", "market", [{ value: "EQUITY", text: "Equities · synthetic" }, { value: "ETF", text: "Cash ETF · synthetic" }, { value: "FX_SPOT", text: "Spot FX · synthetic" }], draft.market);
     market.box.classList.add("full-width");
     const fixtureHint = el("p", "field-hint full-width");
     function updateFixtureHint() {
@@ -1408,7 +1410,7 @@ function updateJobList() {
         target.replaceChildren(el("p", "loading-message", "Loading recorded jobs…"));
         return;
     }
-    const rows = view === "overview" ? jobs.slice(0, 6) : view === "studies" ? jobs.filter(job => job.config.kind === "CRP_STUDY") : view === "backtests" ? jobs.filter(job => job.config.kind !== "CRP_STUDY") : jobs;
+    const rows = view === "overview" ? jobs.slice(0, 6) : view === "studies" ? jobs.filter(job => job.config.kind === "CRP_STUDY") : view === "backtests" ? jobs.filter(job => !job.config.kind) : jobs;
     if (!rows.length) {
         target.replaceChildren(empty("Your research record starts here", "No jobs are visible to this account yet. Run a synthetic backtest to inspect a complete execution and accounting trail.", view !== "backtests" ? launchButton() : undefined));
         return;
@@ -1425,6 +1427,12 @@ function updateJobList() {
     target.replaceChildren(table(["Job / inspect", "Market", "Job state", "Experiment"], values, "Recorded backtest jobs"));
 }
 async function openJob(id) {
+    const kind = jobs.find(job => job.id === id)?.config.kind;
+    if (kind === "PATTERN_JOB" || kind === "PATTERN_CORPUS" || kind === "CHRONOLOGICAL_VALIDATION") {
+        pendingWorkflowJob = id;
+        navigate(kind === "CHRONOLOGICAL_VALIDATION" ? "validation" : "patterns");
+        return;
+    }
     selectedId = id;
     selectedDetail = null;
     const destination = jobs.find(job => job.id === id)?.config.kind === "CRP_STUDY" ? "studies" : "backtests";
@@ -1595,8 +1603,9 @@ function renderExperiments(region) {
     updateJobList();
 }
 function renderPortfolio(region) {
+    region.append(paperPortfolioPanel());
     region.append(heading("Accounting, made inspectable", "Simulated portfolio", "Cash, equity and fills for one recorded backtest. Independent runs are not combined into a portfolio."), syntheticNotice());
-    const completed = jobs.filter(job => complete(job) && job.config.kind !== "CRP_STUDY");
+    const completed = jobs.filter(job => complete(job) && !job.config.kind);
     if (!completed.length) {
         region.append(empty("No completed run to inspect", "Complete a synthetic backtest to view the recorded cash and equity path.", launchButton()));
         return;
@@ -1643,9 +1652,8 @@ function renderSettings(region) {
     }
     else
         connections.body.append(notice("An owner must configure and test data sources. This account cannot view or change private connection settings."));
-    const capabilities = panel("Additional administration", "These mission capabilities are not yet implemented");
-    capabilities.body.append(capabilityRows(["External notifications", "Backups through the UI", "Paper broker configuration"]));
-    region.append(capabilities.box);
+    region.append(el("div", "form-actions", button("Open notifications", () => navigate("notifications"), "secondary"), button("Open paper execution and broker profiles", () => navigate("paper"), "secondary")));
+    region.append(backupSettingsPanel());
 }
 function clearPrivateInputs(target = document) {
     target.querySelectorAll('input[data-private-field="true"]').forEach(input => { if (input.type === "checkbox")
@@ -1806,19 +1814,7 @@ function connectionForm(id, target, epoch) {
     });
     return form;
 }
-async function loadUsers(target, epoch) {
-    try {
-        const users = await api("/users");
-        if (pageEpoch !== epoch || !target.isConnected)
-            return;
-        target.className = "";
-        target.replaceChildren(table(["Username", "Role", "User ID"], users.map(user => [user.username, badge(user.role.toUpperCase()), el("span", "mono", user.id)]), "Local workspace users"));
-    }
-    catch (error) {
-        if (pageEpoch === epoch && target.isConnected)
-            target.replaceChildren(notice(readableError(error), "error"));
-    }
-}
+async function loadUsers(target, epoch) { await loadUserAdministration(target, epoch); }
 function userForm(usersTarget, epoch) {
     const form = el("form");
     const username = field("Username", "new_username", "", { autocomplete: "off" });
@@ -2472,7 +2468,7 @@ function qualityUpload(valid, saved) {
     const instrumentDigest = field("Instrument revision digest", "quality_instrument_digest", "");
     const instrumentPicker = selectField("Use a registered instrument revision", "quality_registered_instrument", [{ value: "", text: "Choose a loaded instrument" }], "");
     const symbol = field("Symbol in these partitions", "quality_symbol", "");
-    const market = selectField("Asset class", "quality_market", [{ value: "EQUITY", text: "Equity" }, { value: "FX_SPOT", text: "Spot FX" }], "EQUITY");
+    const market = selectField("Asset class", "quality_market", [{ value: "EQUITY", text: "Equity" }, { value: "ETF", text: "Cash ETF" }, { value: "FX_SPOT", text: "Spot FX" }], "EQUITY");
     const base = field("Base currency", "quality_base", "USD"), quote = field("Quote / price currency", "quality_quote", "USD");
     const quantity = field("Declared quantity step", "quality_quantity", "1");
     const start = field("Calendar start", "quality_calendar_start", "2025-01-06", { type: "date" }), end = field("Calendar end", "quality_calendar_end", "2025-01-07", { type: "date" });
@@ -2517,12 +2513,11 @@ function qualityUpload(valid, saved) {
         instrumentId.input.value = item.record.instrument_id;
         instrumentDigest.input.value = item.digest;
         symbol.input.value = metadata.symbols.at(-1)?.symbol ?? "";
-        market.input.value = metadata.asset_class === "FX_SPOT" ? "FX_SPOT" : "EQUITY";
+        market.input.value = metadata.asset_class;
         base.input.value = metadata.base_currency;
         quote.input.value = metadata.quote_currency;
         quantity.input.value = metadata.lot_size;
-        if (metadata.asset_class === "ETF")
-            feedback.replaceChildren(notice("Mapped imports currently require EQUITY or FX_SPOT metadata; ETF is not supported by this import profile.", "error"));
+        feedback.replaceChildren();
     });
     const submit = el("button", "button secondary", "Import partitions sequentially");
     submit.type = "submit";
@@ -2568,4 +2563,1637 @@ function qualityUpload(valid, saved) {
     });
     section.append(form);
     return section;
+}
+function patternRows(value) { return Array.isArray(value) ? value.map(record) : []; }
+function patternNumbers(value) {
+    if (!Array.isArray(value))
+        return [];
+    return value.map(row => Number(Array.isArray(row) ? row[0] : row)).filter(Number.isFinite);
+}
+function patternTime(value) {
+    try {
+        return new Date(Number(BigInt(String(value)) / 1000000n)).toISOString();
+    }
+    catch {
+        return "Unknown";
+    }
+}
+function patternJson(title, value) {
+    return el("details", "data-disclosure", el("summary", "", title), el("pre", "json-view", JSON.stringify(value, null, 2)));
+}
+function patternChart(series, title) {
+    const box = el("figure", "pattern-chart");
+    const usable = series.filter(item => item.values.length > 1 && item.values.every(Number.isFinite)).slice(0, 8);
+    if (!usable.length)
+        return notice("No finite curve is available for this result.");
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 760 240");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", title);
+    const all = usable.flatMap(item => item.values), low = Math.min(...all), high = Math.max(...all), span = high - low || 1;
+    const text = (x, y, label) => { const node = document.createElementNS(SVG_NS, "text"); node.setAttribute("x", String(x)); node.setAttribute("y", String(y)); node.textContent = label; svg.append(node); };
+    text(8, 18, high.toPrecision(6));
+    text(8, 222, low.toPrecision(6));
+    for (const item of usable) {
+        const line = document.createElementNS(SVG_NS, "path");
+        line.setAttribute("d", item.values.map((value, index) => `${index ? "L" : "M"}${(64 + index * 684 / (item.values.length - 1)).toFixed(2)},${(218 - (value - low) / span * 196).toFixed(2)}`).join(" "));
+        line.setAttribute("fill", "none");
+        line.setAttribute("stroke", item.color);
+        line.setAttribute("stroke-width", item === usable[0] ? "2.8" : "1.5");
+        svg.append(line);
+    }
+    box.append(svg, el("figcaption", "muted small", title), el("div", "pattern-legend", ...usable.map(item => { const label = el("span", "", item.label); label.style.color = item.color; return label; })));
+    return box;
+}
+function patternView() {
+    const region = el("section");
+    region.id = "pattern-workspace";
+    const epoch = pageEpoch, owner = session.user?.id, editable = session.user?.role !== "reader";
+    const alive = () => pageEpoch === epoch && session.user?.id === owner && region.isConnected;
+    const feedback = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    const corpusPanel = panel("Build an inspectable corpus", "Each build keeps exact parent versions and creates a durable queued job.");
+    const methodPanel = panel("Select a pattern and protocol", "Changes to a method, query or parameter create another counted experiment.");
+    const jobPanel = panel("Pattern jobs", "Running rows show operational progress. Completed inspections recheck the retained input graph.");
+    const resultPanel = panel("Occurrences and evidence", "Observed outcomes, costs and uncertainty retain their limitations.");
+    region.append(heading("PatternLab", "Compare shapes. Retain the uncertainty.", "Fifteen method families, immutable corpora and explicit software controls."), notice("Synthetic software evidence only. A match is not a prediction or probability of future profit. UNKNOWN and insufficient results are retained. Historical causal inputs remain blocked where availability cannot be verified."), feedback, corpusPanel.box, methodPanel.box, jobPanel.box, resultPanel.box);
+    const pages = el("div");
+    corpusPanel.body.append(pages);
+    let selectionOffset = 0, corpusOffset = 0, preparedOffset = 0;
+    let catalogue = {}, corpora = [], selections = [], preparedList = [];
+    let currentCorpus = null, preview = null, preparation = null;
+    let localJobs = [], selectedJob = null, requestEpoch = 0, previewEpoch = 0, jobEpoch = 0, protocolGeneration = 0;
+    const showError = (error) => { if (alive())
+        feedback.replaceChildren(notice(readableError(error), "error")); };
+    const run = async (control, action, mutation = true) => { control.disabled = true; feedback.replaceChildren(); try {
+        await action();
+    }
+    catch (error) {
+        showError(error);
+    }
+    finally {
+        if (alive())
+            control.disabled = mutation && !editable;
+    } };
+    const controls = el("div", "form-grid"), selection = selectField("Owned partition selection", "pattern-selection", [], ""), corpusSelect = selectField("Owned corpus", "pattern-corpus", [], "");
+    const secondary = selectField("Second owned corpus for PAT-11", "pattern-secondary", [{ value: "", text: "No secondary corpus" }], "");
+    const build = button("Queue corpus build", () => {
+        void run(build, async () => {
+            const job = await api("/patterns/corpora", { selection_digest: selection.input.value });
+            if (!alive())
+                return;
+            localJobs.unshift(job);
+            renderJobs();
+            await inspectJob(job.id);
+        });
+    });
+    build.disabled = !editable;
+    controls.append(selection.box, el("div", "form-actions", build));
+    corpusPanel.body.append(controls, notice("List rows are immutable metadata summaries. Admission and complete source verification occur when a build or inspection runs."));
+    const catalogueArea = el("div"), previewArea = el("div"), preparationArea = el("div");
+    const family = selectField("Pattern family", "pattern-family", [], "PAT-01");
+    const scenario = selectField("Research scenario", "pattern-scenario", [
+        { value: "BASELINE", text: "Baseline reference protocol" }, { value: "SELECTED", text: "Selected query and controls" }, { value: "POSITIVE", text: "Known synthetic fixture control" }, { value: "NULL", text: "No eligible past control" }, { value: "SENSITIVITY", text: "One prespecified sensitivity change" }
+    ], "BASELINE");
+    const mode = selectField("Search mode", "pattern-mode", [{ value: "APPROXIMATE", text: "Approximate candidates with exact reranking" }, { value: "EXACT_SMALL", text: "Exact small-corpus comparison" }], "APPROXIMATE");
+    const normal = selectField("Normalization", "pattern-normalization", ["RAW", "BASE100", "RETURNS", "LOG_RETURNS", "Z_WINDOW", "CAUSAL_VOL"].map(value => ({ value, text: value })), "Z_WINDOW");
+    const metric = selectField("Distance", "pattern-metric", [{ value: "EUCLIDEAN", text: "Euclidean" }, { value: "DTW", text: "Constrained DTW" }], "EUCLIDEAN");
+    const queryStart = field("Query start row", "pattern-query-start", "208", { type: "number", min: "0", step: "1" });
+    const queryStop = field("Query stop row (exclusive)", "pattern-query-stop", "240", { type: "number", min: "8", step: "1" });
+    const trainStart = field("Training start row", "pattern-train-start", "0", { type: "number", min: "0", step: "1" });
+    const trainStop = field("Training stop row (exclusive)", "pattern-train-stop", "128", { type: "number", min: "8", step: "1" });
+    const horizon = field("Outcome horizon in bars", "pattern-horizon", "4", { type: "number", min: "1", max: "256", step: "1" });
+    const cost = field("Declared total cost in basis points", "pattern-cost", "7", { type: "number", min: "0", max: "10000", step: ".1" });
+    const maxDistance = field("Maximum distance", "pattern-distance", "1", { type: "number", min: "0", max: "1000000", step: ".01" });
+    const candidates = field("Candidate cap", "pattern-candidates", "256", { type: "number", min: "1", max: "256", step: "1" });
+    const maxResults = field("Maximum retained occurrences", "pattern-results", "20", { type: "number", min: "1", max: "40", step: "1" });
+    const seed = field("Frozen seed", "pattern-seed", "0", { type: "number", min: "0", max: "4294967295", step: "1" });
+    const decision = field("Decision time (UTC nanoseconds)", "pattern-decision", "", { hint: "Derived from actual preview availability; retained exactly as a decimal string." });
+    const trainCutoff = field("Training availability cutoff (UTC nanoseconds)", "pattern-train-cutoff", "");
+    const candidateCutoff = field("Candidate support cutoff (UTC nanoseconds)", "pattern-candidate-cutoff", "");
+    const purge = field("Purge duration in nanoseconds", "pattern-purge", "0");
+    const previewStart = field("Preview start row", "pattern-preview-start", "0", { type: "number", min: "0", step: "1" });
+    const previewStop = field("Preview stop row (at most 512 rows)", "pattern-preview-stop", "240", { type: "number", min: "1", step: "1" });
+    const parameters = el("textarea");
+    parameters.id = "pattern-method-parameters";
+    parameters.value = "{}";
+    parameters.rows = 3;
+    parameters.maxLength = 4096;
+    const parametersLabel = el("label", "", "Explicit method parameters (JSON)");
+    parametersLabel.htmlFor = parameters.id;
+    const selectedControls = el("fieldset", "pattern-controls", el("legend", "", "Selected-query configuration"), el("div", "form-grid", queryStart.box, queryStop.box, trainStart.box, trainStop.box, mode.box, normal.box, metric.box, horizon.box, cost.box, maxDistance.box, candidates.box, maxResults.box, seed.box, decision.box, trainCutoff.box, candidateCutoff.box, purge.box), parametersLabel, parameters);
+    const loadPreview = button("Inspect actual bars", () => { void run(loadPreview, inspectPreview, false); }, "secondary");
+    const prepareButton = button("Prepare and review exact protocol", () => { void run(prepareButton, prepare); });
+    prepareButton.disabled = !editable;
+    methodPanel.body.append(el("div", "form-grid", corpusSelect.box, secondary.box, family.box, scenario.box), catalogueArea, el("div", "form-grid", previewStart.box, previewStop.box), loadPreview, previewArea, selectedControls, el("div", "form-actions", prepareButton), preparationArea);
+    selectedControls.disabled = !editable;
+    selectedControls.hidden = true;
+    function invalidatePreparation() { protocolGeneration += 1; preparation = null; preparationArea.replaceChildren(); }
+    for (const input of [corpusSelect.input, secondary.input, family.input, scenario.input, queryStart.input, queryStop.input, trainStart.input, trainStop.input, mode.input, normal.input, metric.input, horizon.input, cost.input, maxDistance.input, candidates.input, maxResults.input, seed.input, decision.input, trainCutoff.input, candidateCutoff.input, purge.input, parameters])
+        input.addEventListener("input", invalidatePreparation);
+    scenario.input.addEventListener("change", () => { selectedControls.hidden = scenario.input.value !== "SELECTED"; preparation = null; preparationArea.replaceChildren(); methodDescription(); });
+    family.input.addEventListener("change", methodDescription);
+    corpusSelect.input.addEventListener("change", () => { requestEpoch += 1; previewEpoch += 1; currentCorpus = corpora.find(item => item.dataset_id === corpusSelect.input.value) ?? null; preview = preparation = null; previewArea.replaceChildren(); preparationArea.replaceChildren(); previewStart.input.value = "0"; previewStop.input.value = String(Math.min(512, Number(currentCorpus?.row_count ?? 240))); });
+    for (const input of [previewStart.input, previewStop.input])
+        input.addEventListener("input", () => { previewEpoch += 1; preview = null; previewArea.replaceChildren(); invalidatePreparation(); });
+    function methodDescription() {
+        const chosen = patternRows(catalogue.methods).find(item => item.family === family.input.value);
+        catalogueArea.replaceChildren(notice(`${String(chosen?.name ?? "Choose a method")}. ${String(chosen?.scope ?? "")} Scenario: ${metadataText(record(catalogue.scenarios)[scenario.input.value] ?? scenario.input.value)}.`), patternJson("Prespecified sensitivity controls and method details", { method: chosen, sensitivity: record(catalogue.sensitivity_parameters)[family.input.value] }));
+    }
+    async function refresh() {
+        const mine = ++requestEpoch;
+        const [catalog, selectionData, corpusData, preparationData, recentJobs] = await Promise.all([
+            api("/patterns/catalogue"), api(`/quality/selections?limit=25&offset=${selectionOffset}`), api(`/patterns/corpora?limit=25&offset=${corpusOffset}`), api(`/patterns/prepared?limit=25&offset=${preparedOffset}`), api("/jobs")
+        ]);
+        if (!alive() || mine !== requestEpoch)
+            return;
+        catalogue = catalog;
+        selections = selectionData.selections;
+        corpora = corpusData.corpora;
+        preparedList = preparationData.prepared;
+        localJobs = recentJobs.filter(job => ["PATTERN_JOB", "PATTERN_CORPUS"].includes(job.config.kind ?? ""));
+        const options = (input, rows) => { const old = input.value; input.replaceChildren(...rows.map(item => { const option = el("option", "", item.text); option.value = item.value; return option; })); if (rows.some(item => item.value === old))
+            input.value = old; };
+        options(selection.input, selections.map(item => ({ value: String(item.manifest_digest), text: `${shortId(String(item.manifest_digest))} · ${item.total_rows} rows · ${String(item.evidence_mode)}` })));
+        options(corpusSelect.input, corpora.map(item => ({ value: String(item.dataset_id), text: `${shortId(String(item.dataset_id))} · ${item.row_count} rows · ${item.partition_count} partitions` })));
+        options(secondary.input, [{ value: "", text: "No secondary corpus" }, ...corpora.map(item => ({ value: String(item.dataset_id), text: `${shortId(String(item.dataset_id))} · ${item.row_count} rows` }))]);
+        options(family.input, patternRows(catalogue.methods).map(item => ({ value: String(item.family), text: `${item.family} · ${item.name}` })));
+        currentCorpus = corpora.find(item => item.dataset_id === corpusSelect.input.value) ?? null;
+        build.disabled = !editable || !selections.length;
+        prepareButton.disabled = !editable || !corpora.length;
+        if (!selections.length)
+            feedback.replaceChildren(notice("Create or import quality datasets and preserve an owned partition selection in Data quality first."), button("Open Data quality", () => navigate("quality"), "secondary"));
+        pages.replaceChildren(pageControls("Selection", selectionOffset, selections.length, 1000, next => { selectionOffset = next; void refresh().catch(showError); }), pageControls("Corpus", corpusOffset, corpora.length, 1000, next => { corpusOffset = next; invalidatePreparation(); preview = null; previewArea.replaceChildren(); void refresh().catch(showError); }), pageControls("Protocol", preparedOffset, preparedList.length, 1000, next => { preparedOffset = next; invalidatePreparation(); void refresh().catch(showError); }));
+        if (pendingWorkflowJob) {
+            const identity = pendingWorkflowJob;
+            pendingWorkflowJob = null;
+            void inspectJob(identity);
+        }
+        methodDescription();
+        renderJobs();
+        if (preparedList.length && !preparation)
+            renderPreparedList();
+    }
+    function renderPreparedList() {
+        preparationArea.replaceChildren(el("h3", "", "Retained preparations"), table(["Protocol", "Scenario", "Family", "Inspect"], preparedList.map(item => [shortId(String(item.prepared_id)), String(item.scenario ?? ""), String(record(item.configuration).family ?? ""), button("Inspect protocol", () => { const mine = ++protocolGeneration; void api(`/patterns/prepared/${encodeURIComponent(String(item.prepared_id))}`).then(value => { if (alive() && mine === protocolGeneration) {
+                preparation = value;
+                showPreparation();
+            } }).catch(showError); }, "tertiary compact")]), "Your retained Pattern protocols"));
+    }
+    async function inspectPreview() {
+        const mine = ++previewEpoch, identity = corpusSelect.input.value;
+        const start = Number(previewStart.input.value), stop = Number(previewStop.input.value);
+        if (!identity || !Number.isInteger(start) || !Number.isInteger(stop) || start < 0 || stop <= start || stop - start > 512)
+            throw new Error("Choose a corpus and a preview of 1–512 rows.");
+        const data = await api(`/patterns/corpora/${encodeURIComponent(identity)}/preview?start=${start}&stop=${stop}`);
+        if (!alive() || mine !== previewEpoch || corpusSelect.input.value !== identity)
+            return;
+        preview = data;
+        const rows = patternRows(data.rows);
+        if (rows.length < 8)
+            throw new Error("The selected preview needs at least eight actual bars.");
+        queryStop.input.value = String(stop);
+        queryStart.input.value = String(Math.max(start, stop - 32));
+        deriveCutoffs();
+        paintPreview();
+    }
+    function deriveCutoffs() {
+        if (!preview)
+            return;
+        const rows = patternRows(preview.rows), start = Number(preview.row_start);
+        const query = rows.slice(Number(queryStart.input.value) - start, Number(queryStop.input.value) - start);
+        const maximum = (values) => values.reduce((best, row) => BigInt(String(row.available_ns)) > BigInt(best) ? String(row.available_ns) : best, "0");
+        if (Number(queryStart.input.value) >= start && Number(queryStop.input.value) <= Number(preview.row_stop) && query.length >= 8) {
+            decision.input.value = maximum(query);
+            candidateCutoff.input.value = String(query[0].open_ns);
+        }
+        const left = Number(trainStart.input.value), right = Number(trainStop.input.value);
+        if (left >= start && right <= Number(preview.row_stop) && right > left)
+            trainCutoff.input.value = maximum(rows.slice(left - start, right - start));
+        invalidatePreparation();
+    }
+    function paintPreview() {
+        if (!preview)
+            return;
+        const rows = patternRows(preview.rows), values = rows.map(row => patternNumbers(row.values)[0] ?? Number.NaN);
+        const figure = patternChart([{ label: "Actual first feature", values, color: "#136e65" }], `Rows ${preview.row_start}–${preview.row_stop}. ${String(preview.feature_columns?.[0] ?? "Close")}; exact source prices.`);
+        const svg = figure.querySelector("svg"), start = Number(preview.row_start), stop = Number(preview.row_stop);
+        if (svg && rows.length > 1) {
+            const band = document.createElementNS(SVG_NS, "rect");
+            const left = Math.max(start, Number(queryStart.input.value)), right = Math.min(stop, Number(queryStop.input.value));
+            band.setAttribute("x", String(64 + (left - start) * 684 / rows.length));
+            band.setAttribute("y", "24");
+            band.setAttribute("width", String(Math.max(0, right - left) * 684 / rows.length));
+            band.setAttribute("height", "194");
+            band.setAttribute("fill", "#136e6526");
+            svg.append(band);
+            svg.style.touchAction = "none";
+            let anchor = null;
+            const rowAt = (event) => { const bounds = svg.getBoundingClientRect(); return Math.max(start, Math.min(stop - 1, start + Math.floor((((event.clientX - bounds.left) / bounds.width * 760) - 64) / 684 * rows.length))); };
+            svg.addEventListener("pointerdown", event => { if (!editable)
+                return; anchor = rowAt(event); svg.setPointerCapture(event.pointerId); });
+            svg.addEventListener("pointerup", event => { if (anchor === null)
+                return; const last = rowAt(event), leftRow = Math.min(anchor, last), rightRow = Math.max(anchor, last) + 1; anchor = null; queryStart.input.value = String(Math.min(leftRow, stop - 8)); queryStop.input.value = String(Math.min(stop, Math.max(leftRow + 8, Math.min(leftRow + 256, rightRow)))); scenario.input.value = "SELECTED"; selectedControls.hidden = false; deriveCutoffs(); paintPreview(); });
+        }
+        previewArea.replaceChildren(figure, notice("Drag across the curve to choose 8–256 bars, or use the row inputs for keyboard control. Training must end before the selected query. The server checks gaps and availability."), patternJson("Exact preview source receipt", { ...preview, rows: `${rows.length} actual rows; see the curve` }));
+    }
+    for (const input of [queryStart.input, queryStop.input, trainStart.input, trainStop.input])
+        input.addEventListener("change", () => { deriveCutoffs(); paintPreview(); });
+    async function prepare() {
+        const mine = protocolGeneration;
+        const body = { corpus_id: corpusSelect.input.value, scenario: scenario.input.value };
+        if (!body.corpus_id)
+            throw new Error("Build or choose an owned corpus first.");
+        if (secondary.input.value)
+            body.secondary_corpus_id = secondary.input.value;
+        if (scenario.input.value === "SELECTED") {
+            const methodParameters = JSON.parse(parameters.value);
+            if (!methodParameters || Array.isArray(methodParameters) || typeof methodParameters !== "object")
+                throw new Error("Method parameters must be a JSON object.");
+            body.configuration = { family: family.input.value, query_start: Number(queryStart.input.value), query_stop: Number(queryStop.input.value), train_start: Number(trainStart.input.value), train_stop: Number(trainStop.input.value), decision_ns: decision.input.value, train_cutoff_ns: trainCutoff.input.value, candidate_cutoff_ns: candidateCutoff.input.value, purge_ns: purge.input.value, normalization: normal.input.value, mode: mode.input.value, metric: metric.input.value, horizon: Number(horizon.input.value), cost_bps: Number(cost.input.value), maximum_distance: Number(maxDistance.input.value), candidate_cap: Number(candidates.input.value), max_results: Number(maxResults.input.value), seed: Number(seed.input.value), method_parameters: methodParameters };
+        }
+        else
+            body.family = family.input.value;
+        const value = await api("/patterns/prepare", body);
+        if (!alive() || mine !== protocolGeneration)
+            return;
+        preparation = value;
+        showPreparation();
+    }
+    function showPreparation() {
+        if (!preparation)
+            return;
+        const value = preparation;
+        const queue = button("Queue this exact Pattern experiment", () => {
+            void run(queue, async () => {
+                const job = await api("/patterns/jobs", { prepared_id: value.prepared_id });
+                if (!alive())
+                    return;
+                localJobs.unshift(job);
+                renderJobs();
+                await inspectJob(job.id);
+            });
+        });
+        queue.disabled = !editable;
+        preparationArea.replaceChildren(notice(`Prepared ${String(value.pattern_id ?? value.prepared_id)}. Review every expanded control before evaluation. Queuing again creates another counted experiment.`), patternJson("Exact prepared configuration and provenance", value), queue);
+    }
+    function renderJobs() {
+        const refreshButton = button("Refresh Pattern workspace", () => { void refresh().catch(showError); }, "secondary compact");
+        jobPanel.body.replaceChildren(refreshButton);
+        if (!localJobs.length) {
+            jobPanel.body.append(notice("No Pattern jobs are visible to this account yet."));
+            return;
+        }
+        jobPanel.body.append(table(["Job", "Type", "State", "Experiment", "Actions"], localJobs.map(job => {
+            const inspect = button(shortId(job.id), () => { void inspectJob(job.id); }, "link-button");
+            const cancel = job.status === "QUEUED" && editable ? button("Cancel queued job", () => { void api(`/jobs/${encodeURIComponent(job.id)}/cancel`, {}).then(() => refresh()).catch(showError); }, "tertiary compact") : null;
+            return [inspect, job.config.kind ?? "", statusBadge(job.status), job.experiment_id ? shortId(job.experiment_id) : "Not started", cancel];
+        }), "Your Pattern builds and experiments"));
+    }
+    async function inspectJob(identity) {
+        selectedJob = identity;
+        const mine = ++jobEpoch;
+        try {
+            const detail = await api(`/patterns/jobs/${encodeURIComponent(identity)}`);
+            if (!alive() || mine !== jobEpoch || selectedJob !== identity)
+                return;
+            const job = record(detail.job);
+            localJobs = localJobs.map(value => value.id === identity ? job : value);
+            renderJobs();
+            resultPanel.body.replaceChildren(notice(`Job ${identity}: ${String(job.status)}. ${String(job.error ?? "")}`), patternJson("Operational progress and checkpoint", { progress: detail.progress, checkpoint_digest: detail.checkpoint_digest, operation_id: detail.operation_id }));
+            if (job.status === "QUEUED" || job.status === "RUNNING") {
+                window.setTimeout(() => { if (alive() && selectedJob === identity && mine === jobEpoch)
+                    void inspectJob(identity); }, 2500);
+                return;
+            }
+            if (detail.corpus) {
+                resultPanel.body.append(patternJson("Verified materialized corpus", detail.corpus));
+                await refresh();
+                return;
+            }
+            const runRecord = record(detail.run), result = record(runRecord.result);
+            if (Object.keys(result).length)
+                renderResult(result, runRecord);
+            else
+                resultPanel.body.append(notice("No completed numerical result is available. Retained failures remain part of the experiment record."));
+        }
+        catch (error) {
+            if (alive() && mine === jobEpoch)
+                showError(error);
+        }
+    }
+    function renderResult(result, runRecord) {
+        const query = record(result.query), hits = patternRows(result.occurrences), outcome = record(result.outcomes), exposure = record(result.exposure);
+        const method = record(result.method);
+        resultPanel.body.append(notice(`Method computation: ${String(method.status ?? "UNKNOWN")}. ${String(method.reason ?? "")} Occurrence-search state and method validity are separate.`), patternJson("Permanent model identities, fitted artifact and declared input", { model_recipe: result.model_recipe, model_fit: result.model_fit, model_artifact: result.model_artifact, method_input_schema: result.method_input_schema, expanded_method_parameters: result.expanded_method_parameters }));
+        resultPanel.body.append(el("div", "stats-grid", stat("Search state", String(result.state ?? "UNKNOWN"), "No forced prediction"), stat("Retained events", String(hits.length), "Deduplicated; independent effective sample size unknown"), stat("Uncertainty state", String(outcome.state ?? "UNKNOWN"), "Dependent observations require explicit assumptions")), notice(`Method ${result.method_id}; ${result.search_mode}. Approximate recall for this query: not measured unless a separate exact comparison has been registered. Empirical validation: MISSING.`));
+        const colors = ["#b6531d", "#516a98", "#7f5a94", "#73963c", "#9f6b43", "#477e87", "#787878"];
+        for (const [key, label] of [["normalized_values", "Normalized first-feature overlays"], ["raw_values", "Actual-price first-feature overlays"]]) {
+            resultPanel.body.append(patternChart([{ label: "Query", values: patternNumbers(query[key]), color: "#136e65" }, ...hits.slice(0, 7).map((hit, index) => ({ label: `Occurrence ${index + 1}`, values: patternNumbers(hit[key]), color: colors[index] ?? "#555555" }))], `${label}. Relative bar index; up to seven retained occurrences.`));
+        }
+        if (hits.length)
+            resultPanel.body.append(table(["Occurrence", "UTC start / end", "Instrument / timeframe", "Distance", "Gross return", "Net return", "Costs (bps)"], hits.map((hit, index) => {
+                const source = record(hit.provenance), after = record(hit.outcome);
+                return [String(index + 1), `${patternTime(hit.start_ns)} / ${patternTime(hit.end_ns)}`, `${String(source.instrument_id ?? "Unknown")} / ${String(hit.step_ns)} ns`, String(hit.distance), String(after.gross_return ?? "Unavailable"), String(hit.net_return ?? "Unavailable"), String(after.cost_bps ?? "Unavailable")];
+            }), "Observed occurrence outcomes after declared costs", [3, 4, 5, 6]));
+        const histogram = record(result.outcome_histogram), counts = patternNumbers(histogram.counts), edges = patternNumbers(histogram.edges);
+        if (counts.length && edges.length === counts.length + 1)
+            resultPanel.body.append(table(["Net-return bin", "Observed count"], counts.map((count, index) => [`${edges[index].toPrecision(5)} to ${edges[index + 1].toPrecision(5)}`, count]), "Observed net-return histogram", [1]));
+        resultPanel.body.append(patternJson("Outcome summary, quantiles and interval assumptions", outcome), patternJson("Failed or nonpositive occurrences", result.negative_cases), patternJson("Actual method output, regimes and stability diagnostics", result.method), patternJson("Complete search exposure and exclusions", exposure), patternJson("Exact configuration, training and source graph", { configuration: result.configuration, canonical_binding: result.canonical_binding, parent_snapshots: result.parent_snapshots, selected_snapshot: result.selected_snapshot, experiment_id: runRecord.experiment_id }), notice((Array.isArray(result.limitations) ? result.limitations : []).map(String).join(" ")));
+    }
+    void refresh().catch(showError);
+    return region;
+}
+/* Chronological diagnostics, with no conversion of prediction errors into P&L. */
+function validationView() {
+    const region = el("section");
+    region.id = "validation-workspace";
+    const epoch = pageEpoch, owner = session.user?.id, editable = session.user?.role !== "reader";
+    const alive = () => pageEpoch === epoch && session.user?.id === owner && region.isConnected;
+    const rows = (value) => Array.isArray(value) ? value.map(record) : [];
+    const evidence = (label, value) => el("details", "data-disclosure", el("summary", "", label), el("pre", "json-view", JSON.stringify(value, null, 2)));
+    const feedback = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    const setup = panel("Preregister a diagnostic candidate", "Every model or parameter choice receives a separate permanent experiment. There is no automatic search.");
+    const history = panel("Your chronological experiments", "Failed and pending outcomes remain in the research record.");
+    const detail = panel("Fold membership, errors and uncertainty", "Training, purge and embargo are determined from actual source support and receipt times.");
+    region.append(heading("Chronological validation", "Keep training and evaluation in order.", "Inspect expanding development prefixes and later validation segments with explicit exclusion intervals."), notice("SYNTHETIC SOFTWARE DIAGNOSTICS. MSE and MAE describe prediction error; they are not trading profit. These results do not release sealed data or establish empirical validity."), feedback, setup.box, history.box, detail.box);
+    let sourceOffset = 0, sourceRequest = 0;
+    const sourcePages = el("div", "form-actions");
+    setup.body.append(sourcePages);
+    let datasets = [], localJobs = [], selectedId = null, pollEpoch = 0;
+    const source = selectField("Owned quality dataset", "validation-source", [], "");
+    const model = selectField("Model candidate", "validation-model", [{ value: "TRAIN_MEAN", text: "Training-label mean baseline" }, { value: "OLS_LAG_RETURNS", text: "OLS of lagged returns with training-only scaling" }], "TRAIN_MEAN");
+    const evaluation = field("Evaluation as of (UTC ISO)", "validation-asof", new Date().toISOString());
+    const numericFields = {};
+    const grid = el("div", "form-grid", source.box, model.box, evaluation.box);
+    const controls = [
+        ["lookback", "Lagged-return features", "4", "1", "16"], ["horizon", "Label horizon in bars", "1", "1", "120"], ["training_rows", "Development row count", "120", "4", "9998"], ["folds", "Chronological folds", "2", "1", "5"], ["purge_bars", "Minimum purge bars", "2", "0", "120"], ["embargo_bars", "Embargo bars", "1", "0", "120"], ["minimum_train", "Minimum eligible training rows", "20", "2", "10000"], ["minimum_validation", "Minimum validation rows", "10", "1", "10000"], ["block_length", "Bootstrap block length", "2", "1", "10000"], ["repetitions", "Frozen bootstrap repetitions", "200", "100", "1000"], ["seed", "Frozen bootstrap seed", "0", "0", "4294967295"], ["minimum_observations", "Minimum observations for uncertainty", "20", "4", "10000"]
+    ];
+    const advanced = el("details", "data-disclosure", el("summary", "", "All frozen split and uncertainty controls")), advancedGrid = el("div", "form-grid");
+    controls.forEach(([name, title, initial, min, max], index) => { const value = field(title, `validation-${name}`, initial, { type: "number", min, max, step: "1" }); numericFields[name] = value.input; (index < 6 ? grid : advancedGrid).append(value.box); value.input.disabled = !editable; });
+    const commission = field("One-way commission hurdle (bps)", "validation-commission", "0", { type: "number", min: "0", max: "1000", step: ".01" });
+    const slippage = field("One-way slippage hurdle (bps)", "validation-slippage", "0", { type: "number", min: "0", max: "1000", step: ".01" });
+    const confidence = selectField("Bootstrap confidence", "validation-confidence", ["0.80", "0.90", "0.95", "0.99"].map(value => ({ value, text: value })), "0.95");
+    advancedGrid.append(commission.box, slippage.box, confidence.box);
+    advanced.append(advancedGrid);
+    const form = el("form"), submit = el("button", "button", "Freeze and queue this candidate");
+    submit.type = "submit";
+    submit.disabled = !editable;
+    form.append(grid, advanced, notice("For multiple folds, training expands only within development. It never absorbs earlier validation labels. The actual gap may be longer than the requested purge. Costs here are diagnostic hurdles, with no fill or realized-profit model."), el("div", "form-actions", submit));
+    setup.body.append(form);
+    const error = (value) => { if (alive())
+        feedback.replaceChildren(notice(readableError(value), "error")); };
+    for (const control of [source.input, model.input, evaluation.input, commission.input, slippage.input, confidence.input])
+        control.disabled = !editable;
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        void (async () => {
+            submit.disabled = true;
+            feedback.replaceChildren();
+            try {
+                const dataset = datasets.find(item => item.dataset_id === source.input.value);
+                if (!dataset)
+                    throw new Error("Choose an owned quality dataset first.");
+                const values = { model: model.input.value, evaluation_as_of: evaluation.input.value, commission_bps: commission.input.value, slippage_bps: slippage.input.value, confidence: confidence.input.value };
+                for (const [name, input] of Object.entries(numericFields))
+                    values[name] = Number(input.value);
+                const job = await api("/validations/jobs", { dataset_id: dataset.dataset_id, record_digest: dataset.record_digest, quality_report_digest: dataset.quality_report_digest, controls: values });
+                if (!alive())
+                    return;
+                localJobs.unshift(job);
+                renderJobs();
+                await inspect(job.id);
+            }
+            catch (failure) {
+                error(failure);
+            }
+            finally {
+                if (alive())
+                    submit.disabled = !editable;
+            }
+        })();
+    });
+    async function refresh() {
+        const request = ++sourceRequest;
+        const [sources, jobsValue] = await Promise.all([api(`/quality/datasets?limit=25&offset=${sourceOffset}`), api("/validations/jobs")]);
+        if (!alive() || request !== sourceRequest)
+            return;
+        datasets = sources.datasets;
+        localJobs = jobsValue.jobs;
+        const old = source.input.value;
+        source.input.replaceChildren(...datasets.map(item => { const option = el("option", "", `${shortId(item.dataset_id)} · ${item.row_count} rows · ${item.evidence_mode}`); option.value = item.dataset_id; return option; }));
+        if (datasets.some(item => item.dataset_id === old))
+            source.input.value = old;
+        sourcePages.replaceChildren(pageControls("Dataset", sourceOffset, datasets.length, 1000, next => { sourceOffset = next; void refresh().catch(error); }));
+        if (pendingWorkflowJob) {
+            const identity = pendingWorkflowJob;
+            pendingWorkflowJob = null;
+            void inspect(identity);
+        }
+        submit.disabled = !editable || !datasets.length;
+        if (!datasets.length)
+            feedback.replaceChildren(notice("Create the explicit synthetic quality demo or import an eligible owned dataset before running this workflow."), button("Open Data quality", () => navigate("quality"), "secondary"));
+        renderJobs();
+    }
+    function renderJobs() {
+        history.body.replaceChildren(button("Refresh validation jobs", () => { void refresh().catch(error); }, "secondary compact"));
+        if (!localJobs.length) {
+            history.body.append(notice("No chronological jobs are visible to this account."));
+            return;
+        }
+        history.body.append(table(["Job", "State", "Experiment", "Action"], localJobs.map(job => [button(shortId(job.id), () => { void inspect(job.id); }, "link-button"), statusBadge(job.status), job.experiment_id ? shortId(job.experiment_id) : "Not started", job.status === "QUEUED" && editable ? button("Cancel queued candidate", () => { void api(`/validations/jobs/${encodeURIComponent(job.id)}/cancel`, {}).then(() => refresh()).catch(error); }, "tertiary compact") : null]), "Your chronological diagnostic jobs"));
+    }
+    async function inspect(identity, full = false, retries = 0) {
+        selectedId = identity;
+        const mine = ++pollEpoch;
+        try {
+            const value = await api(`/validations/jobs/${encodeURIComponent(identity)}${full ? "/report" : ""}`);
+            if (!alive() || mine !== pollEpoch || selectedId !== identity)
+                return;
+            feedback.replaceChildren();
+            const job = record(value.job), run = record(value.run), result = record(run.result);
+            localJobs = localJobs.map(item => item.id === identity ? job : item);
+            renderJobs();
+            detail.body.replaceChildren(notice(`Job ${identity}: ${job.status}. ${String(job.error ?? "")} Empirical interpretation remains INCONCLUSIVE.`), evidence("Frozen definition and exact source receipts", value.definition), evidence("Counted family exposure", value.family_exposure));
+            if (job.status === "RUNNING" || job.status === "QUEUED") {
+                window.setTimeout(() => { if (alive() && mine === pollEpoch && selectedId === identity)
+                    void inspect(identity); }, 2500);
+                return;
+            }
+            if (!Object.keys(result).length) {
+                detail.body.append(notice("This job has no computed report. Its failure or cancellation remains retained."));
+                return;
+            }
+            detail.body.append(evidence("Preregistered model identities and fit artifacts", result.canonical_models));
+            const folds = rows(result.folds);
+            detail.body.append(el("div", "stats-grid", stat("Model", String(result.model), "Training-only fit"), stat("Empirical status", String(result.empirical_status ?? "INCONCLUSIVE"), "Software evidence only"), stat("Excluded supports", String(result.source_support_exclusion_count ?? "Unknown"), "No silent gap imputation")), table(["Fold", "State", "Train", "Validation", "Excluded", "Scored", "Pending labels", "MSE", "MAE"], folds.map(fold => [String(fold.fold_id), String(fold.status), String(fold.training_count), String(fold.validation_count), String(fold.excluded_count), String(fold.scored_count), String(fold.pending_label_count), String(fold.mse ?? "Unavailable"), String(fold.mae ?? "Unavailable")]), "Chronological fold prediction errors", [2, 3, 4, 5, 6, 7, 8]), evidence("Mean absolute error interval and fixed bootstrap assumptions", result.uncertainty_of_mean_absolute_error), evidence("Multiple-testing status; no invented p-values", result.multiple_testing), evidence("Missing scientific gates", result.missing_scientific_gates), notice(Array.isArray(result.limitations) ? result.limitations.map(String).join(" ") : "Prediction diagnostics are not profit or win probabilities."));
+            if (!value.report) {
+                detail.body.append(button("Inspect exact memberships and predictions", () => { void inspect(identity, true); }, "secondary"));
+                return;
+            }
+            const report = record(value.report);
+            for (const fold of rows(report.folds)) {
+                const predictions = rows(fold.predictions), group = panel(`Fold ${String(fold.fold_id)}`, `${String(fold.status)}. ${String(fold.reason ?? "")}`);
+                group.body.append(evidence("Exact training and validation membership; exclusions", { training_ids: fold.training_ids, validation_ids: fold.validation_ids, exclusions: fold.exclusions, model: fold.model, fitted_model: fold.fitted_model }));
+                const target = el("div");
+                let offset = 0;
+                const renderPredictions = () => {
+                    target.replaceChildren(notice(`Predictions ${offset + 1}–${Math.min(offset + 100, predictions.length)} of ${predictions.length}. Labels still unavailable at evaluation remain pending.`), table(["Observation", "Prediction", "Observed label", "After diagnostic cost hurdle"], predictions.slice(offset, offset + 100).map(row => [String(row.observation_id ?? row.id ?? ""), String(row.prediction), String(row.label ?? "Pending"), String(row.prediction_after_diagnostic_hurdle)]), `Fold ${fold.fold_id} actual predictions`, [1, 2, 3]));
+                    const previous = button("Previous predictions", () => { offset = Math.max(0, offset - 100); renderPredictions(); }, "tertiary compact"), next = button("Next predictions", () => { offset += 100; renderPredictions(); }, "tertiary compact");
+                    previous.disabled = offset === 0;
+                    next.disabled = offset + 100 >= predictions.length;
+                    target.append(el("div", "form-actions", previous, next));
+                };
+                if (predictions.length)
+                    renderPredictions();
+                else
+                    target.append(notice("This fold has no computed predictions."));
+                group.body.append(target);
+                detail.body.append(group.box);
+            }
+            detail.body.append(evidence("Full report metadata and source exclusions", { controls: report.controls, selected_snapshot: report.selected_snapshot, source_support_exclusions: report.source_support_exclusions }));
+        }
+        catch (failure) {
+            if (!alive() || mine !== pollEpoch || selectedId !== identity)
+                return;
+            error(failure);
+            if (failure instanceof ApiError && failure.status === 503 && retries < 5) {
+                feedback.append(notice(`Evidence is temporarily unavailable. Retrying this read (${retries + 1}/5); no new experiment is submitted.`));
+                window.setTimeout(() => { if (alive() && mine === pollEpoch && selectedId === identity)
+                    void inspect(identity, full, retries + 1); }, 3000 * (retries + 1));
+            }
+            else {
+                feedback.append(button("Retry selected validation read", () => { void inspect(identity, full); }, "secondary"));
+            }
+        }
+    }
+    void refresh().catch(error);
+    return region;
+}
+function notificationsView() {
+    const region = el("section");
+    region.id = "notifications-workspace";
+    const epoch = pageEpoch, actor = session.user, owner = actor?.role === "owner", editable = actor?.role !== "reader";
+    const alive = () => pageEpoch === epoch && session.user?.id === actor?.id && region.isConnected;
+    const feedback = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    const inbox = panel("Private local inbox", "Events are retained locally. Reading an event never sends a message.");
+    const settings = panel("Optional Telegram delivery", "Owner configuration uses the separate encrypted notification vault.");
+    region.append(heading("Notifications", "Keep the evidence in view.", "Local job, signal and risk events retain their evidence mode."), feedback, inbox.box);
+    let after = 0, entries = [], configuration = {}, refreshEpoch = 0;
+    const token = privateField("Bot token", "notification-token", "Stored only in the separate encrypted notification vault.", 149);
+    const chat = privateField("Allowed chat ID", "notification-chat", "The exact allowed destination; only its masked suffix is returned.", 17);
+    const enable = selectField("Delivery setting", "notification-enabled", [{ value: "false", text: "Store disabled" }, { value: "true", text: "Enable explicit sends when policy allows" }], "false");
+    const info = el("div"), configurationForm = el("form", "form-grid");
+    const save = el("button", "button", "Save this notification profile");
+    save.type = "submit";
+    const disable = button("Disable and revoke profile", () => {
+        void act(disable, async () => {
+            configuration = await api("/notifications/configuration/disable", { expected_revision: configuration.revision });
+            renderConfiguration();
+        });
+    }, "secondary");
+    const problem = (error) => { if (alive())
+        feedback.replaceChildren(notice(readableError(error), "error")); };
+    async function act(control, operation) {
+        control.disabled = true;
+        feedback.replaceChildren();
+        try {
+            await operation();
+        }
+        catch (error) {
+            problem(error);
+        }
+        finally {
+            if (alive())
+                control.disabled = false;
+        }
+    }
+    function renderConfiguration() {
+        if (!alive())
+            return;
+        info.replaceChildren(notice(`Policy: ${configuration.policy ?? "DISABLED"}. Profile: ${configuration.configured ? "configured" : "absent"}; revision ${configuration.revision ?? 0}; ${configuration.enabled ? "enabled" : "disabled"}. Destination ${configuration.allowed_chat_masked ?? "not configured"}. External validation: not performed. Automatic delivery: off.`));
+        disable.hidden = !configuration.configured;
+        enable.input.value = String(Boolean(configuration.enabled));
+        for (const option of Array.from(enable.input.options))
+            if (option.value === "true")
+                option.disabled = configuration.policy !== "REVIEWED_V0_TELEGRAM_TOKEN_PATH_ONLY";
+    }
+    if (owner) {
+        region.append(settings.box);
+        configurationForm.append(token.box, chat.box, enable.box, el("div", "form-actions", save, disable));
+        settings.body.append(info, configurationForm, notice("Each external send uses the displayed event and current profile revision. Unknown delivery stays unresolved and is never automatically retried. Tokens are cleared after submission and are never displayed in event details."));
+        configurationForm.addEventListener("submit", event => {
+            event.preventDefault();
+            void act(save, async () => {
+                const payload = { bot_token: token.input.value, allowed_chat_id: chat.input.value, enabled: enable.input.value === "true", expected_revision: configuration.revision ?? 0 };
+                token.input.value = "";
+                chat.input.value = "";
+                try {
+                    const value = await api("/notifications/configuration", payload);
+                    if (alive()) {
+                        configuration = value;
+                        renderConfiguration();
+                    }
+                }
+                finally {
+                    payload.bot_token = "";
+                    payload.allowed_chat_id = "";
+                }
+            });
+        });
+    }
+    function render() {
+        if (!alive())
+            return;
+        const refresh = button("Refresh inbox", () => { after = 0; void load().catch(problem); }, "secondary compact");
+        const test = button("Create local test event", () => { void act(test, async () => { await api("/notifications/local-test", {}); after = 0; await load(); }); }, "secondary compact");
+        test.disabled = !editable;
+        const previous = button("First page", () => { after = 0; void load().catch(problem); }, "tertiary compact");
+        previous.disabled = after === 0;
+        const next = button("Next events", () => { if (entries.length)
+            after = Number(entries[entries.length - 1].sequence); void load().catch(problem); }, "tertiary compact");
+        next.disabled = entries.length < 25;
+        inbox.body.replaceChildren(el("div", "form-actions", refresh, test, previous, next));
+        if (!entries.length) {
+            inbox.body.append(notice("No local events on this page. Completed work and explicit local tests appear here."));
+            return;
+        }
+        for (const entry of entries) {
+            const event = record(entry.event), delivery = record(entry.delivery), identity = String(event.notification_id);
+            const item = el("article", "notification-entry", el("div", "status-row", badge(String(event.mode)), statusBadge(String(event.severity)), badge(entry.read_at ? "READ" : "UNREAD")), el("h3", "", String(event.title)), el("p", "", String(event.body)), el("p", "muted small", `${event.created_at} · expires ${event.expires_at} · ${event.kind}`));
+            if (event.experiment_id)
+                item.append(el("p", "small", `Experiment ${event.experiment_id}`));
+            const read = button("Mark read", () => { void act(read, async () => { await api(`/notifications/inbox/${encodeURIComponent(identity)}/read`, {}); await load(); }); }, "tertiary compact");
+            read.disabled = Boolean(entry.read_at);
+            const actions = el("div", "form-actions", read);
+            if (owner) {
+                const send = button("Send this event to Telegram", () => {
+                    void act(send, async () => {
+                        const value = await api(`/notifications/inbox/${encodeURIComponent(identity)}/send`, { expected_revision: configuration.revision });
+                        if (alive())
+                            feedback.replaceChildren(notice(`Delivery state: ${value.state ?? "UNKNOWN"}. ${value.reason ?? ""}`));
+                        await load();
+                    });
+                }, "secondary compact");
+                send.disabled = !configuration.enabled || configuration.policy !== "REVIEWED_V0_TELEGRAM_TOKEN_PATH_ONLY" || Object.keys(delivery).length > 0;
+                actions.append(send);
+            }
+            item.append(actions, el("p", "muted small", Object.keys(delivery).length ? `External delivery: ${delivery.state}; ${delivery.reason ?? ""}.` : "External delivery: none."));
+            inbox.body.append(item);
+        }
+    }
+    async function load() {
+        const mine = ++refreshEpoch;
+        const projection = await api("/notifications/projection", {});
+        if (!alive() || mine !== refreshEpoch)
+            return;
+        const value = await api(`/notifications/inbox?after=${after}&limit=25`);
+        if (!alive() || mine !== refreshEpoch)
+            return;
+        entries = value;
+        render();
+        inbox.body.prepend(notice(projection.local_delivery_unavailable ? `Local delivery requires attention: ${projection.failure_code}. Research state is unchanged.` : `Local completion scan: ${projection.scanned} jobs examined on this page; ${projection.projected} notices verified. ${projection.cycle_complete ? "Cycle complete." : "More pages may remain; refresh to continue."}`), patternJson("Local delivery recovery status", projection));
+    }
+    void (async () => { try {
+        if (owner) {
+            const value = await api("/notifications/configuration");
+            if (!alive())
+                return;
+            configuration = value;
+            renderConfiguration();
+        }
+        await load();
+    }
+    catch (error) {
+        problem(error);
+    } })();
+    return region;
+}
+async function loadUserAdministration(target, epoch, after = 0) {
+    const actor = session.user?.id;
+    const alive = () => pageEpoch === epoch && session.user?.id === actor && target.isConnected;
+    try {
+        const users = await api(`/administration/users?after=${after}&limit=25`);
+        if (!alive())
+            return;
+        target.replaceChildren(notice("Role changes, password resets and revocation end every current session for that account. Existing jobs and research evidence remain. The last owner cannot be demoted."));
+        const message = el("div");
+        message.setAttribute("aria-live", "polite");
+        target.append(message);
+        const first = button("First accounts", () => { void loadUserAdministration(target, epoch); }, "tertiary compact"), nextPage = button("Next accounts", () => { if (users.length)
+            void loadUserAdministration(target, epoch, users[users.length - 1].id); }, "tertiary compact");
+        first.disabled = after === 0;
+        nextPage.disabled = users.length < 25;
+        target.append(el("div", "form-actions", first, nextPage));
+        for (const user of users) {
+            const role = selectField(`Role for ${user.username}`, `admin-role-${user.id}`, ["owner", "researcher", "reader"].map(value => ({ value, text: value })), user.role);
+            const password = privateField(`New password for ${user.username}`, `admin-password-${user.id}`, "12–128 characters. Submit only when replacing this account's password.", 128);
+            password.input.minLength = 12;
+            password.input.autocomplete = "new-password";
+            async function change(action, control) {
+                const payload = { action, expected_revision: user.revision };
+                if (action === "ROLE")
+                    payload.role = role.input.value;
+                if (action === "PASSWORD")
+                    payload.password = password.input.value;
+                password.input.value = "";
+                control.disabled = true;
+                message.replaceChildren();
+                try {
+                    const result = await api(`/administration/users/${user.id}/change`, payload);
+                    if (!alive())
+                        return;
+                    if (user.id === actor) {
+                        session = { needs_owner: false, user: null, csrf: null };
+                        renderAuth("Your account changed and its sessions were revoked. Sign in again.");
+                        return;
+                    }
+                    await loadUserAdministration(target, epoch);
+                    if (alive())
+                        target.prepend(notice(`Account ${user.username} updated. ${result.revoked_sessions} session(s) revoked.`));
+                }
+                catch (error) {
+                    if (alive())
+                        message.replaceChildren(notice(readableError(error), "error"));
+                }
+                finally {
+                    payload.password = "";
+                    if (alive())
+                        control.disabled = false;
+                }
+            }
+            const saveRole = button("Apply role", () => { void change("ROLE", saveRole); }, "secondary compact");
+            const reset = button("Replace password", () => { void change("PASSWORD", reset); }, "secondary compact");
+            const revoke = button("Revoke all sessions", () => { void change("REVOKE_SESSIONS", revoke); }, "tertiary compact");
+            const card = el("details", "data-disclosure", el("summary", "", `${user.username} · ${user.role} · revision ${user.revision}`), el("div", "form-grid", role.box, password.box), el("div", "form-actions", saveRole, reset, revoke));
+            target.append(card);
+        }
+        const audit = el("details", "data-disclosure"), summary = el("summary", "", "Inspect retained account audit");
+        audit.append(summary);
+        const body = el("div"), next = button("Load next audit page", () => { void loadAudit(); }, "secondary compact");
+        audit.append(body, next);
+        target.append(audit);
+        let auditAfter = 0, busy = false;
+        async function loadAudit() {
+            if (busy)
+                return;
+            busy = true;
+            next.disabled = true;
+            try {
+                const entries = await api(`/administration/history?after=${auditAfter}&limit=25`);
+                if (!alive())
+                    return;
+                if (!entries.length) {
+                    body.append(notice("No further account changes."));
+                    next.hidden = true;
+                    return;
+                }
+                auditAfter = Number(entries[entries.length - 1].sequence);
+                body.append(table(["Event", "Actor / account", "Action", "Role change", "Sessions revoked", "UTC time"], entries.map(item => [String(item.sequence), `${item.actor_id} / ${item.target_id}`, String(item.action), `${item.previous_role} → ${item.resulting_role}`, String(item.revoked_sessions), new Date(Number(item.created_at) * 1000).toISOString()]), "Owner account maintenance audit"));
+                next.hidden = entries.length < 25;
+            }
+            catch (error) {
+                if (alive())
+                    body.append(notice(readableError(error), "error"));
+            }
+            finally {
+                busy = false;
+                if (alive())
+                    next.disabled = false;
+            }
+        }
+        audit.addEventListener("toggle", () => { if (audit.open && auditAfter === 0)
+            void loadAudit(); });
+    }
+    catch (error) {
+        if (alive())
+            target.replaceChildren(notice(readableError(error), "error"));
+    }
+}
+function pageControls(label, offset, count, maximum, change) {
+    const previous = button(`Previous ${label.toLowerCase()} page`, () => change(Math.max(0, offset - 25)), "tertiary compact");
+    const next = button(`Next ${label.toLowerCase()} page`, () => change(offset + 25), "tertiary compact");
+    previous.disabled = offset === 0;
+    next.disabled = count < 25 || offset + 25 > maximum;
+    return el("div", "form-actions", el("span", "muted", `${label} page ${offset / 25 + 1}`), previous, next);
+}
+function operationsView() {
+    const region = el("section"), epoch = pageEpoch, actor = session.user?.id;
+    const body = panel("Current operational observations", "These observations do not grant resource admission or scientific validation.");
+    region.append(heading("Operations", "Inspect workers and capacity", "Private queues, shared resource limits and explicit storage freshness."), body.box);
+    const refresh = async () => {
+        try {
+            const value = await api("/operations/status");
+            if (pageEpoch !== epoch || session.user?.id !== actor || !region.isConnected)
+                return;
+            const worker = record(value.worker), storage = record(value.storage);
+            body.body.replaceChildren(el("div", "stats-grid", stat("Database", String(value.database), String(value.observed_at)), stat("Worker", String(worker.state), "Observed process state"), stat("Storage freshness", String(storage.freshness ?? "Owner only"), "Bounded sample; no admission authority")), patternJson("Your queue and reader counts", value.private), patternJson("Worker observation", worker), patternJson("Shared limits", value.limits));
+            if (session.user?.role === "owner")
+                body.body.append(patternJson("Global resource counts", value.global), patternJson("Storage sample and limitations", storage));
+            body.body.append(button("Refresh operational observations", () => { void refresh(); }, "secondary"));
+        }
+        catch (error) {
+            if (pageEpoch === epoch && region.isConnected)
+                body.body.replaceChildren(notice(readableError(error), "error"), button("Retry observations", () => { void refresh(); }, "secondary"));
+        }
+    };
+    void refresh();
+    return region;
+}
+/* Durable local-paper workspace draft; all economic values are backend evidence. */
+function paperView() {
+    const region = el("section");
+    region.id = "paper-workspace";
+    const epoch = pageEpoch, owner = session.user?.id, editable = session.user?.role !== "reader";
+    const alive = () => pageEpoch === epoch && session.user?.id === owner && region.isConnected;
+    const rows = (value) => Array.isArray(value) ? value.map(record) : [];
+    const detailJson = (label, value) => el("details", "data-disclosure", el("summary", "", label), el("pre", "json-view", JSON.stringify(value, null, 2)));
+    const feedback = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    const creation = panel("Create a local paper session", "Creation preserves inputs. Explicit activation registers the experiment before the first signal.");
+    const sessionsPanel = panel("Your persistent sessions", "Each configuration is a separate counted variant once evaluated.");
+    const currentPanel = panel("Ledger, signals and controls", "A closed-bar decision can fill only at a strictly later opening quote.");
+    region.append(heading("Paper execution", "Follow every decision into the ledger.", "Persistent synthetic equity, cash ETF and FX spot sessions, partial fills, explicit costs, risk controls and crash reconciliation."), notice("LOCAL PAPER / SYNTHETIC. No broker orders or real funds. Cash-funded intraday long spot only. Final inventory stays marked at bid; the application does not invent a liquidation."), feedback, creation.box, sessionsPanel.box, currentPanel.box);
+    let defaults = {}, selected = null, sessions = [];
+    let selectedId = null, requestEpoch = 0, pollEpoch = 0;
+    const errors = (error) => { if (alive())
+        feedback.replaceChildren(notice(readableError(error), "error")); };
+    const market = selectField("Paper market", "paper-market", [{ value: "EQUITY", text: "Synthetic equity / XNYS" }, { value: "ETF", text: "Synthetic cash ETF / XNYS" }, { value: "FX_SPOT", text: "Synthetic EUR/USD spot" }], "EQUITY");
+    const mode = selectField("Execution mode", "paper-mode", [{ value: "LOCAL_PAPER", text: "Local paper execution" }, { value: "REPLAY", text: "Deterministic replay" }], "LOCAL_PAPER");
+    const fields = {};
+    const visible = el("div", "form-grid", market.box, mode.box), risk = el("details", "data-disclosure", el("summary", "", "Explicit risk limits")), riskFields = el("div", "form-grid");
+    const definitions = [
+        ["bars", "Generated minute bars", "20", "100", "1"], ["lookback", "Closed-bar lookback", "1", "10", "1"], ["initial_cash", "Initial USD cash", ".000001", "1000000", ".01"], ["quantity", "Target instrument units", "1", "1000000", "1"], ["max_fill_quantity", "Maximum units per opening fill", "1", "1000000", "1"], ["commission_per_fill", "USD commission per partial fill", "0", "1000000", ".01"], ["slippage_bps", "Adverse slippage (basis points)", "0", "1000", ".01"],
+        ["max_order_notional", "Maximum order notional (USD)", ".000001", "1000000", ".01"], ["max_exposure", "Maximum exposure (USD)", ".000001", "1000000", ".01"], ["max_concentration", "Maximum concentration fraction", ".000001", "1", ".01"], ["max_drawdown", "Maximum drawdown fraction", ".000001", "1", ".01"], ["max_loss", "Maximum loss (USD)", ".000001", "1000000", ".01"], ["max_spread_bps", "Maximum spread (basis points)", ".000001", "1000", ".01"], ["max_slippage_bps", "Maximum allowed slippage (basis points)", ".000001", "1000", ".01"], ["max_orders_per_window", "Maximum orders per rate window", "1", "100", "1"]
+    ];
+    definitions.forEach(([name, title, min, max, step], index) => { const value = field(title, `paper-${name}`, "", { type: "number", min, max, step: ["bars", "lookback", "max_orders_per_window"].includes(name) ? step : "any" }); fields[name] = value.input; (index < 7 ? visible : riskFields).append(value.box); value.input.disabled = !editable; });
+    risk.append(riskFields);
+    const form = el("form", "paper-form");
+    const create = el("button", "button", "Create configured session");
+    create.type = "submit";
+    create.disabled = !editable;
+    form.append(visible, risk, el("div", "form-actions", create));
+    creation.body.append(form);
+    function resetDefaults() {
+        const values = record(defaults[market.input.value]);
+        for (const [name, input] of Object.entries(fields))
+            input.value = String(values[name] ?? "");
+        mode.input.value = String(values.mode ?? "LOCAL_PAPER");
+    }
+    market.input.addEventListener("change", resetDefaults);
+    market.input.disabled = mode.input.disabled = !editable;
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        void (async () => {
+            create.disabled = true;
+            feedback.replaceChildren();
+            try {
+                const configuration = { market: market.input.value, mode: mode.input.value };
+                for (const [name, input] of Object.entries(fields))
+                    configuration[name] = ["bars", "lookback", "max_orders_per_window"].includes(name) ? Number(input.value) : input.value;
+                const value = await api("/paper/sessions", { configuration });
+                if (!alive())
+                    return;
+                await refresh();
+                await inspect(String(value.id));
+            }
+            catch (error) {
+                errors(error);
+            }
+            finally {
+                if (alive())
+                    create.disabled = !editable;
+            }
+        })();
+    });
+    async function refresh() {
+        const mine = ++requestEpoch, value = await api("/paper/sessions");
+        if (!alive() || mine !== requestEpoch)
+            return;
+        sessions = value;
+        sessionsPanel.body.replaceChildren(button("Refresh paper sessions", () => { void refresh().catch(errors); }, "secondary compact"));
+        if (!sessions.length) {
+            sessionsPanel.body.append(notice("No paper sessions are visible to this account. Create a configuration to begin."));
+            return;
+        }
+        sessionsPanel.body.append(table(["Session", "Market", "State", "Bars", "Experiment"], sessions.map(item => [button(shortId(String(item.id)), () => { void inspect(String(item.id)); }, "link-button"), String(record(item.configuration).market ?? ""), statusBadge(String(item.status)), `${item.cursor ?? 0} / ${record(item.configuration).bars ?? "?"}`, item.experiment_id ? shortId(String(item.experiment_id)) : "Not activated"]), "Your persistent local paper sessions"));
+    }
+    async function inspect(identity, retries = 0) {
+        selectedId = identity;
+        const mine = ++pollEpoch;
+        try {
+            const value = await api(`/paper/sessions/${encodeURIComponent(identity)}`);
+            if (!alive() || selectedId !== identity || mine !== pollEpoch)
+                return;
+            selected = value;
+            renderCurrent();
+            if (["ACTIVE", "STARTING", "STEPPING", "RECOVERING"].includes(String(value.status)) || value.requested)
+                window.setTimeout(() => { if (alive() && selectedId === identity && mine === pollEpoch)
+                    void inspect(identity); }, 2000);
+        }
+        catch (error) {
+            if (!alive() || mine !== pollEpoch || selectedId !== identity)
+                return;
+            errors(error);
+            if (error instanceof ApiError && error.status === 503 && retries < 5) {
+                window.setTimeout(() => { if (alive() && mine === pollEpoch && selectedId === identity)
+                    void inspect(identity, retries + 1); }, 3000 * (retries + 1));
+            }
+            else
+                feedback.append(button("Retry selected paper read", () => { void inspect(identity); }, "secondary"));
+        }
+    }
+    async function control(action, buttonNode) {
+        if (!selected)
+            return;
+        const value = selected;
+        buttonNode.disabled = true;
+        feedback.replaceChildren();
+        pollEpoch += 1;
+        try {
+            const path = `/paper/sessions/${encodeURIComponent(String(value.id))}/${action === "RECONCILE" ? "reconcile" : "control"}`;
+            const body = action === "RECONCILE" ? { expected_revision: value.revision } : { action, expected_revision: value.revision };
+            const updated = await api(path, body);
+            if (!alive() || selectedId !== value.id)
+                return;
+            selected = updated;
+            renderCurrent();
+            await refresh();
+            await inspect(String(value.id));
+        }
+        catch (error) {
+            errors(error);
+            if (alive() && selectedId === value.id)
+                await inspect(String(value.id));
+        }
+    }
+    function renderCurrent() {
+        if (!selected)
+            return;
+        const value = selected, config = record(value.configuration), report = record(value.report), snapshot = record(report.snapshot), book = record(snapshot.book), status = String(value.status);
+        const actionRow = el("div", "form-actions");
+        const available = status === "CREATED" ? [["ACTIVATE", "Activate this configuration"], ["CANCEL", "Cancel before activation"]] : status === "AMBIGUOUS" ? [["RECONCILE", "Verify interrupted step"], ["CANCEL", "Cancel and retain partial evidence"]] : ["PAUSED", "ACTIVE", "STARTING", "STEPPING", "RECOVERING"].includes(status) ? [...(status === "PAUSED" ? [["RESUME", "Resume verified session"]] : [["PAUSE", "Pause after bounded step"]]), [snapshot.killed ? "RESET_KILL" : "KILL", snapshot.killed ? "Reset this session’s kill control" : "Kill this session’s order flow"], ["CANCEL", "Cancel and retain evidence"]] : [];
+        for (const [action, label] of available) {
+            const item = button(label, () => { void control(action, item); }, action === "KILL" || action === "CANCEL" ? "secondary" : "button");
+            item.disabled = !editable || (Boolean(value.requested) && action !== "CANCEL");
+            actionRow.append(item);
+        }
+        currentPanel.body.replaceChildren(notice(`Session ${value.id}. State ${status}; revision ${value.revision}; requested control ${value.requested ?? "none"}. Scientific disposition: ${value.scientific_disposition ?? "INCONCLUSIVE"}.`), actionRow);
+        if (status === "AMBIGUOUS")
+            currentPanel.body.append(notice("An interrupted step is not replayed automatically. Reconciliation checks the retained receipt against the ledger. A verified session stays paused until you explicitly resume."));
+        if (!Object.keys(report).length) {
+            currentPanel.body.append(detailJson("Retained configuration before evaluation", config));
+            return;
+        }
+        currentPanel.body.append(el("div", "stats-grid", stat("Marked equity", String(report.equity ?? "Unavailable"), "USD; remaining inventory at bid"), stat("Maximum drawdown", String(report.max_drawdown ?? "Unavailable"), "Fraction of recorded high-water equity"), stat("Completed bars", String(report.completed_bars ?? value.cursor ?? "Unavailable"), `${config.bars} configured bars`), stat("Commissions", String(report.commissions ?? "Unavailable"), "USD; every partial fill pays its fee")), el("div", "status-row", badge(snapshot.killed === true ? "KILL ACTIVE" : snapshot.killed === false ? "KILL CLEAR" : "KILL UNKNOWN"), badge(snapshot.reconciled === true ? "RECONCILED" : snapshot.reconciled === false ? "UNRECONCILED" : "RECONCILIATION UNKNOWN"), badge(snapshot.healthy === true ? "HEALTHY" : snapshot.healthy === false ? "HEALTH BLOCKED" : "HEALTH UNKNOWN")));
+        if (!Object.keys(report).length) {
+            currentPanel.body.append(notice("Operational acknowledgement only; a fresh admitted report read is required for economic and risk values."));
+            return;
+        }
+        currentPanel.body.append(el("h3", "", "Cash and holdings"), table(["Currency", "Actual cash"], rows(book.cash).map(item => [String(item.currency), String(item.amount)]), "Paper cash balances", [1]), table(["Instrument", "Held units", "Cost basis"], rows(book.positions).map(item => [String(item.instrument_id), String(item.quantity), String(item.cost_basis)]), "Paper held positions", [1, 2]));
+        currentPanel.body.append(el("h3", "", "Orders and partial fills"), table(["Order", "Side", "Units", "Filled", "State", "Reason"], rows(book.orders).map(item => [shortId(String(item.order_id)), String(item.side), String(item.quantity), String(item.filled), String(item.status), String(item.reason ?? "")]), "Retained paper orders", [2, 3]), table(["Time", "Order", "Filled units", "Price", "Fee", "Adverse slippage", "Realized P&L"], rows(book.fills).map(item => [String(item.at), shortId(String(item.order_id)), String(item.quantity), String(item.price), String(item.commission), String(item.adverse_slippage), String(item.realized_pnl)]), "Actual local partial fills", [2, 3, 4, 5, 6]));
+        const signals = rows(report.signals);
+        currentPanel.body.append(el("h3", "", "Explainable decisions"), table(["Bar", "Decision / availability", "Current bid", "Prior bid", "Target units", "Explanation", "Admission"], signals.map(item => [String(item.index), `${item.decision_at} / ${item.available_at}`, String(item.current_bid), String(item.comparison_bid ?? "Warmup"), String(item.target_quantity), String(item.explanation), String(item.admission_status ?? "No order")]), "Causal closed-bar paper signals", [0, 2, 3, 4]), detailJson("Rejected commands and risk evidence", report.engine_rejections), detailJson("Live reservations and attributed holdings", { reservations: snapshot.reservations, holdings: snapshot.holdings }), detailJson("Frozen limits, provenance and exact configuration", { limits: snapshot.limits, provenance: snapshot.provenance, configuration: config, report_digest: value.report_digest, experiment_id: value.experiment_id }), notice(Array.isArray(report.limitations) ? report.limitations.map(String).join(" ") : "Synthetic software accounting only."));
+    }
+    void (async () => {
+        try {
+            const value = await api("/paper/configuration");
+            if (!alive())
+                return;
+            defaults = record(value.defaults);
+            resetDefaults();
+            await refresh();
+        }
+        catch (error) {
+            errors(error);
+        }
+    })();
+    return region;
+}
+function paperBrokerPanel() {
+    const region = panel("Paper broker protocols", "Owner-only configuration and explicit offline protocol proof. Live execution is disabled.");
+    if (session.user?.role !== "owner") {
+        region.body.append(notice("An owner manages paper broker profiles. Your local paper sessions remain available above."));
+        return region.box;
+    }
+    const epoch = pageEpoch, actor = session.user.id;
+    const alive = () => pageEpoch === epoch && session.user?.id === actor && region.box.isConnected;
+    const feedback = el("div"), profiles = el("div"), operations = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    const provider = selectField("Offline protocol", "broker-protocol", [{ value: "ALPACA", text: "Alpaca paper · equity" }, { value: "OANDA", text: "OANDA practice · spot FX" }], "ALPACA");
+    const paper = selectField("Owned paused paper session", "broker-paper-session", [], "");
+    let sessions = [], generation = 0;
+    const error = (value) => { if (alive())
+        feedback.replaceChildren(notice(readableError(value), "error")); };
+    async function action(control, operation) {
+        control.disabled = true;
+        feedback.replaceChildren();
+        try {
+            await operation();
+        }
+        catch (value) {
+            error(value);
+        }
+        finally {
+            if (alive())
+                control.disabled = false;
+        }
+    }
+    const dry = button("Run offline order-protocol proof", () => {
+        void action(dry, async () => {
+            const selected = sessions.find(item => item.id === paper.input.value);
+            if (!selected)
+                throw new Error("Choose a paused session with a retained active reservation.");
+            const result = await api(`/paper-brokers/${provider.input.value}/dry-run`, { paper_id: selected.id, expected_revision: selected.revision });
+            if (alive())
+                feedback.replaceChildren(patternJson("Actual offline protocol receipt", result));
+            await refreshOperations();
+        });
+    });
+    region.body.append(notice("The local engine keeps economic accounting. This optional proof passes an actual paused reservation through the concrete broker client and a fixed offline server. It sends no network order, changes no holding and claims no broker fill. Repeating an already demonstrated or uncertain reservation is rejected."), feedback, profiles, el("div", "form-grid", provider.box, paper.box), el("div", "form-actions", dry, button("Refresh broker and paused-session status", () => { void refresh().catch(error); }, "secondary")), operations);
+    async function refreshOperations() {
+        const values = await api("/paper-brokers/operations");
+        if (!alive())
+            return;
+        operations.replaceChildren(el("h3", "", "Retained broker operations"));
+        if (!values.length) {
+            operations.append(notice("No broker account test or offline protocol operation yet."));
+            return;
+        }
+        operations.append(table(["Operation", "Provider / kind", "State / reason", "Evidence mode", "Inspect"], values.map(item => {
+            const result = record(item.result), identity = String(item.operation_id);
+            const verify = button("Verify retained evidence", () => {
+                void action(verify, async () => {
+                    const receipt = await api(`/paper-brokers/operations/${encodeURIComponent(identity)}/verify`, {});
+                    if (alive())
+                        feedback.replaceChildren(patternJson("Retained operation", item), patternJson("Fresh evidence verification; no request resent", receipt));
+                });
+            }, "tertiary compact");
+            return [shortId(identity), `${item.provider} / ${item.kind}`, `${result.status} / ${result.reason ?? ""}`, String(result.evidence_mode ?? "Not established"), verify];
+        }), "Owner paper broker protocol and account diagnostics"));
+    }
+    async function refresh() {
+        const mine = ++generation;
+        const [configured, listed] = await Promise.all([api("/paper-brokers/configuration"), api("/paper/sessions")]);
+        if (!alive() || mine !== generation)
+            return;
+        sessions = listed.filter(item => item.status === "PAUSED");
+        paper.input.replaceChildren(...sessions.map(item => { const option = el("option", "", `${shortId(String(item.id))} · ${record(item.configuration).market} · revision ${item.revision}`); option.value = String(item.id); return option; }));
+        dry.disabled = !sessions.length;
+        profiles.replaceChildren();
+        for (const profile of configured) {
+            const identity = String(profile.provider), name = identity === "ALPACA" ? "Alpaca paper" : "OANDA practice";
+            const account = privateField(`${name} exact account ID`, `broker-account-${identity}`, "The returned account must match exactly before any protocol action.", 64);
+            const key = privateField(`${name} ${identity === "ALPACA" ? "key ID" : "practice token"}`, `broker-key-${identity}`, "Only credentials issued for this paper environment.", 256);
+            key.input.minLength = 8;
+            const secret = privateField("Alpaca paper secret", `broker-secret-${identity}`, "Separate from all data-provider and live credentials.", 256);
+            secret.box.hidden = identity !== "ALPACA";
+            const confirm = declaration(`These credentials are for ${name} only and grant no live-account access.`, `broker-confirm-${identity}`);
+            const form = el("form"), save = el("button", "button", `Save ${name} profile`);
+            save.type = "submit";
+            const revoke = button("Revoke this profile", () => { void action(revoke, async () => { await api(`/paper-brokers/${identity}/revoke`, { expected_revision: profile.revision }); await refresh(); }); }, "secondary");
+            revoke.disabled = !profile.enabled;
+            const test = button("Test configured account read", () => {
+                void action(test, async () => {
+                    const result = await api(`/paper-brokers/${identity}/test`, { expected_revision: profile.revision });
+                    if (alive())
+                        feedback.replaceChildren(patternJson("Actual bounded account-read result", result));
+                    await refreshOperations();
+                });
+            }, "secondary");
+            test.disabled = !profile.enabled || !profile.read_test_configured;
+            form.append(el("div", "form-grid", account.box, key.box, secret.box), confirm.box, el("div", "form-actions", save, revoke, test));
+            form.addEventListener("submit", event => {
+                event.preventDefault();
+                if (!confirm.input.checked) {
+                    error(new Error("Confirm the credential's paper-only origin before saving."));
+                    return;
+                }
+                void action(save, async () => {
+                    const payload = { account_id: account.input.value, key: key.input.value, secret: identity === "ALPACA" ? secret.input.value : null, credential_source: identity === "ALPACA" ? "ALPACA_PAPER" : "OANDA_PRACTICE", paper_only_confirmed: true, expected_revision: profile.revision };
+                    clearPrivateInputs(form);
+                    try {
+                        await api(`/paper-brokers/${identity}/configuration`, payload);
+                        await refresh();
+                    }
+                    finally {
+                        payload.key = "";
+                        payload.secret = "";
+                        payload.account_id = "";
+                    }
+                });
+            });
+            profiles.append(el("details", "data-disclosure", el("summary", "", `${name}: ${profile.enabled ? "configured" : "disabled / absent"} · account ${profile.account_masked ?? "not configured"}`), notice(`Revision ${profile.revision}; credentials ${profile.secret_masked ?? "absent"}; live orders disabled. External account evidence: ${profile.authenticated_smoke}. ${profile.read_test_configured ? "An explicit bounded account read is available." : "External account test is blocked until a reviewed transport is configured."}`), form));
+        }
+        await refreshOperations();
+    }
+    void refresh().catch(error);
+    return region.box;
+}
+function historicalTime(value) {
+    if (value === null)
+        return "Unknown";
+    try {
+        const ns = BigInt(value), seconds = ns / 1000000000n, fraction = ns % 1000000000n;
+        return new Date(Number(seconds * 1000n)).toISOString().replace(".000Z", `.${fraction.toString().padStart(9, "0")}Z`);
+    }
+    catch {
+        return "Invalid timestamp; inspect exact retained value";
+    }
+}
+function historicalChart(preview) {
+    const column = preview.feature_columns.indexOf("close");
+    const panel = el("div", "chart-wrap");
+    if (column < 0 || !preview.rows.length)
+        return notice("No close-price feature is available for this chart.");
+    const points = [];
+    for (const row of preview.rows) {
+        const literal = row.values[column];
+        if (literal === undefined)
+            continue;
+        const value = Number(literal);
+        try {
+            if (Number.isFinite(value))
+                points.push({ time: BigInt(row.close_ns), value, row, literal });
+        }
+        catch { /* Exact table remains available. */ }
+    }
+    if (!points.length)
+        return notice("These values cannot be represented in chart coordinates. The exact table remains available.");
+    const first = points[0];
+    let start = first.time, end = first.time, low = first.value, high = first.value;
+    for (const point of points) {
+        if (point.time < start)
+            start = point.time;
+        if (point.time > end)
+            end = point.time;
+        low = Math.min(low, point.value);
+        high = Math.max(high, point.value);
+    }
+    const spread = high - low;
+    if (!Number.isFinite(spread))
+        return notice("Price scale exceeds chart coordinates. Read the exact decimal table.");
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 920 280");
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Observed historical close prices: separate points at actual close times, with no interpolation across gaps");
+    const background = document.createElementNS(SVG_NS, "rect");
+    background.setAttribute("width", "920");
+    background.setAttribute("height", "280");
+    background.setAttribute("fill", "#f6f8f7");
+    svg.append(background);
+    const duration = end - start;
+    for (const point of points) {
+        const x = duration > 0n ? 28 + 864 * Number(point.time - start) / Number(duration) : 460;
+        const y = spread > 0 ? 245 - 210 * (point.value - low) / spread : 140;
+        const circle = document.createElementNS(SVG_NS, "circle");
+        circle.setAttribute("cx", String(x));
+        circle.setAttribute("cy", String(y));
+        circle.setAttribute("r", "3");
+        circle.setAttribute("fill", "#147d77");
+        const title = document.createElementNS(SVG_NS, "title");
+        title.textContent = `Row ${point.row.row} · ${historicalTime(point.row.close_ns)} · close ${point.literal}`;
+        circle.append(title);
+        svg.append(circle);
+    }
+    const label = (x, y, value, anchor = "start") => { const text = document.createElementNS(SVG_NS, "text"); text.setAttribute("x", String(x)); text.setAttribute("y", String(y)); text.setAttribute("font-size", "12"); text.setAttribute("text-anchor", anchor); text.setAttribute("fill", "#435866"); text.textContent = value; svg.append(text); };
+    label(28, 18, `Close range ${low.toPrecision(8)} – ${high.toPrecision(8)}`);
+    label(28, 270, historicalTime(start.toString()));
+    label(892, 270, historicalTime(end.toString()), "end");
+    panel.append(svg, el("p", "muted", "Each dot is one returned observation. Coordinates use display precision; the table retains exact decimal prices and nanosecond timestamps. Missing periods stay blank. No connecting lines, interpolation, outcomes or similarity search."));
+    if (points.length !== preview.rows.length)
+        panel.append(notice(`${preview.rows.length - points.length} returned rows could not be drawn; inspect the complete exact table.`, "error"));
+    return panel;
+}
+function historicalView() {
+    const region = el("section");
+    region.id = "historical-workspace";
+    const epoch = pageEpoch, actor = session.user?.id;
+    const alive = () => pageEpoch === epoch && session.user?.id === actor && region.isConnected;
+    let datasetOffset = 0, auditOffset = 0, listGeneration = 0, selectionGeneration = 0, previewGeneration = 0, auditGeneration = 0, auditDetailGeneration = 0;
+    const library = panel("Owned quality dataset versions", "Choose an exact version to verify chart-only admission. Listing metadata is not a fresh quality assessment.");
+    const detail = el("div");
+    detail.id = "historical-selection";
+    const output = el("div");
+    output.id = "historical-preview";
+    const history = panel("Private inspection history", "Retained preparation and failure receipts. Reading a receipt does not replay source data or prove browser delivery.");
+    const auditDetail = el("div");
+    auditDetail.id = "historical-audit-detail";
+    region.append(heading("Declared historical evidence", "Historical chart inspection", "Inspect up to 512 actual rows from one owned, mapped historical dataset. Every explicit inspection retains its exact input versions and response digest."), notice("Chart-only exploratory scope. Declared availability and revision timestamps remain unverified. Causal research, PatternLab matching, fitted models and experiment evaluation are unavailable in this view. Missing required timing information can block even chart inspection."), library.box, detail, output, history.box, auditDetail);
+    async function loadDatasets() {
+        const generation = ++listGeneration, offset = datasetOffset;
+        library.body.setAttribute("aria-busy", "true");
+        try {
+            const result = await api(`/quality/datasets?limit=25&offset=${offset}`);
+            if (!alive() || generation !== listGeneration)
+                return;
+            library.body.replaceChildren(result.datasets.length ? table(["Dataset", "Rows", "Evidence", "Retained metadata"], result.datasets.map(item => [button(shortId(item.dataset_id), () => { void selectDataset(item.dataset_id); }, "link-button"), item.row_count.toLocaleString(), badge(item.evidence_mode), item.admission === "NOT_FRESH_ADMISSION" ? "Select to reverify" : item.admission]), "Owned historical-inspection dataset choices") : empty("No datasets on this page", "Import and map a source partition in Data quality. This view does not manufacture historical evidence."));
+            const previous = button("Previous historical dataset page", () => { datasetOffset = Math.max(0, offset - 25); void loadDatasets(); }, "secondary compact");
+            previous.disabled = offset === 0;
+            const next = button("Next historical dataset page", () => { datasetOffset = offset + 25; void loadDatasets(); }, "secondary compact");
+            next.disabled = result.datasets.length < 25 || offset >= 975;
+            library.body.append(el("p", "muted", `Dataset rows ${offset + 1}–${offset + result.datasets.length}; page size 25.`), el("div", "form-actions", previous, next));
+        }
+        catch (error) {
+            if (alive() && generation === listGeneration)
+                library.body.replaceChildren(notice(readableError(error), "error"), button("Retry dataset page", () => { void loadDatasets(); }, "secondary"));
+        }
+        finally {
+            if (alive() && generation === listGeneration)
+                library.body.setAttribute("aria-busy", "false");
+        }
+    }
+    async function selectDataset(id) {
+        const generation = ++selectionGeneration;
+        ++previewGeneration;
+        output.replaceChildren();
+        detail.replaceChildren(notice("Verifying the selected owned dataset and quality receipts…"));
+        try {
+            const selected = await api(`/quality/datasets/${encodeURIComponent(id)}`);
+            if (!alive() || generation !== selectionGeneration)
+                return;
+            const section = panel("Exact chart selection", selected.dataset_id, badge(selected.admission));
+            section.body.append(el("p", "", `${selected.row_count.toLocaleString()} rows · ${selected.bounds.start} to ${selected.bounds.end}`), el("p", "", selected.reasons.join(" · ") || "No additional admission reasons recorded."), patternJson("Dataset, mapping and quality provenance", selected));
+            if (selected.evidence_mode !== "HISTORICAL" || selected.admission !== "HISTORICAL_EXPLORATORY" || selected.causal_eligible) {
+                section.body.append(notice("This version does not satisfy the historical chart-only profile. The current admission rules remain in force; inspect the quality reasons above.", "error"));
+                detail.replaceChildren(section.box);
+                return;
+            }
+            const form = el("form");
+            form.id = "historical-inspection-form";
+            const start = field("First normalized row (zero based)", "historical_start", "0", { type: "number", min: "0", max: String(Math.max(0, selected.row_count - 1)), step: "1" });
+            const count = field("Number of rows (maximum 512)", "historical_count", String(Math.min(128, selected.row_count)), { type: "number", min: "1", max: "512", step: "1" });
+            const message = el("div");
+            message.setAttribute("aria-live", "polite");
+            const submit = el("button", "button secondary", "Inspect and retain audit receipt");
+            submit.type = "submit";
+            const invalidate = () => { ++previewGeneration; output.replaceChildren(); message.replaceChildren(); };
+            start.input.addEventListener("input", invalidate);
+            count.input.addEventListener("input", invalidate);
+            form.append(notice("This explicit read retains a private operational audit. It allocates no research object, model, experiment or validation identity."), el("div", "form-grid", start.box, count.box), submit, message);
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const request = ++previewGeneration, first = Number(start.input.value), length = Number(count.input.value);
+                output.replaceChildren();
+                message.replaceChildren();
+                if (!Number.isInteger(first) || !Number.isInteger(length) || first < 0 || length < 1 || length > 512 || first + length > selected.row_count) {
+                    message.append(notice("Choose 1–512 rows entirely inside the selected dataset.", "error"));
+                    return;
+                }
+                const current = () => alive() && generation === selectionGeneration && request === previewGeneration && form.isConnected;
+                submit.disabled = true;
+                form.setAttribute("aria-busy", "true");
+                try {
+                    const preview = await api("/quality/inspections", { dataset_id: selected.dataset_id, record_digest: selected.record_digest, quality_report_digest: selected.quality_report_digest, start: first, stop: first + length });
+                    if (!current())
+                        return;
+                    if (preview.snapshot.dataset_id !== selected.dataset_id || preview.snapshot.record_digest !== selected.record_digest || preview.snapshot.quality_report_digest !== selected.quality_report_digest || preview.row_start !== first || preview.row_stop !== first + length || preview.rows.length !== length || preview.causal_research !== "BLOCKED")
+                        throw new Error("The response does not match this exact chart selection. Inspect retained audit history.");
+                    renderPreview(preview);
+                    message.replaceChildren(notice(`Inspection ${preview.inspection_id} prepared and retained.`));
+                }
+                catch (error) {
+                    if (current())
+                        message.replaceChildren(notice(`${readableError(error)} Inspect retained history before repeating a request with an uncertain outcome.`, "error"));
+                }
+                finally {
+                    submit.disabled = false;
+                    form.setAttribute("aria-busy", "false");
+                    if (alive()) {
+                        auditOffset = 0;
+                        void loadAudit();
+                    }
+                }
+            });
+            section.body.append(form);
+            detail.replaceChildren(section.box);
+        }
+        catch (error) {
+            if (alive() && generation === selectionGeneration)
+                detail.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    function renderPreview(preview) {
+        const report = panel("Observed rows", `${preview.row_start} through ${preview.row_stop - 1} · ${preview.rows.length} actual bars`, badge("HISTORICAL · EXPLORATORY"));
+        report.body.append(notice(`${preview.availability_mode}. Causal research remains ${preview.causal_research}. ${preview.limitations.join(" ")}`), historicalChart(preview));
+        const timestamp = (value) => el("div", "", historicalTime(value), el("div", "mono", value ?? "Unknown"));
+        const numeric = preview.feature_columns.map((_, index) => index + 3);
+        report.body.append(table(["Normalized / source row", "Open UTC / exact ns", "Close UTC / exact ns", ...preview.feature_columns, "Availability UTC / exact ns", "Revision UTC / exact ns", "Revision declaration", "Ingestion UTC / exact ns", "Gap before row (ns)"], preview.rows.map(row => [`${row.row} / ${row.source_row}`, timestamp(row.open_ns), timestamp(row.close_ns), ...row.values, timestamp(row.available_ns), timestamp(row.revision_ns), row.revision_time_status, timestamp(row.ingestion_ns), row.gap_before_ns === null ? (row.row === preview.row_start ? "Predecessor outside this page" : "No positive gap recorded") : row.gap_before_ns]), "Exact historical observation prices, timings and gaps", numeric), el("p", "muted", "The first returned row has no predecessor context. Its null gap does not establish continuity. Null gaps on later rows mean no positive gap was recorded between those returned bars; no missing observations are filled."), patternJson("Exact source, mapping and immutable receipts", { inspection_id: preview.inspection_id, inspection_receipt_digest: preview.inspection_receipt_digest, snapshot: preview.snapshot, source: preview.source, mapping: preview.mapping }));
+        output.replaceChildren(report.box);
+    }
+    async function loadAudit() {
+        const generation = ++auditGeneration, offset = auditOffset;
+        try {
+            const result = await api(`/quality/inspections?limit=25&offset=${offset}`);
+            if (!alive() || generation !== auditGeneration)
+                return;
+            history.body.replaceChildren(result.inspections.length ? table(["Inspection", "Created UTC", "Preparation state", "Retained error"], result.inspections.map(item => [button(shortId(item.inspection_id), () => { void selectAudit(item.inspection_id); }, "link-button"), item.created_at, statusBadge(item.status), item.error_code ?? "—"]), "Private historical inspection audit metadata") : empty("No inspections on this page", "An explicit chart inspection retains its preparation or failure state here."));
+            const previous = button("Previous inspection receipts", () => { auditOffset = Math.max(0, offset - 25); void loadAudit(); }, "secondary compact");
+            previous.disabled = offset === 0;
+            const next = button("Next inspection receipts", () => { auditOffset = offset + 25; void loadAudit(); }, "secondary compact");
+            next.disabled = result.inspections.length < 25 || offset >= 9975;
+            history.body.append(el("div", "form-actions", previous, next, button("Refresh inspection receipts", () => { void loadAudit(); }, "tertiary compact")));
+        }
+        catch (error) {
+            if (alive() && generation === auditGeneration)
+                history.body.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    async function selectAudit(id) {
+        const generation = ++auditDetailGeneration;
+        auditDetail.replaceChildren(notice("Loading retained audit metadata…"));
+        try {
+            const item = await api(`/quality/inspections/${encodeURIComponent(id)}`);
+            if (!alive() || generation !== auditDetailGeneration)
+                return;
+            auditDetail.replaceChildren(notice("Retained server preparation metadata only. This is not proof of client delivery and does not replay source bytes or upgrade historical timing."), patternJson(`Inspection ${item.inspection_id} · ${item.status}`, item));
+        }
+        catch (error) {
+            if (alive() && generation === auditDetailGeneration)
+                auditDetail.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    queueMicrotask(() => { if (alive()) {
+        void loadDatasets();
+        void loadAudit();
+    } });
+    return region;
+}
+function comparisonView() {
+    const region = el("section"), epoch = pageEpoch, actor = session.user?.id;
+    const alive = () => pageEpoch === epoch && session.user?.id === actor && region.isConnected;
+    const selection = panel("Choose recorded experiments", "Inspect up to four owned results. Nothing is rerun, optimized or promoted."), detail = panel("Exact results side by side", "Differences in data, units and validation protocol can make numerical ranking inappropriate.");
+    const feedback = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    region.append(heading("Run comparison", "Compare the evidence and assumptions.", "Every column comes from an existing verified experiment."), notice("Independent runs are separate research candidates, not a combined portfolio. A software pass is not empirical validation or evidence of future profit."), feedback, selection.box, detail.box);
+    let available = [], offset = 0, generation = 0;
+    const chosen = new Set();
+    const compare = button("Inspect selected results", () => { void inspect(); });
+    compare.disabled = true;
+    function render() {
+        selection.body.replaceChildren(table(["Select", "Job", "Kind / market", "State", "Experiment"], available.slice(offset, offset + 25).map(job => {
+            const input = el("input");
+            input.type = "checkbox";
+            input.checked = chosen.has(job.id);
+            input.setAttribute("aria-label", `Compare ${job.id}`);
+            input.addEventListener("change", () => {
+                if (input.checked && chosen.size >= 4) {
+                    input.checked = false;
+                    feedback.replaceChildren(notice("Select no more than four recorded results."));
+                    return;
+                }
+                generation += 1;
+                detail.body.replaceChildren();
+                if (input.checked)
+                    chosen.add(job.id);
+                else
+                    chosen.delete(job.id);
+                compare.disabled = chosen.size < 2;
+                feedback.replaceChildren(notice(`${chosen.size} of four result columns selected.`));
+            });
+            return [input, shortId(job.id), jobLabel(job), statusBadge(job.status), job.experiment_id ? shortId(job.experiment_id) : "No experiment"];
+        }), "Owned completed or failed research candidates"), pageControls("Recorded runs", offset, available.slice(offset, offset + 25).length, Math.max(0, available.length - 1), next => { offset = next; render(); }), compare);
+    }
+    async function inspect() {
+        const identities = [...chosen], mine = ++generation;
+        if (identities.length < 2 || identities.length > 4)
+            return;
+        compare.disabled = true;
+        detail.body.replaceChildren(el("p", "loading-message", "Verifying each retained result and its exact source graph…"));
+        try {
+            const details = [];
+            // Sequential requests respect the shared verified-reader resource bound.
+            for (const identity of identities) {
+                details.push(await api(`/jobs/${encodeURIComponent(identity)}`));
+                if (!alive() || mine !== generation)
+                    return;
+            }
+            const rows = [
+                ["Permanent experiment", value => record(value.run).experiment_id],
+                ["Job state", value => record(value.job).status],
+                ["Research lifecycle", value => record(value.run).lifecycle_status],
+                ["Evaluation outcome", value => record(value.run).evaluation_outcome],
+                ["Counted attempts", value => record(value.run).variants_attempted],
+                ["Configuration digest", value => record(record(value.run).bindings).configuration_digest],
+                ["Input manifest digest", value => record(record(value.run).bindings).dataset_digest],
+                ["Result digest", value => record(value.run).result_digest],
+                ["Model identity status", value => value.model_identity_status ?? "See method-specific model receipts"],
+                ["Computed metrics", value => { const result = record(record(value.run).result); return result.summary ?? result.metrics ?? result.folds ?? result.outcomes ?? "No comparable scalar metrics"; }],
+            ];
+            detail.body.replaceChildren(table(["Evidence", ...identities.map(shortId)], rows.map(([name, read]) => [name, ...details.map(value => el("pre", "json-view", metadataText(read(value))))]), "Verified recorded experiment comparison"));
+            details.forEach((value, index) => {
+                const run = record(value.run), job = record(value.job);
+                detail.body.append(patternJson(`Exact configuration and result: ${identities[index]}`, { job_id: job.id, job_configuration: job.config, frozen_configuration: run.configuration, bindings: run.bindings, result: run.result, disposition: run.decision }));
+            });
+            feedback.replaceChildren(notice(`${details.length} existing results verified. This comparison created no new experiment and made no selection or promotion decision.`));
+        }
+        catch (error) {
+            if (alive() && mine === generation)
+                detail.body.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            if (alive() && mine === generation)
+                compare.disabled = chosen.size < 2;
+        }
+    }
+    void api("/jobs").then(value => {
+        if (!alive())
+            return;
+        available = value.filter(job => Boolean(job.experiment_id) && !active(job));
+        if (!available.length) {
+            selection.body.append(notice("No completed or failed experiments are available to this account."));
+            return;
+        }
+        render();
+    }).catch(error => { if (alive())
+        feedback.replaceChildren(notice(readableError(error), "error")); });
+    return region;
+}
+/* Integration draft: owner prepares offline CLI commands; no backup or shutdown HTTP action. */
+function backupPowerShellLiteral(value) { return `'${value.replaceAll("'", "''")}'`; }
+function backupDPath(value, label) {
+    const normalized = value.replaceAll("/", "\\");
+    if (value !== value.trim() || normalized.length > 240 || !/^D:\\/i.test(normalized))
+        throw new Error(`${label} must be an absolute path on D:, no longer than 240 characters.`);
+    const parts = normalized.slice(3).split("\\");
+    if (!parts.length || parts.some(part => !part || part === "." || part === ".." || /[<>:"|?*\x00-\x1f\x7f`$&;(){}\[\]!%^']/.test(part) || /[. ]$/.test(part) || /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i.test(part)))
+        throw new Error(`${label} contains an unsupported Windows path component or shell metacharacter.`);
+    return `D:\\${parts.join("\\")}`;
+}
+function backupPlanCommands(runtimeValue, archiveValue, destinationValue, revision, portValue) {
+    const runtime = backupDPath(runtimeValue, "Original runtime"), archive = backupDPath(archiveValue, "New archive"), destination = backupDPath(destinationValue, "New restore destination");
+    const related = (a, b) => a.toLowerCase() === b.toLowerCase() || a.toLowerCase().startsWith(`${b.toLowerCase()}\\`) || b.toLowerCase().startsWith(`${a.toLowerCase()}\\`);
+    if (!archive.toLowerCase().endsWith(".qhbackup"))
+        throw new Error("Choose a new archive filename ending in .qhbackup.");
+    if (related(runtime, archive) || related(runtime, destination) || related(archive, destination))
+        throw new Error("Use distinct, non-nested runtime, archive and restore paths. Keep the original runtime.");
+    if (!/^[0-9a-f]{40}$/.test(revision))
+        throw new Error("Enter the exact 40-character lowercase source commit. A revision label does not capture uncommitted source changes.");
+    if (!/^\d{4,5}$/.test(portValue) || Number(portValue) < 1024 || Number(portValue) > 65535)
+        throw new Error("Choose a separate local port from 1024 through 65535.");
+    const quote = backupPowerShellLiteral;
+    return {
+        create: `& '.venv\\Scripts\\python.exe' -m quant_hunter.web.backup create --runtime ${quote(runtime)} --archive ${quote(archive)} --code-revision ${quote(revision)}`,
+        restore: `& '.venv\\Scripts\\python.exe' -m quant_hunter.web.backup restore --archive ${quote(archive)} --destination ${quote(destination)}`,
+        start: `& 'pwsh.exe' -NoLogo -NoProfile -File 'scripts\\windows\\start_v0.ps1' -Runtime ${quote(destination)} -Port ${portValue}`,
+    };
+}
+function backupSettingsPanel() {
+    const area = panel("Private backup and recovery", "Prepare an offline recovery plan using the existing stopped-runtime tools.");
+    if (session.user?.role !== "owner") {
+        area.body.append(notice("An owner manages private runtime backups and separate credential recovery."));
+        return area.box;
+    }
+    const epoch = pageEpoch, actor = session.user.id;
+    const alive = () => pageEpoch === epoch && session.user?.id === actor && session.user?.role === "owner" && area.box.isConnected;
+    const stamp = new Date().toISOString().replaceAll(":", "").replaceAll(".", "");
+    const runtime = field("Original runtime on D:", "backup-runtime", "", { hint: "The reported running path is loaded once. Check it before preparing commands." });
+    const archive = field("New private archive on D:", "backup-archive", `D:\\quant-hunter\\.local\\backups\\owner-${stamp}.qhbackup`, { hint: "Must not exist. Keep this unencrypted private archive out of Git and shared exports." });
+    const destination = field("New restore destination on D:", "backup-destination", `D:\\quant-hunter\\.local\\restored-${stamp}`, { hint: "Must not exist; it is separate from the original runtime." });
+    const revision = field("Exact source commit", "backup-revision", "", { hint: "40 lowercase hexadecimal characters. Confirm that the installed source matches this commit; this form does not inspect Git or back up the checkout." });
+    const port = field("Separate restored-instance port", "backup-port", "8766", { type: "number", min: "1024", max: "65535", step: "1", hint: "Choose a free local port distinct from the original instance." });
+    const feedback = el("div"), output = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    const form = el("form");
+    form.autocomplete = "off";
+    const submit = el("button", "button", "Prepare offline commands");
+    submit.type = "submit";
+    let runtimeEdited = false, planEpoch = 0;
+    runtime.input.addEventListener("input", () => { runtimeEdited = true; });
+    for (const control of [runtime.input, archive.input, destination.input, revision.input, port.input]) {
+        control.maxLength = 240;
+        control.spellcheck = false;
+        control.dataset.privateField = "true";
+        control.addEventListener("input", () => { planEpoch += 1; output.replaceChildren(); feedback.replaceChildren(); });
+    }
+    revision.input.maxLength = 40;
+    revision.input.pattern = "[0-9a-f]{40}";
+    form.append(el("div", "form-grid", runtime.box, archive.box, destination.box, revision.box, port.box), el("div", "form-actions", submit));
+    area.body.append(notice("This form prepares commands only. No backup, restore, shutdown or external request is performed. The command-line tool checks the runtime lease and refuses existing archives or restore destinations."), form, feedback, output);
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (!alive())
+            return;
+        const mine = ++planEpoch;
+        output.replaceChildren();
+        feedback.replaceChildren();
+        try {
+            if (String(Number(port.input.value)) === window.location.port)
+                throw new Error("Choose a restored-instance port different from the current server port.");
+            const commands = backupPlanCommands(runtime.input.value, archive.input.value, destination.input.value, revision.input.value, port.input.value);
+            const commandBlock = (label, command) => {
+                const copy = button(`Copy ${label} command`, () => {
+                    copy.disabled = true;
+                    void Promise.resolve().then(() => {
+                        if (!alive() || mine !== planEpoch)
+                            return;
+                        return navigator.clipboard.writeText(command);
+                    }).then(() => {
+                        if (alive() && mine === planEpoch)
+                            feedback.replaceChildren(notice(`${label} command copied. It has not been executed.`));
+                    }).catch(() => {
+                        if (alive() && mine === planEpoch)
+                            feedback.replaceChildren(notice("Clipboard unavailable. Select the command text and copy it manually.", "error"));
+                    }).finally(() => { if (alive() && mine === planEpoch)
+                        copy.disabled = false; });
+                }, "secondary compact");
+                return el("div", "", el("pre", "json-view", command), el("div", "form-actions", copy));
+            };
+            output.append(notice("Plan prepared, not executed. Path existence, installed source revision, free disk space and stopped-runtime state have not been verified by this page."), el("h3", "", "1. Stop and create a new archive"), el("p", "", "Finish active work, use Ctrl+C in the original server terminal, and wait for the worker to stop. Then run the command below from D:\\quant-hunter in PowerShell. The page will become unavailable after shutdown; copy your plan first. Do not work around a busy runtime lease."), commandBlock("Create archive", commands.create), el("h3", "", "2. Restore to the new destination"), el("p", "", "Run this only after creation succeeds. Restoration validates the manifest, file hashes and supported SQLite structure before completing. A failed restore keeps its incomplete marker; retain it and choose a new destination after addressing the cause."), commandBlock("Restore archive", commands.restore), el("h3", "", "3. Inspect the restored instance"), commandBlock("Start restored instance", commands.start), el("p", "", "Use the restored account to inspect dataset identities, experiment results and task history in the distinct instance. Startup performs evidence recovery; file and SQLite checks alone do not prove the scientific graph. Preserve the original runtime. Record the actual CLI outcomes and restored-instance checks separately; this page cannot certify success."), el("h3", "", "Separate credential recovery"), el("p", "", "Runtime archives contain private accounts, password hashes, sessions and imported data under their original rights. They exclude credential vaults and master keys. Follow docs/v0/CREDENTIALS.md: stop consumers, preserve the complete private root and every key generation in separate owner-controlled storage, retain the original Windows DPAPI identity context, and verify with synthetic credentials. Restoring an older vault can restore older revocation state; reconcile owner intent before any consumer is enabled."), el("p", "field-hint", "Existing backup limits: 50,000 files, 64 MiB per file and 30 GB total; free-space reserve is 20 GiB or 15% of the volume, whichever is larger. The CLI remains authoritative. Full procedure: docs/v0/OPERATIONS.md. Repository, dependencies and the whole host are outside this runtime archive."));
+        }
+        catch (error) {
+            feedback.replaceChildren(notice(readableError(error), "error"));
+        }
+    });
+    queueMicrotask(() => {
+        if (!alive())
+            return;
+        void api("/project").then(value => {
+            if (!alive() || runtimeEdited)
+                return;
+            runtime.input.value = backupDPath(value.runtime, "Reported runtime");
+        }).catch(error => { if (alive())
+            feedback.replaceChildren(notice(`Could not load the reported runtime. Enter and check it manually. ${readableError(error)}`, "error")); });
+    });
+    return area.box;
+}
+/* Persistent barrier affects only this local synthetic paper worker. */
+function paperHaltPanel() {
+    const area = panel("Local paper stop", "A persistent barrier across every account's local paper sessions.");
+    const epoch = pageEpoch, actor = session.user?.id;
+    const alive = () => pageEpoch === epoch && session.user?.id === actor && area.box.isConnected;
+    let revision = 0;
+    const state = el("div"), feedback = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    const refresh = button("Refresh local stop status", () => { void load(); }, "secondary");
+    const stop = button("Stop all local paper sessions", () => { void act(false); });
+    const clear = button("Clear local paper stop", () => { void act(true); }, "secondary");
+    async function act(clearing) {
+        stop.disabled = clear.disabled = true;
+        feedback.replaceChildren();
+        try {
+            const value = await api(`/paper/halt${clearing ? "/clear" : ""}`, { expected_revision: revision });
+            if (!alive())
+                return;
+            render(value);
+            feedback.replaceChildren(notice(clearing ? "Stop cleared after verifying retained protection. Sessions remain paused or killed; no automatic resume." : "Persistent local stop recorded. Inspect protection status as the worker cancels local reservations."));
+        }
+        catch (error) {
+            if (alive())
+                feedback.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            if (alive())
+                await load();
+        }
+    }
+    function render(value) {
+        revision = Number(value.revision);
+        const counts = record(value.counts);
+        state.replaceChildren(statusBadge(value.halted === true ? "HALTED" : "CLEAR"), notice(`Revision ${revision}. Scope: local synthetic paper only. External orders and other software are outside this control.`));
+        if (session.user?.role === "owner") {
+            state.append(table(["Pending protection", "Verified protection", "Blocked / uncertain"], [[display(counts.pending ?? 0), display(counts.protected ?? 0), display(counts.blocked ?? 0)]], "Actual global local-paper protection counts"), patternJson("Retained local protection evidence", value));
+            stop.disabled = value.halted === true;
+            clear.disabled = value.halted !== true || Number(counts.pending ?? 0) !== 0 || Number(counts.blocked ?? 0) !== 0;
+        }
+    }
+    async function load() {
+        refresh.disabled = true;
+        try {
+            const value = await api("/paper/halt");
+            if (alive())
+                render(value);
+        }
+        catch (error) {
+            if (alive()) {
+                stop.disabled = clear.disabled = true;
+                feedback.replaceChildren(notice(readableError(error), "error"));
+            }
+        }
+        finally {
+            if (alive())
+                refresh.disabled = false;
+        }
+    }
+    stop.disabled = clear.disabled = true;
+    area.body.append(notice("Stop prevents new ordinary paper steps and new activation. Existing positions, cash and audit history are retained. Uncertain protection stays visible; clearing requires verified receipts and never resumes sessions."), state, feedback, el("div", "form-actions", ...(session.user?.role === "owner" ? [stop, clear] : []), refresh));
+    queueMicrotask(() => { if (alive())
+        void load(); });
+    return area.box;
+}
+function paperPortfolioPanel() {
+    const rows = (value) => Array.isArray(value) ? value.map(record) : [];
+    const area = panel("Recorded paper portfolio", "One owned session's retained cash, positions, exposure and economic history.");
+    const epoch = pageEpoch, actor = session.user?.id;
+    const alive = () => pageEpoch === epoch && session.user?.id === actor && area.box.isConnected;
+    const picker = selectField("Owned paper portfolio", "paper-portfolio-session", [], ""), feedback = el("div"), detail = el("div");
+    feedback.setAttribute("aria-live", "polite");
+    let generation = 0;
+    const refresh = button("Refresh paper portfolio", () => { void load(); }, "secondary");
+    picker.input.addEventListener("change", () => { void inspect(picker.input.value); });
+    area.body.append(notice("Every session has separate initial capital. Values are the last immutable reported state, with fresh graph verification. No wealth or return is pooled across runs."), picker.box, refresh, feedback, detail);
+    async function load() {
+        const mine = ++generation;
+        refresh.disabled = true;
+        try {
+            const value = await api("/paper/portfolio/sessions");
+            if (!alive() || mine !== generation)
+                return;
+            const choices = Array.isArray(value) ? value : rows(value.sessions);
+            const old = picker.input.value;
+            picker.input.replaceChildren(...choices.map(item => { const option = el("option", "", `${shortId(String(item.id ?? item.session_id))} · ${item.status ?? item.workflow_status}`); option.value = String(item.id ?? item.session_id); return option; }));
+            if (choices.some(item => String(item.id ?? item.session_id) === old))
+                picker.input.value = old;
+            if (!choices.length) {
+                detail.replaceChildren(notice("No owned local paper session is available."));
+                return;
+            }
+            await inspect(picker.input.value);
+        }
+        catch (error) {
+            if (alive() && mine === generation)
+                feedback.replaceChildren(notice(readableError(error), "error"));
+        }
+        finally {
+            if (alive())
+                refresh.disabled = false;
+        }
+    }
+    async function inspect(identity) {
+        const mine = ++generation;
+        detail.replaceChildren(el("p", "loading-message", "Verifying the recorded portfolio..."));
+        feedback.replaceChildren();
+        try {
+            const value = await api(`/paper/portfolio/sessions/${encodeURIComponent(identity)}`);
+            if (!alive() || mine !== generation || identity !== picker.input.value)
+                return;
+            const current = record(value.current), duration = record(value.drawdown_duration);
+            detail.replaceChildren(notice(`Availability: ${value.availability}. ${value.reason ?? ""} Unreported native revisions: ${value.unreported_native_revisions ?? "Unavailable"}.`));
+            if (Object.keys(current).length) {
+                detail.append(el("div", "stats-grid", stat("Recorded equity", display(current.recorded_equity), String(current.base_currency)), stat("Reserved buy cash", display(current.reserved_buy_cash), String(current.base_currency)), stat("Drawdown fraction", display(current.recorded_drawdown), "Recorded native high-water basis"), stat("Largest position / equity", display(current.largest_position_fraction_of_equity), String(current.concentration_status))), table(["Cash currency", "Amount"], rows(current.cash_balances).map(row => [String(row.currency), String(row.amount)]), "Recorded paper cash balances", [1]), table(["Instrument", "Quantity", "Cost basis", "Bid-marked value", "Fraction of equity", "Quote time", "Mark status"], rows(current.positions).map(row => [String(row.instrument_id), String(row.quantity), String(row.cost_basis), display(row.bid_marked_value), display(row.fraction_of_equity), display(row.quote_at), String(row.mark_status)]), "Recorded paper positions and exposures", [1, 2, 3, 4]));
+            }
+            detail.append(patternJson("Observation-based drawdown duration", duration), notice("Duration uses retained command observations only. It does not interpolate unobserved recovery. A right-censored duration remains ongoing at the last recorded observation."));
+            const timeline = rows(value.timeline), target = el("div");
+            let offset = 0;
+            const render = () => {
+                target.replaceChildren(table(["Native revision", "Observed UTC", "Equity", "High water", "Drawdown fraction", "Command"], timeline.slice(offset, offset + 100).map(row => [String(row.engine_revision), String(row.at), String(row.equity), String(row.high_water), String(row.drawdown), display(row.command_id)]), "Verified native economic observations", [0, 2, 3, 4]));
+                const previous = button("Previous portfolio observations", () => { offset = Math.max(0, offset - 100); render(); }, "secondary compact"), next = button("Next portfolio observations", () => { offset += 100; render(); }, "secondary compact");
+                previous.disabled = offset === 0;
+                next.disabled = offset + 100 >= timeline.length;
+                target.append(el("div", "form-actions", previous, next), notice(`${timeline.length} retained native observations. Controls without an economic command add no point.`));
+            };
+            render();
+            detail.append(target, patternJson("Exact portfolio bindings and report anchors", value));
+        }
+        catch (error) {
+            if (alive() && mine === generation)
+                detail.replaceChildren(notice(readableError(error), "error"));
+        }
+    }
+    queueMicrotask(() => { if (alive())
+        void load(); });
+    return area.box;
 }

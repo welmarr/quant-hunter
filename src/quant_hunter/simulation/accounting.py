@@ -104,13 +104,15 @@ class InstrumentSpec:
         _id(self.instrument_id)
         _id(self.symbol)
         _currency(self.quote_currency)
-        if self.kind not in {"EQUITY", "FX_SPOT", "CRYPTO_SPOT"}:
+        if self.kind not in {"EQUITY", "ETF", "FX_SPOT", "CRYPTO_SPOT"}:
             raise AccountingError(
                 "UNSUPPORTED: derivative, short and leverage execution"
             )
         if self.base_currency is not None:
             _currency(self.base_currency)
-        if self.kind != "EQUITY" and (
+        if self.kind == "ETF" and self.base_currency not in {None, self.quote_currency}:
+            raise AccountingError("cash ETF base and quote currencies must match")
+        if self.kind not in {"EQUITY", "ETF"} and (
             self.base_currency is None or self.base_currency == self.quote_currency
         ):
             raise AccountingError("distinct spot base and quote currencies required")
@@ -728,7 +730,10 @@ def _transition(book: BookSnapshot, event: BookEvent) -> BookSnapshot:
             book, event, event.effective_at, event.available_at, event.price_basis
         )
         _number(event.ratio, positive=True)
-        if spec.kind != "EQUITY" or event.open_order_policy != "CANCEL_OPEN":
+        if (
+            spec.kind not in {"EQUITY", "ETF"}
+            or event.open_order_policy != "CANCEL_OPEN"
+        ):
             raise AccountingError(
                 "unsupported split instrument or order adjustment policy"
             )
@@ -760,7 +765,7 @@ def _transition(book: BookSnapshot, event: BookEvent) -> BookSnapshot:
         _corporate(book, event, event.ex_at, event.available_at, event.price_basis)
         _utc(event.payment_at)
         _number(event.amount_per_share)
-        if spec.kind != "EQUITY" or event.payment_at < event.ex_at:
+        if spec.kind not in {"EQUITY", "ETF"} or event.payment_at < event.ex_at:
             raise AccountingError("unsupported dividend or payment before ex-date")
         if any(d.dividend_id == event.dividend_id for d in book.dividends):
             raise AccountingError("dividend entitlement already recorded")

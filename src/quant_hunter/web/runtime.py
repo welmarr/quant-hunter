@@ -6,6 +6,7 @@ import base64
 import hashlib
 import platform
 import sys
+import time
 from dataclasses import asdict
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -17,17 +18,31 @@ from quant_hunter.data_quality import QualityService
 from quant_hunter.imports import ImportService
 from quant_hunter.lab import LabService
 from quant_hunter.markets.registry import InstrumentRegistry
+from quant_hunter.notifications.telegram import FixedTelegramHTTPS
+from quant_hunter.notifications.types import TelegramPolicy
 from quant_hunter.publications import PublicationService
 from quant_hunter.simulation import Costs, SimulationConfig, simulate, synthetic_fixture
+from quant_hunter.simulation.paper_engine import PaperEngine
 from quant_hunter.sources import SourceProbeService
 from quant_hunter.sources.equity_probes import EquityProbeService
 from quant_hunter.sources.providers import ProviderService
 from quant_hunter.storage import ImmutableObjectStore
+from quant_hunter.web.broker_access import BrokerAccess
 from quant_hunter.web.connections import Connections, SourceRouter, default_private_root
 from quant_hunter.web.data_access import DataAccess
+from quant_hunter.web.halt_admission import HaltReadAdmission, ResumeReadAdmission
+from quant_hunter.web.historical_access import HistoricalPreviewAccess
+from quant_hunter.web.notification_access import NotificationAccess
+from quant_hunter.web.notification_projection import NotificationProjection
+from quant_hunter.web.paper_access import PaperAccess
+from quant_hunter.web.paper_halt import GlobalPaperHalt
+from quant_hunter.web.paper_portfolio import PaperPortfolio
+from quant_hunter.web.pattern_access import PatternAccess
 from quant_hunter.web.publication_access import PublicationAccess
 from quant_hunter.web.quality_access import QualityAccess
-from quant_hunter.web.state import AppState
+from quant_hunter.web.state import AccessError, AppState, ResourceBusyError, User
+from quant_hunter.web.study_model_ids import StudyModelIds
+from quant_hunter.web.validation_access import ValidationAccess
 
 
 def json_value(value: object) -> JsonValue:
@@ -49,7 +64,7 @@ def json_value(value: object) -> JsonValue:
 
 def fixture_catalog() -> list[dict[str, object]]:
     records: list[dict[str, object]] = []
-    for market in ("EQUITY", "FX_SPOT"):
+    for market in ("EQUITY", "ETF", "FX_SPOT"):
         instrument, bars = synthetic_fixture(market)
         records.append(
             {
@@ -163,11 +178,119 @@ class Runtime:
             self.data,
             self.instruments,
         )
+        self.patterns = PatternAccess(self.state, self.quality, self.lab)
+        self.historical = HistoricalPreviewAccess(self.state, self.quality)
+        self.validation = ValidationAccess(self.state, self.lab, self.quality)
+        self.study_models = StudyModelIds(self.state, self.lab)
+        self.paper = PaperAccess(
+            self.state,
+            self.lab,
+            PaperEngine(root / "paper.sqlite3"),
+            capacity=self.data._capacity,
+        )
+        self.paper_halt = GlobalPaperHalt(self.paper)
+        self.halt_reads = HaltReadAdmission(self.paper_halt)
+        self.paper_halt.read_resource = self.halt_reads.inspection
+        self.resume_reads = ResumeReadAdmission(self.paper)
+        self.paper.resume_resource = self.resume_reads.inspection
+        self.paper_portfolio = PaperPortfolio(
+            self.paper, inspection=self.quality.inspection
+        )
+        self.brokers = BrokerAccess(
+            self.state,
+            self.paper,
+            self.lab.objects,
+            private_root or default_private_root(root),
+            repository,
+            resource=lambda user, _operation: self.quality.inspection(user),
+        )
+        self._paper_turn = False
+        self.notifications = NotificationAccess(
+            self.state,
+            private_root or default_private_root(root),
+            repository,
+            resource=self.quality.inspection,
+            paper_detail=self.paper_detail,
+            policy=TelegramPolicy.REVIEWED_V0_TOKEN_PATH,
+            transport=FixedTelegramHTTPS(network_enabled=True),
+        )
+        self.notification_projection = NotificationProjection(self.notifications)
+        self.notification_projection_error: str | None = None
+        self._notification_due = 0.0
+        self._notification_owner = 0
+
+    def paper_detail(self, user: User, paper_id: str) -> JsonRecord:
+        """Verified owned paper projection under shared read admission."""
+        with self.quality.inspection(user):
+            return self.paper.get(user, paper_id)
+
+    def _project_notifications(self) -> None:
+        """Bounded local projection; notification failure never changes research."""
+        now = time.monotonic()
+        if now < self._notification_due:
+            return
+        self._notification_due = now + 5.0
+        try:
+            with self.state.connection() as db:
+                count = db.execute(
+                    "SELECT COUNT(*) FROM (SELECT 1 FROM jobs LIMIT 10001)"
+                ).fetchone()[0]
+                if count > 10000:
+                    self.notification_projection_error = "LOCAL_DELIVERY_UNAVAILABLE"
+                    return
+                row = db.execute(
+                    "SELECT DISTINCT owner_id FROM jobs WHERE owner_id>? "
+                    "AND status IN ('SUCCEEDED','FAILED','CANCELLED') "
+                    "ORDER BY owner_id LIMIT 1",
+                    (self._notification_owner,),
+                ).fetchone()
+            if row is None:
+                self._notification_owner = 0
+                return
+            user = self.state.user(int(row[0]))
+            projected = self.notification_projection.sweep(user, limit=100)
+            self._notification_owner = user.id
+            self.notification_projection_error = (
+                "LOCAL_DELIVERY_UNAVAILABLE"
+                if projected["local_delivery_unavailable"]
+                else None
+            )
+        except Exception:
+            self.notification_projection_error = "LOCAL_DELIVERY_UNAVAILABLE"
+
+    def job_detail(self, user: User, job_id: str) -> JsonRecord:
+        """Every public job route uses the same owned evidence verification."""
+        job = self.state.job(user, job_id)
+        kind = job.config.get("kind")
+        if kind in {"PATTERN_JOB", "PATTERN_CORPUS"}:
+            return self.patterns.job(user, job_id)
+        if kind == "CHRONOLOGICAL_VALIDATION":
+            return self.validation.get(user, job_id)
+        run: JsonRecord | None = None
+        identity_status: str | None = None
+        if job.experiment_id:
+            with self.quality.inspection(user):
+                run = self.lab.get_run(job.experiment_id)
+                if kind == "CRP_STUDY":
+                    config = cast(JsonRecord, run["configuration"])
+                    if "model_registration" in config:
+                        run = self.study_models.inspect(user, job)
+                        identity_status = "VERIFIED_PREREGISTERED_MODELS"
+                    else:
+                        identity_status = "LEGACY_WITHOUT_MODEL_PREREGISTRATION"
+        return {
+            "job": cast(JsonRecord, asdict(job)),
+            "run": run,
+            "model_identity_status": identity_status,
+        }
 
     def recover(self) -> None:
         """Never rerun an unknown interrupted attempt. Retain failure and require retry."""
         self.data.recover()
         self.publications.recover()
+        self.patterns.recover()
+        self.paper.recover()
+        paper_experiments = self.paper.owned_experiment_ids()
         for job in self.state.interrupted():
             if job.experiment_id:
                 run = self.lab.recover_run(job.experiment_id)
@@ -185,25 +308,61 @@ class Runtime:
             )
         # An interruption between begin_run and job.bind can leave an orphan.
         for run in self.lab.list_runs():
-            if run["lifecycle_status"] == "RUNNING":
+            if (
+                run["lifecycle_status"] == "RUNNING"
+                and run["experiment_id"] not in paper_experiments
+            ):
                 self.lab.recover_run(str(run["experiment_id"]))
 
+    def _process_paper(self) -> bool:
+        try:
+            return self.paper_halt.process_one()
+        except ResourceBusyError:
+            # Capacity is temporary, not failed protective evidence. The worker
+            # backs off and retains every task; other failures stay fail-closed.
+            return False
+
     def process_one(self) -> bool:
+        self._project_notifications()
+        self._paper_turn = not self._paper_turn
+        if self._paper_turn and self.paper_halt.has_pending() and self._process_paper():
+            return True
         job = self.state.claim()
         if job is None:
-            return False
+            return self._process_paper() if self.paper_halt.has_pending() else False
         experiment_id: str | None = None
         try:
+            user = self.state.user(job.owner_id)
+            if user.role not in {"owner", "researcher"}:
+                raise AccessError("Current researcher role required")
+            self.data._capacity()
+            if job.config.get("kind") == "PATTERN_CORPUS":
+                self.patterns.execute_corpus_job(job)
+                return True
+            if job.config.get("kind") == "PATTERN_JOB":
+                self.patterns.execute_job(job)
+                return True
+            if job.config.get("kind") == "CHRONOLOGICAL_VALIDATION":
+                self.validation.execute_job(job)
+                return True
             if job.config.get("kind") == "CRP_STUDY":
-                from quant_hunter.research_methods.studies import execute_study
                 from quant_hunter.web.studies import prepare_job
 
-                study_config, study_dataset, study_name = prepare_job(job.config)
+                base_config, actual_dataset, study_name = prepare_job(job.config)
+                study_config, study_dataset = self.study_models.register_study(
+                    user, job, base_config, actual_dataset
+                )
                 experiment_id = self.lab.begin_run(
                     study_config, study_dataset, name=study_name
                 )
                 self.state.bind(job.id, experiment_id)
-                study_result = execute_study(study_dataset, study_config)
+                study_result = self.study_models.execute_study(
+                    user,
+                    self.state.job(user, job.id),
+                    experiment_id,
+                    study_config,
+                    study_dataset,
+                )
                 self.lab.evaluate_run(experiment_id, study_result)
                 self.state.finish(job.id)
                 return True

@@ -2,7 +2,93 @@
 
 Date: 2026-10-05. Status: IN_PROGRESS; V0 is not delivered.
 
-## Current resume authority — quality local gate passed; checkpoint push next
+## Latest continuation — 2026-10-06 UTC
+
+Root full-2 remains running (last observed62%, no failure), with all293source/
+test/frontend/config files unchanged. No new checkpoint has yet been committed.
+Current source has a scoped21-path cross-item review with no new blocker; dossier
+`.tools/v0-drafts/root-full2-simulation-cross-review.md`. Candidate privacy/path
+review found no private/generated file or credential-pattern match in114files.
+Git audit is persisted through111commands. Main/backup pointers remain untouched.
+
+The next product integration is isolated at `.tools/v0-pattern-extension`.
+Exact modified-file/parent hashes are in
+`.tools/v0-drafts/next-product-diff-manifest.json`; independently reviewed16file
+hashes are in `.tools/v0-tmp/next-product-simulation-peer-final-hashes.json`.
+It wires archive imports, relative-OHLC, verified performance metrics, legacy
+Signals, source scheduler73 and explicit owner GET-only paper-account transport.
+All3native integration tests passed independently; final no-send tripwire test
+passed after formatting. Known header/test-URL failures are preserved in
+next-product-integration1/2. Strict mypy/Ruff/format6files and draftTypeScript pass.
+Do not copy this candidate wholesale or before the root checkpoint is saved.
+
+Scheduler73 author96PASS93.28%coverage and peer28PASS; the two-clock claim race
+was corrected. Prospective paper profile is ready at
+`.tools/v0-drafts/paper-signal-handoff.json`:158authorPASS92.05%,peer6PASS,
+legacybytes unchanged, real native expiry/supersession/cancellation fail-closed.
+Its corresponding Signals projection/UI is still under agent verification;
+copy producer and projection together. Parent opt-in UI draft is
+`.tools/v0-drafts/paper-signal-ui.ts` (strictTypeScript checked).
+Campaign/new-data alerts are still isolated with scoped gate corrections pending.
+
+Acceptance audit found the fifteen-family service matrix is not fifteen-family
+HTTP proof. Governance agent is adding actual per-family route receipts and an
+explicit numerical oracle/control map in a new isolated acceptance test file.
+The requirement index retains246originalIDs; stale NOT_STARTED became IN_PROGRESS,
+not PASS; conditional sources10–17 and finalreport remain incomplete. Final
+real-screen harness draft `.tools/v0-drafts/gallery-smoke.mjs` is prepared, not run.
+All new source/runtime/cache/log/private evidence continues on D:.
+
+## Current resume authority — saved quality CI passed; product integration active
+
+Saved `d76ff6860e0e7485a6d071bc6c9a3668cbbc954b` is verified on
+origin/version-0. Exact hosted run 37375966992 passed Ubuntu and Windows:
+2,608 tests, one platform skip, one existing warning on each; Ubuntu 92.82%
+coverage/569.64s, Windows 1,386.67s. Main and work-before-v0 remain protected.
+All text below describing checkpoint push as next is historical to that gate.
+
+Current uncommitted integration includes actual Pattern/validation/model workflows,
+local notifications and bounded completion projection, account maintenance,
+operations, historical chart-only inspection, persistent paper, offline broker
+protocols, global local-paper halt, verified owned portfolios, comparisons and
+ordinary cash ETF support. These are integrated software slices, not a delivered
+release. Preserve `.tools/v0-integration-snapshots` and isolated agent work.
+
+Current browser evidence under `.local/v0-research-product-proof`:
+`browser-4/research-proof.json` passed8 checks, `product-browser-1` passed9,
+and `paper-browser-2/paper-proof.json` passed5. Paper proof includes actual UI
+creation, partial fills, pause, offline broker exercise, global halt/clear,
+portfolio accounting and390px layout; zero browser errors/external requests.
+Earlier failed attempts remain preserved. The first paper browser attempt found
+that decimal HTML step/min combinations rejected default values. Corrected
+inputs use unrestricted decimal steps with server-side numerical validation.
+
+The initial full regression `full-1` was intentionally interrupted to correct
+that demonstrated form defect; it is not a pass. Its source hashes were unchanged
+and its interruption note is retained. `full-2` started2026-10-05T23:17:29Z
+against frozen source/tests/frontend/static; its result must be read before
+claiming success. Ruff, strict mypy (256files) and TypeScript/build passed; the
+catalog test formatting correction then passed all257 Python format checks.
+Focused halt/resume/ETF/mutation checks passed19; actual ETF engine checks13;
+notification scheduler checks3. None substitutes for the full regression/CI.
+
+Remaining mandatory slices are isolated: Signals projections, general paper
+performance metrics, archive/vintage/survey/FX-forward file readers, persistent
+source schedules, and Pattern relative-OHLC/multiscale/new-data alerts. Root's
+relative-OHLC candidate is in `.tools/v0-pattern-extension`; it has not changed
+the source under `full-2`. Full mission acceptance, packaging, clean startup and
+final operational acceptance remain required. Current restoration proved all254managed
+files and allthree SQLite databases byte-identical; restored-browser3 passed7checks,
+zero errors/external requests, including owned evidence and cross-account isolation. No empirical, host, sealed,
+Stage1 or live-money gate is closed by these software checks.
+
+Current task test server uses port8767 and
+`.local/v0-research-product-restored`, with a fresh private root
+`D:\QuantHunterPrivate\v0-research-product-restored-tests`.
+The original runtime is stopped and preserved after an idle verified backup. Recheck exact process identity
+and all job/operation/reader counts before stopping. Runtime source may lag root
+edits until a controlled restart. The earlier8766 quality server is a separate
+preserved test instance. All new artifacts, caches and logs stay on D:.
 
 The latest publication product gate passed 2,327 tests, one platform skip,
 one existing warning, 93.19% coverage in 1,162.32 seconds. All 135 frozen

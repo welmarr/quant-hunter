@@ -8,6 +8,14 @@ and `v0/RESUME.md`. The clean prior checkout was saved and remotely verified as
 The same commit starts version-0. Main and the saved branch must remain unchanged.
 V0 implementation is IN_PROGRESS; no complete product claim is made.
 
+Latest saved V0 checkpoint `d76ff686` is remotely verified; exact CI run
+37375966992 passed both platforms with 2,608 tests each (one skip/one existing
+warning), Ubuntu92.82% coverage. New native research/model, paper, notification,
+administration and observability integration is ongoing in the working tree.
+Focused gates and22 current browser checks pass. The frozen full-2 regression
+is running; acceptance reconciliation remains incomplete. Use `v0/RESUME.md`
+for exact current evidence, preserved failures and remaining required slices.
+
 The native loopback UI has owner/researcher/reader accounts, private persistent
 jobs, Decimal synthetic equity/FX simulation and immutable Item 8 evidence.
 CSV/Parquet imports now preserve raw/normalized versions with explicit timing and
@@ -44,9 +52,9 @@ Quality product integration passed10real browser checks on both source/restored
 instances, including private access, multi-file import, aggregation and390px layout.
 The final quality/shared-admission/core gate passed2,608tests,one platform skip,
 one existing warning,92.95%coverage, with all225captured hashes unchanged.
-Actual quality restoration matched1,012managed files. This new checkpoint still
-requires commit/push and exact hosted CI; Pattern/paper/validation/notification
-product integrations remain separate unfinished work. See `v0/TEST_REPORT.md` for exact scope,
+Actual quality restoration matched1,012managed files. That quality checkpoint was subsequently saved as d76ff686 and its exact CI
+passed both platforms. Pattern/paper/validation/notification product integrations
+are now in the working tree and require their own complete regression and CI. See `v0/TEST_REPORT.md` for exact scope,
 failures and evidence. The remaining mission remains required in
 `v0/REQUIREMENTS.md`. No empirical or host gate is
 closed by these software checks.

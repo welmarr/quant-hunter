@@ -839,3 +839,96 @@ and fail closed with a smaller-page instruction instead of hiding skipped rows.
 Independent review and15real-SQLite reader/shared-admission tests cover the
 cross-service bound, ownership, cleanup and recovery. No scientific lifecycle,
 historical admission, sealed release or host authority is inferred from a list.
+
+## DEC-0046 — Model identities precede computation; declared univariate projection
+
+Date: 2026-10-05. Status: accepted within the explicitly authorized V0 software
+mission; no empirical validation, stage transition or live execution authority.
+
+Native Studies, chronological validation and learned Pattern methods now allocate
+permanent PROPOSED recipe/FIT model records before Item 8 freezes the actual
+experiment. Immutable registrations bind owner, job, actual input and numerical
+configuration, source revision/environment, training support and declared fit
+keys. The Lab dataset is an input manifest referencing the exact numerical source;
+the numerical core still receives the original source/configuration bytes.
+Result artifacts bind actual fitted parameters to the preregistered IDs. Failed
+or unused fits retain their IDs and null outputs; they are never fabricated.
+Fixed transformations do not invent learned-fit identities. Model catalogue
+grouping does not create another testing family or reset exposure. Item 8 remains
+the sole experiment lifecycle and attempt counter. Legacy results remain explicitly
+legacy, without retroactively invented preregistration.
+
+PAT-05 CUSUM and PAT-07 Haar calculations explicitly select a declared univariate
+feature from the actual corpus (default close, index zero). Feature index/name and
+the complete source feature order are frozen before model/experiment evaluation.
+The common occurrence search still uses its declared full-feature representation.
+Earlier multivariate inconclusive outcomes remain retained. This is a versioned
+method-input contract, not parameter selection based on desirable results.
+
+Current integration evidence: 24 Runtime/Study oracles passed; 119 combined
+research/administration/notification/operations tests passed. Independent source
+and targeted model/Pattern reviews are recorded in their V0 workflow documents.
+The complete integrated regression gate and its exact saved-commit CI remain
+required. No method is promoted by these software tests.
+
+## DEC-0047 — Historical charts preserve existing quality refusals
+
+Date: 2026-10-05. Status: accepted additive observational interface.
+
+Historical chart inspection uses the existing EXPLORATORY_INSPECTION selector,
+owned exact quality receipts, at most 512 literal rows and a shared reader slot.
+It accepts HISTORICAL_EXPLORATORY with causal eligibility false; missing
+availability or unknown required revision timing remains BLOCKED. The chart may
+not bypass refusal by reading normalized bytes directly. Declared timestamps do
+not become verified historical knowledge. Prices and nanosecond timestamps remain
+lossless in the table; gaps are disclosed without interpolation. Operational
+inspection receipts document server preparation, not proof of human viewing.
+No Pattern search, learned fit, outcome calculation or research identity is added
+by viewing a chart. Author 44 tests and independent 16 targeted tests passed;
+integrated browser and full-regression evidence remain separate requirements.
+
+## DEC-0048 — Protective paper reads reuse a verified queued reservation
+
+Date: 2026-10-05. Status: additive operational design; independent final integrated
+review and full regression pending. Scientific authority is unchanged.
+
+The persistent local-paper halt must be able to verify protection while all eight
+existing queued reservations are occupied. It does not raise either host bound.
+A trusted helper verifies the immutable current HALT task, real retained actor,
+exact initialized PAUSED workflow and current digest inside BEGIN IMMEDIATE. A
+unique linked reader then consumes one of the two active slots while sharing
+that task's already occupied queue reservation. Ordinary reads cannot borrow it.
+Orphaned, stale, terminal or contradictory links count independently; all exits
+remove the reader and its link. The single-process runtime lease remains required.
+
+A short per-path proof lock prevents all paper controls from changing that exact
+reservation during inspection. It is separate from the existing native-step lock,
+so protective PAUSE/CANCEL/KILL can still queue during an in-flight bar. The reader
+is released before any native protective command. Original authenticated HALT
+authority survives later issuer demotion only for the retained protective task;
+explicit CLEAR requires a current owner, verified receipts and current CAS. CLEAR
+does not resume sessions or erase positions, losses, unknown commands or failures.
+A temporary ResourceBusyError backs off the worker without fabricating a blocked
+proof or killing the worker. Other evidence failures retain their existing gates.
+
+Ordinary paper, historical, Pattern and validation reads use regular shared
+reservations. Resource saturation is HTTP503 with Retry-After, distinct from
+HTTP403 ownership failures. Validation UI retries at most five reads, never
+resubmits the experiment, and rejects stale navigation/account responses.
+
+CI time budgets increase from10 to20minutes on Ubuntu and30 to45minutes on
+Windows after the saved2608-test jobs took569.64s and1386.67s respectively. Every
+test, the90% coverage gate and all static checks remain enabled. This operational
+time allowance does not waive a failed check.
+
+
+DEC-0048 implementation clarification: an ordinary owned RESUME may similarly
+borrow its own existing initialized PAUSED queue reservation solely for fresh
+provenance verification. This uses a distinct linked table and current actor/CAS;
+it never borrows another session. The helper releases its active read before any
+workflow state change. If a valid halt and resume link refer to the same paper
+reservation, admission subtracts that distinct paper ID only once. Duplicate,
+stale or unrelated links do not create free capacity. Integrated tests exercise
+all eight reservations, two occupied readers, duplicate cross-links, failure
+cleanup and real worker survival. The focused19-test combined gate passed; the
+current full2 regression and exact hosted CI remain separate pending evidence.

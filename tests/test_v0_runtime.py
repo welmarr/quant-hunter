@@ -134,7 +134,11 @@ def test_runtime_lease_and_serialization(tmp_path: Path) -> None:
     second.acquire()
     second.release()
     second.release()
-    assert fixture_catalog()[1]["market"] == "FX_SPOT"
+    assert [entry["market"] for entry in fixture_catalog()] == [
+        "EQUITY",
+        "ETF",
+        "FX_SPOT",
+    ]
     with pytest.raises(ValueError):
         json_value({1: "bad key"})
     with pytest.raises(ValueError):

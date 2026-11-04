@@ -18,7 +18,7 @@ from quant_hunter.data_quality import MappingSpec, QualityError
 from quant_hunter.identity import StaleWriterError
 from quant_hunter.web.publication_routes import Authenticated
 from quant_hunter.web.quality_access import QualityAccess
-from quant_hunter.web.state import AccessError, Session
+from quant_hunter.web.state import AccessError, ResourceBusyError, Session
 
 
 class _Closed(BaseModel):
@@ -35,7 +35,7 @@ Purpose = Literal["PATTERN_CAUSAL", "RESEARCH_CAUSAL", "EXPLORATORY_INSPECTION"]
 
 class InstrumentMetadata(_Closed):
     symbol: Annotated[str, Field(min_length=1, max_length=32)]
-    asset_class: Literal["EQUITY", "FX_SPOT"]
+    asset_class: Literal["EQUITY", "ETF", "FX_SPOT"]
     base_currency: Currency
     quote_currency: Currency
     quantity_step: Annotated[str, Field(min_length=1, max_length=40)] = "1"
@@ -132,6 +132,12 @@ def install_quality_routes(
             raise HTTPException(503, "Quality data service is unavailable")
         try:
             return action(quality, session)
+        except ResourceBusyError:
+            raise HTTPException(
+                503,
+                "Inspection resources busy; retry later",
+                headers={"Retry-After": "3"},
+            ) from None
         except AccessError:
             raise HTTPException(
                 403, "Dataset is unavailable or operation is not permitted"

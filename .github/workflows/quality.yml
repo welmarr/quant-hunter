@@ -12,7 +12,9 @@ jobs:
   quality:
     name: Ubuntu quality gate
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    # The verified quality checkpoint used 569.64s before the reviewed research
+    # and paper suites were integrated. Keep every test and the 90% threshold.
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -42,9 +44,9 @@ jobs:
   windows-compatibility:
     name: Windows compatibility
     runs-on: windows-2025
-    # The expanded V0 suite exceeded the old cap with 1,596 passes and no failure.
-    # Retain every test; allow the complete compatibility suite to finish.
-    timeout-minutes: 30
+    # The preceding 2,608-test checkpoint used 1,386.67s. Allow the complete
+    # added research/paper regression suite; do not remove tests to fit a cap.
+    timeout-minutes: 45
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

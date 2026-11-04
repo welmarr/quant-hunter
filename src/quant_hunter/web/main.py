@@ -45,6 +45,17 @@ def main() -> None:
             instruments=runner.instruments,
             publications=runner.publications,
             quality=runner.quality,
+            patterns=runner.patterns,
+            validation=runner.validation,
+            get_job=runner.job_detail,
+            notifications=runner.notifications,
+            paper=runner.paper,
+            paper_halt=runner.paper_halt,
+            paper_portfolio=runner.paper_portfolio,
+            brokers=runner.brokers,
+            historical=runner.historical,
+            notification_projection=runner.notification_projection,
+            notification_projection_error=lambda: runner.notification_projection_error,
         )
         uvicorn.run(
             app, host="127.0.0.1", port=args.port, access_log=False, log_level="warning"

@@ -30,7 +30,7 @@ from quant_hunter.identity import StaleWriterError
 from quant_hunter.markets.registry import InstrumentRegistry
 from quant_hunter.web.admission import resource_counts
 from quant_hunter.web.data_access import DataAccess
-from quant_hunter.web.state import AccessError, AppState, User
+from quant_hunter.web.state import AccessError, AppState, ResourceBusyError, User
 
 
 class QualityAccess:
@@ -101,7 +101,9 @@ class QualityAccess:
             else:
                 active, queued = resource_counts(db)
                 if active >= 2 or queued >= 8:
-                    raise AccessError("Inspection resources busy; wait for completion")
+                    raise ResourceBusyError(
+                        "Inspection resources busy; wait for completion"
+                    )
                 db.execute(
                     "INSERT INTO resource_readers VALUES(?,?,?)",
                     (identity, user.id, time.time()),

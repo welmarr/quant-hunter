@@ -7,6 +7,14 @@ those responsibilities through existing Item8 and its private job/ownership stor
 Historical uploads with unverified availability remain ineligible for causal
 PatternLab jobs. Initially only `SYNTHETIC_SOFTWARE_ONLY` selected snapshots pass.
 
+PAT05 and PAT07 use a univariate method input. Their prepared description freezes
+the explicit `feature_index`, selected column name and full source column order;
+out-of-schema selection is rejected before evaluation. Their projection preserves
+the original timing/provenance and changes only the declared feature dimension.
+The common occurrence search still uses all declared corpus features. This native
+adapter correction is recorded in `PATTERN_WORKFLOW.md`; earlier multicolumn
+INCONCLUSIVE results are preserved, never rewritten.
+
 ## Corpus input and composition
 
 `CorpusStore(ImmutableObjectStore)` publishes through the existing object store.
@@ -182,9 +190,9 @@ registered sensitivity study has already run.
 | PAT-02 | Constrained DTW comparisons on retained occurrences | Hand distance/band oracle; work budget | DTW radius, maximum distance |
 | PAT-03 | Train-only shapelet, selected threshold, classification | Available-label fitting and holdout prediction; schema refusal | Shapelet length and candidate cap |
 | PAT-04 | Fitted SAX quantiles/vocabulary and query word/state | Train vocabulary; unseen word UNKNOWN; overlap refusal | Alphabet and PAA segments |
-| PAT-05 | Train-normalized CUSUM model and forward detections | Future-suffix invariance; feature/cadence binding | Allowance, threshold, scale floor |
+| PAT-05 | Train-normalized CUSUM model and forward detections | Future-suffix invariance; feature/cadence binding | Explicit feature_index (default close column0), allowance, threshold, scale floor |
 | PAT-06 | Train-fitted HMM and forward filtered probabilities | Training cutoff; prefix unaffected by future suffix | States, iterations, variance floor |
-| PAT-07 | Hann spectrum and Haar summaries | Known frequency and energy oracles | Query window and source selection |
+| PAT-07 | Hann spectrum and Haar summaries | Known frequency and energy oracles | Query window and explicit feature_index (default close column0) |
 | PAT-08 | Recurrence statistics | Four-point independently calculable oracle | Radius, Theiler exclusion, minimum line |
 | PAT-09 | Fitted medoid clusters, query assignment/distance or UNKNOWN | Explicit out-of-distribution rejection | Cluster count, radius factor, PAA segments |
 | PAT-10 | Explicit geometric rule diagnostics | Independent breakout boundaries | Breakout fraction and channel tolerance |

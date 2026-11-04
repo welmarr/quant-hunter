@@ -12,6 +12,7 @@ from quant_hunter.config import JsonRecord, canonicalize_json
 from quant_hunter.research_methods import studies
 from quant_hunter.web.api import create_app
 from quant_hunter.web.studies import catalogue, prepare_job, request_config
+from quant_hunter.web.study_model_ids import StudyModelIds
 
 
 @pytest.mark.parametrize("study_id", [item.study_id for item in studies.list_studies()])
@@ -46,13 +47,23 @@ def test_actual_study_is_frozen_before_fit_and_permanently_inconclusive(
             == config["training_end_exclusive"]
         )
         bindings = cast(JsonRecord, run["bindings"])
+        wrapped = cast(JsonRecord, run["configuration"])
+        registration = cast(JsonRecord, wrapped["model_registration"])
+        expected_config, expected_manifest = StudyModelIds.bound(registration, config)
+        runner.study_models.verify(owner, registration, current=True)
+        assert (
+            runner.lab.objects.read_bytes(str(registration["source_digest"])) == payload
+        )
+        assert runner.lab.objects.read_bytes(
+            str(registration["configuration_digest"])
+        ) == canonicalize_json(config)
         assert (
             runner.lab.objects.get(str(bindings["dataset_digest"])).path.read_bytes()
-            == payload
+            == expected_manifest
         )
         assert runner.lab.objects.get(
             str(bindings["configuration_digest"])
-        ).path.read_bytes() == canonicalize_json(config)
+        ).path.read_bytes() == canonicalize_json(expected_config)
         return compute(payload, config)
 
     monkeypatch.setattr(studies, "execute_study", inspected)
@@ -70,11 +81,18 @@ def test_actual_study_is_frozen_before_fit_and_permanently_inconclusive(
         result["assessment"] == "EMPIRICALLY_UNVALIDATED"
         and result["study_id"] == study_id
     )
-    assert result["input_digest"] == cast(JsonRecord, run["bindings"])["dataset_digest"]
-    assert (
-        result["config_digest"]
-        == cast(JsonRecord, run["bindings"])["configuration_digest"]
+    registration = cast(
+        JsonRecord, cast(JsonRecord, run["configuration"])["model_registration"]
     )
+    assert (
+        result["input_digest"]
+        == result["actual_input_digest"]
+        == registration["source_digest"]
+    )
+    assert result["config_digest"] == registration["configuration_digest"]
+    detail = runner.job_detail(owner, job.id)
+    assert detail["model_identity_status"] == "VERIFIED_PREREGISTERED_MODELS"
+    assert detail["run"] == run
     assert not runner.process_one()
     reopened = runner_at(tmp_path)
     reopened.recover()

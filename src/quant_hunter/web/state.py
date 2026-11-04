@@ -23,6 +23,10 @@ class AccessError(ValueError):
     """A local application authorization or state check failed."""
 
 
+class ResourceBusyError(AccessError):
+    """A transient shared capacity refusal, distinct from authorization."""
+
+
 @dataclass(frozen=True)
 class User:
     id: int
@@ -173,12 +177,27 @@ class AppState:
                 for r in db.execute("SELECT id,username,role FROM users ORDER BY id")
             ]
 
+    def user(self, identity: int) -> User:
+        """Trusted worker lookup; public routes retain their session boundary."""
+        with self.connection() as db:
+            row = db.execute(
+                "SELECT id,username,role FROM users WHERE id=?", (identity,)
+            ).fetchone()
+        if row is None:
+            raise AccessError("Job owner is unavailable")
+        return User(row["id"], row["username"], row["role"])
+
     def enqueue(self, user: User, config: dict[str, str | int]) -> Job:
         if user.role not in ("owner", "researcher"):
             raise AccessError("Researcher role required")
         job_id = secrets.token_hex(16)
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
+            actor = db.execute(
+                "SELECT username,role FROM users WHERE id=?", (user.id,)
+            ).fetchone()
+            if actor is None or tuple(actor) != (user.username, user.role):
+                raise AccessError("Current researcher role required")
             _, pending = resource_counts(db)
             if pending >= 8:
                 raise AccessError("Queue is full; wait for a job to finish")

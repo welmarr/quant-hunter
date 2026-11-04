@@ -8,7 +8,7 @@ before execute_registered(). This adapter cannot promote a research object.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, fields, is_dataclass
+from dataclasses import asdict, dataclass, fields, is_dataclass, replace
 from itertools import pairwise
 from typing import Any, Literal, cast
 
@@ -162,6 +162,7 @@ _PARAMETERS: dict[str, dict[str, tuple[int | float, int | float, int | float]]] 
     "PAT-03": {"length": (8, 2, 64), "candidate_cap": (32, 1, 128)},
     "PAT-04": {"alphabet": (4, 2, 16)},
     "PAT-05": {
+        "feature_index": (0, 0, 15),
         "allowance": (0.5, 0.0, 10.0),
         "threshold": (5.0, 0.01, 100.0),
         "scale_floor": (0.000001, 0.000000000001, 1.0),
@@ -171,7 +172,7 @@ _PARAMETERS: dict[str, dict[str, tuple[int | float, int | float, int | float]]] 
         "iterations": (12, 1, 30),
         "variance_floor": (0.000001, 0.000000000001, 1.0),
     },
-    "PAT-07": {},
+    "PAT-07": {"feature_index": (0, 0, 15)},
     "PAT-08": {
         "radius": (0.5, 0.000001, 100.0),
         "theiler": (1, 0, 254),
@@ -215,6 +216,32 @@ def _parameters(config: PatternJobConfig) -> dict[str, int | float]:
             raise PatternError("METHOD_PARAMETER_RANGE")
         result[key] = cast(int | float, value)
     return result
+
+
+def _method_input(config: PatternJobConfig, features: tuple[str, ...]) -> JsonRecord:
+    column: int | None = None
+    if config.family in {"PAT-05", "PAT-07"}:
+        column = int(_parameters(config)["feature_index"])
+        bounded_int(column, 0, len(features) - 1, "method feature column")
+        selected = [features[column]]
+    else:
+        selected = list(features)
+    return {
+        "source_feature_columns": list(features),
+        "feature_index": column,
+        "method_feature_columns": cast(list[JsonValue], selected),
+        "projection": "EXPLICIT_SINGLE_COLUMN"
+        if column is not None
+        else "ALL_SOURCE_COLUMNS",
+    }
+
+
+def method_profile(config: PatternJobConfig, features: tuple[str, ...]) -> JsonRecord:
+    """Result-free explicit parameters and source-column semantics for registration."""
+    return {
+        "expanded_method_parameters": cast(JsonRecord, _parameters(config)),
+        "method_input_schema": _method_input(config, features),
+    }
 
 
 def _summary_parameters(config: PatternJobConfig) -> dict[str, int]:
@@ -359,6 +386,7 @@ class PatternProduct:
             + 1,
         )
         parameters = _parameters(config)
+        method_input = _method_input(config, corpus.provenance.features)
         record: JsonRecord = {
             "format": "qh-registered-pattern-job-v1",
             "pattern_id": pattern_id,
@@ -371,6 +399,7 @@ class PatternProduct:
             "calendar_profile_digest": corpus.calendar_profile_digest,
             "secondary_parent_snapshots": secondary.parents if secondary else [],
             "expanded_method_parameters": cast(JsonRecord, parameters),
+            "method_input_schema": method_input,
             "outcome_summary_parameters": cast(JsonRecord, _summary_parameters(config)),
             "query_fingerprint": query.fingerprint,
             "code_revision": code_revision,
@@ -586,6 +615,7 @@ class PatternProduct:
             ),
             "configuration": config.to_record(),
             "method_parameters": _plain(_parameters(config)),
+            "method_input_schema": plan["method_input_schema"],
             "evidence_mode": "SYNTHETIC",
             "empirical_validation": "MISSING",
             "state": search.state,
@@ -747,6 +777,9 @@ class PatternProduct:
         context = FitContext(config.train_cutoff_ns, query.start_ns, config.purge_ns)
         parameters = _parameters(config)
         exposure: JsonRecord = {"fits": 0, "family": config.family}
+        exposure["method_input_schema"] = _method_input(
+            config, corpus.provenance.features
+        )
         try:
             train, windows, labels, training_exposure = self._training(
                 config, corpus, query
@@ -806,10 +839,36 @@ class PatternProduct:
                 }
             elif family == "PAT-05":
                 exposure["fits"] = 1
-                cusum = fit_cusum(train, context, **parameters)
+                column = int(parameters["feature_index"])
+                provenance = replace(
+                    train.provenance, features=(train.provenance.features[column],)
+                )
+                method_train = replace(
+                    train,
+                    values=train.values[:, column : column + 1],
+                    provenance=provenance,
+                )
+                method_query = replace(
+                    query,
+                    values=query.values[:, column : column + 1],
+                    provenance=replace(
+                        query.provenance, features=(query.provenance.features[column],)
+                    ),
+                )
+                cusum = fit_cusum(
+                    method_train,
+                    context,
+                    **{
+                        key: value
+                        for key, value in parameters.items()
+                        if key != "feature_index"
+                    },
+                )
                 result = {
                     "model": cusum,
-                    "detection": cusum.detect(query, decision_ns=config.decision_ns),
+                    "detection": cusum.detect(
+                        method_query, decision_ns=config.decision_ns
+                    ),
                 }
             elif family == "PAT-06":
                 exposure["fits"] = 1
@@ -828,7 +887,15 @@ class PatternProduct:
                     "smoothing_at_inference": False,
                 }
             elif family == "PAT-07":
-                result = spectra_haar(query, decision_ns=config.decision_ns)
+                column = int(parameters["feature_index"])
+                method_query = replace(
+                    query,
+                    values=query.values[:, column : column + 1],
+                    provenance=replace(
+                        query.provenance, features=(query.provenance.features[column],)
+                    ),
+                )
+                result = spectra_haar(method_query, decision_ns=config.decision_ns)
             elif family == "PAT-08":
                 result = recurrence(
                     query,

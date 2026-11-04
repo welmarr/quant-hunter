@@ -10,7 +10,7 @@ import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, Literal, cast
 
@@ -28,13 +28,41 @@ from quant_hunter.identity import IdentityError, RegistryIntegrityError
 from quant_hunter.markets import MarketError, sessions
 from quant_hunter.markets.registry import InstrumentRegistry
 from quant_hunter.sources.transport import SourceError
+from quant_hunter.web.broker_access import BrokerAccess
+from quant_hunter.web.broker_routes import install_broker_routes
 from quant_hunter.web.connections import Connections
 from quant_hunter.web.data_access import DataAccess
+from quant_hunter.web.halt_routes import install_halt_routes
+from quant_hunter.web.historical_access import HistoricalPreviewAccess
+from quant_hunter.web.historical_routes import install_historical_routes
+from quant_hunter.web.notification_access import NotificationAccess
+from quant_hunter.web.notification_projection import NotificationProjection
+from quant_hunter.web.notification_routes import install_notification_routes
+from quant_hunter.web.operations_access import OperationsAccess, WorkerStatus
+from quant_hunter.web.operations_routes import install_operations_routes
+from quant_hunter.web.paper_access import PaperAccess
+from quant_hunter.web.paper_halt import GlobalPaperHalt
+from quant_hunter.web.paper_portfolio import PaperPortfolio
+from quant_hunter.web.paper_portfolio_routes import install_paper_portfolio_routes
+from quant_hunter.web.paper_routes import install_paper_routes
+from quant_hunter.web.pattern_access import PatternAccess
+from quant_hunter.web.pattern_routes import install_pattern_routes
 from quant_hunter.web.publication_access import PublicationAccess
 from quant_hunter.web.publication_routes import install_publication_routes
 from quant_hunter.web.quality_access import QualityAccess
 from quant_hunter.web.quality_routes import install_quality_routes
-from quant_hunter.web.state import AccessError, AppState, Role, Session
+from quant_hunter.web.state import (
+    AccessError,
+    AppState,
+    ResourceBusyError,
+    Role,
+    Session,
+    User,
+)
+from quant_hunter.web.user_admin import UserAdministration
+from quant_hunter.web.user_admin_routes import install_user_administration_routes
+from quant_hunter.web.validation_access import ValidationAccess
+from quant_hunter.web.validation_routes import install_validation_routes
 
 
 class Input(BaseModel):
@@ -51,7 +79,7 @@ class NewUser(Credentials):
 
 
 class Backtest(Input):
-    market: Literal["EQUITY", "FX_SPOT"] = "EQUITY"
+    market: Literal["EQUITY", "ETF", "FX_SPOT"] = "EQUITY"
     initial_cash: Annotated[str, Field(pattern=r"^[0-9]{1,8}(\.[0-9]{1,4})?$")] = (
         "10000"
     )
@@ -72,7 +100,7 @@ class StudyRequest(Input):
 
 class ImportInstrument(Input):
     symbol: Annotated[str, Field(min_length=1, max_length=32)]
-    asset_class: Literal["EQUITY", "FX_SPOT"]
+    asset_class: Literal["EQUITY", "ETF", "FX_SPOT"]
     base_currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
     quote_currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
     quantity_step: Annotated[str, Field(pattern=r"^[0-9]{1,8}(\.[0-9]{1,12})?$")] = "1"
@@ -258,17 +286,31 @@ def create_app(
     instruments: InstrumentRegistry | None = None,
     publications: PublicationAccess | None = None,
     quality: QualityAccess | None = None,
+    patterns: PatternAccess | None = None,
+    validation: ValidationAccess | None = None,
+    get_job: Callable[[User, str], object] | None = None,
+    notifications: NotificationAccess | None = None,
+    paper: PaperAccess | None = None,
+    paper_halt: GlobalPaperHalt | None = None,
+    paper_portfolio: PaperPortfolio | None = None,
+    brokers: BrokerAccess | None = None,
+    historical: HistoricalPreviewAccess | None = None,
+    notification_projection: NotificationProjection | None = None,
+    notification_projection_error: Callable[[], str | None] = lambda: None,
 ) -> FastAPI:
     """Create app without starting jobs or loading any external provider."""
     from quant_hunter.web.worker import Worker
 
     state = AppState(runtime / "application.sqlite3")
     worker = Worker(process_job) if process_job else None
+    worker_started_at: datetime | None = None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        nonlocal worker_started_at
         if worker:
             worker.start()
+            worker_started_at = datetime.now(UTC)
         try:
             yield
         finally:
@@ -305,6 +347,53 @@ def create_app(
 
     install_publication_routes(app, authenticated, publications)
     install_quality_routes(app, authenticated, quality)
+    install_historical_routes(app, authenticated, historical)
+    install_user_administration_routes(app, authenticated, UserAdministration(state))
+    install_notification_routes(
+        app,
+        authenticated,
+        notifications,
+        projection=notification_projection,
+        projection_error=notification_projection_error,
+    )
+    install_paper_routes(
+        app, authenticated, paper, inspection=quality.inspection if quality else None
+    )
+    install_halt_routes(app, authenticated, paper_halt)
+    install_paper_portfolio_routes(app, authenticated, paper_portfolio)
+    install_broker_routes(app, authenticated, brokers)
+    install_operations_routes(
+        app,
+        authenticated,
+        OperationsAccess(
+            state,
+            runtime,
+            worker_status=lambda: WorkerStatus(
+                "RUNNING" if worker is not None and worker.alive else "STOPPED",
+                started_at=worker_started_at,
+            ),
+        ),
+    )
+    install_pattern_routes(
+        app,
+        authenticated,
+        patterns,
+        worker_available=lambda: worker is not None and worker.alive,
+    )
+    install_validation_routes(
+        app,
+        authenticated,
+        validation,
+        worker_available=lambda: worker is not None and worker.alive,
+    )
+
+    @app.exception_handler(ResourceBusyError)
+    async def resource_busy(request: Request, exc: ResourceBusyError) -> JSONResponse:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Inspection resources busy; retry later"},
+            headers={"Retry-After": "3"},
+        )
 
     @app.exception_handler(AccessError)
     async def access_error(request: Request, exc: AccessError) -> JSONResponse:
@@ -544,8 +633,19 @@ def create_app(
         return asdict(state.enqueue(current.user, payload.model_dump()))
 
     @app.get("/api/jobs/{job_id}")
-    def job_detail(job_id: str, request: Request) -> dict[str, object]:
-        job = state.job(authenticated(request).user, job_id)
+    def job_detail(job_id: str, request: Request) -> object:
+        user = authenticated(request).user
+        job = state.job(user, job_id)
+        if get_job is not None:
+            try:
+                return get_job(user, job_id)
+            except AccessError:
+                raise
+            except Exception:
+                raise HTTPException(
+                    503,
+                    "Job evidence failed verification; retained records require review",
+                ) from None
         result = get_run(job.experiment_id) if get_run and job.experiment_id else None
         return {"job": asdict(job), "run": result}
 
@@ -569,7 +669,7 @@ def create_app(
             "limitations": [
                 "Synthetic software demonstration; no empirical validation",
                 "HOST_ENFORCED evidence remains blocked",
-                "Paper brokers and PatternLab are not yet implemented",
+                "External broker accounts, historical causal validation and live-money execution remain unverified or disabled",
                 "Imported and public-source data are not admitted to synthetic backtests",
             ],
         }

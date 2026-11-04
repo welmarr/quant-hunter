@@ -2,8 +2,8 @@
   "mission": "Quant Hunter V0",
   "status": "IN_PROGRESS",
   "date": "2026-10-05",
-  "reference_commit": "b13af539bc02897e54786a5525aa41ddb6fdca5c",
-  "reference_semantics": "Saved parent with passing exact CI; new quality checkpoint local full gate passed, awaiting its own saved-commit hosted CI.",
+  "reference_commit": "d76ff6860e0e7485a6d071bc6c9a3668cbbc954b",
+  "reference_semantics": "Saved quality checkpoint passed exact Ubuntu and Windows CI (2608 tests each; Ubuntu92.82%). Current research/paper/operations working tree has22actual browser checks and7restored browser checks, exact254-file/three-database restoration and distribution verification. Full2 regression is running; this remains uncommitted integration, not a release.",
   "branch": "version-0",
   "host_evidence": "BLOCKED_EXTERNAL",
   "data_mode": "SYNTHETIC backtests; separate HISTORICAL_REAL acquisition and uploader-declared imports",
@@ -16,7 +16,7 @@
     {
       "name": "Owner/researcher/reader authentication",
       "status": "PASS",
-      "evidence": "Local role boundaries verified by API and real browser; additional account administration remains future work"
+      "evidence": "Local ownership and role boundaries verified in API/browser; account maintenance now integrated with18 focused passes, strict typing and independent review. Actual product-browser1 maintenance and session-revocation checks passed."
     },
     {
       "name": "CSV/Parquet immutable import",
@@ -41,42 +41,42 @@
     {
       "name": "Fifteen PatternLab families",
       "status": "IN_PROGRESS",
-      "evidence": "Reviewed fifteen classical cores plus immutable corpus/product controls are root-integrated. Native registered Pattern workflow and model identities remain isolated pending integration."
+      "evidence": "Fifteen cores plus immutable owned native corpus/preparation/queue/results and preregistered model/fit identities integrated. Browser4 actual learned PAT-05 workflow passed; new complete gate pending."
     },
     {
       "name": "Bounded multi-scale pattern search and benchmarks",
       "status": "IN_PROGRESS",
-      "evidence": "Persisted synthetic 2015-2024 corpora scanned 4,734,600 rows with exact parent/checkpoint evidence, bounded memory and measured approximate recall. Native search UI remains pending."
+      "evidence": "Persisted synthetic2015-2024 corpora scanned4,734,600rows; measured approximate recall and bounded resources retained. Native owned search UI passed actual corpus/preview/queue/receipt checks. Historical empirical claims remain absent."
     },
     {
       "name": "Equity/FX accounting and costs",
       "status": "IN_PROGRESS",
-      "evidence": "Reviewed Decimal event accounting integrated with 66 focused tests: partial fills/cancel races, corporate actions, directed FX and cost identities. Durable paper service still isolated."
+      "evidence": "Reviewed Decimal accounting and durable engine integrated with owned paper API/UI. Ordinary cash ETF added; actual paper browser5checks and byte-identical three-database restore pass. Full2 regression is running."
     },
     {
       "name": "Governed experiments and chronological validation",
       "status": "IN_PROGRESS",
-      "evidence": "Existing Item8/Item9 and new train-only temporal/statistical cores pass the root gate. Native chronological jobs with permanent model/fit identities remain isolated."
+      "evidence": "Actual native worker queues chronological validation with permanent model/fit IDs and unchanged Item8 authority. Browser4 verified exact0.90 confidence, full membership/prediction report and retained counted result. Full new regression pending."
     },
     {
       "name": "Portfolio and ensemble/meta-model baseline",
       "status": "IN_PROGRESS",
-      "evidence": "ENS-COV and META-OOF synthetic studies execute real models and comparisons with frozen train/target/seed evidence. Empirical and operational portfolio workflows remain."
+      "evidence": "ENS-COV and META-OOF synthetic studies execute real models and comparisons with frozen train/target/seed evidence. Verified owned paper cash/position/exposure/observation-duration UI passed actual desktop/mobile checks. General performance metrics are isolated pending integration; empirical claims remain unproven."
     },
     {
       "name": "Persistent local paper execution and risk",
       "status": "IN_PROGRESS",
-      "evidence": "Durable paper engine passes 85 tests and independent review in isolation; owned runtime/API workflow is being implemented. Live trading remains disabled."
+      "evidence": "Durable paper engine, private service and API/UI integrated; global persistent halt, owned resume and shared protected-reader admission integrated/reviewed. Actual paper5checks passed; cleared halt leaves paused/killed sessions without automatic resume. No live execution enabled."
     },
     {
       "name": "Paper broker adapters and contract tests",
       "status": "IN_PROGRESS",
-      "evidence": "Fixed paper-host adapters and persistent submission journal under isolated implementation; no actual accounts, credentials or orders."
+      "evidence": "Concrete fixed paper-host clients, persistent journal and owner offline actual-reservation proof integrated; corrected57-case evidence binding review passed. Actual paused-order offline proof passed in paper-browser2 and restored-browser3; real credentials/account tests/orders remain absent."
     },
     {
       "name": "Local notifications and optional Telegram",
       "status": "IN_PROGRESS",
-      "evidence": "Reviewed scoped-vault/local-inbox/Telegram adapter remains isolated; 228 focused passes, one platform skip, 95.97% coverage. Root UI/integration pending. Delivery disabled; no messages sent."
+      "evidence": "Private scoped vault/local inbox/routes/UI and bounded local worker projection integrated. Browser4 local event and disabled profile passed; projection identity and scheduler regressions passed. Optional explicit owner Telegram transport is available; no credentials or messages used."
     },
     {
       "name": "Worker restart/cancellation/recovery",
@@ -91,12 +91,12 @@
     {
       "name": "Backup/restore and clean-clone proof",
       "status": "PASS",
-      "evidence": "Quality archive restored 1,012 exact managed files and matching SQLite counts to a distinct instance; restored/final browser passed 10 checks. Prior clean-clone launch remains separately evidenced; current next-module recovery still required."
+      "evidence": "Quality archive restored 1,012 exact managed files and matching SQLite counts to a distinct instance; restored/final browser passed 10 checks. Current research-product backup also restored254managed files and allthree SQLite databases byte-identically; restored-browser3 passed7checks. Current clean-clone launch remains required after push."
     },
     {
       "name": "Responsive UI, browser evidence and status",
       "status": "IN_PROGRESS",
-      "evidence": "Sources/Data and private Settings verified; Markets browser proof in TEST_REPORT.md; later mission modules remain"
+      "evidence": "Browser4 added8 actual research/notification/operations/account checks, three screenshots including390px, no JS errors or external requests. Product-browser1 added9historical/comparison/admin/backup/private-role checks; paper-browser2 added5paper/portfolio checks. Current full gate and remaining isolated product slices are unfinished."
     }
   ],
   "tests": {
