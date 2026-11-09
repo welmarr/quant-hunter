@@ -67,6 +67,7 @@ class DiagnosticMaterializer:
         public = self.public
         public._verify_environment()
         if catalogue_id not in (
+            "SRC-04",
             "SRC-05",
             "SRC-06",
             "SRC-07",
@@ -74,6 +75,8 @@ class DiagnosticMaterializer:
             "SRC-18",
             "SRC-19",
             "SRC-20",
+            "SRC-21",
+            "SRC-22",
         ):
             raise SourceError("UNSUPPORTED_DIAGNOSTIC_SOURCE")
         if evidence_mode not in (
@@ -103,7 +106,7 @@ class DiagnosticMaterializer:
             price_nature="VENUE_QUOTE_OR_TRADE"
             if catalogue_id == "SRC-09"
             else "UNKNOWN"
-            if catalogue_id == "SRC-19"
+            if catalogue_id in {"SRC-19", "SRC-21"}
             else "NOT_APPLICABLE",
         )
         if catalogue_id in ("SRC-07", "SRC-09", "SRC-18", "SRC-19", "SRC-20"):
@@ -113,6 +116,20 @@ class DiagnosticMaterializer:
                 "monthly_cost": "UNKNOWN",
                 "pricing_date": spec.documentation_reviewed_on or "2026-10-05",
             }
+        if catalogue_id == "SRC-21":
+            candidate["cost"] = {
+                "class": "INSTITUTIONAL",
+                "currency": "USD",
+                "monthly_cost": "UNKNOWN",
+                "pricing_date": spec.documentation_reviewed_on or "2026-10-05",
+            }
+        if catalogue_id in {"SRC-04", "SRC-21", "SRC-22"}:
+            candidate["limitations"] = [
+                spec.pit_notes,
+                "Owner-submitted CSV export only; origin, upstream rights and vintage claims unverified",
+                "Local parsing has zero incremental service fee; any upstream price remains unverified",
+                f"Mission catalogue key: {catalogue_id}",
+            ]
         source = public.registry.allocate(RegistryKind.SOURCE, candidate)
         config = public.objects.publish(configured)
         try:
@@ -245,7 +262,15 @@ class DiagnosticMaterializer:
                 dataset_id=dataset.object_id,
                 provider=spec.name,
                 source_endpoint=endpoint,
-                request_parameters={**configuration, "payload_index": index},
+                # Structured archive metadata (e.g. per-vintage units) lives in
+                # its exact immutable configuration, not scalar request fields.
+                request_parameters={
+                    "configuration_digest": config.digest,
+                    "profile": configuration["profile"],
+                    "payload_index": index,
+                }
+                if catalogue_id in {"SRC-04", "SRC-21", "SRC-22"}
+                else {**configuration, "payload_index": index},
                 request_reference="Owner-supplied bytes; endpoint is an import reference"
                 if evidence_mode == "OWNER_SUPPLIED"
                 else None,

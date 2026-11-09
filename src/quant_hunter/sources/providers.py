@@ -200,6 +200,12 @@ class ProviderService:
         if metadata.get("license_confirmed") is not True:
             raise SourceError("SOURCE_RIGHTS_DECLARATION_REQUIRED")
         _text(metadata.get("declared_license"))
+        if catalogue_id in {"SRC-04", "SRC-21", "SRC-22"}:
+            from quant_hunter.sources.archive_workflow import import_archive
+
+            if series_metadata is not None:
+                raise SourceError("UNEXPECTED_SUPPLEMENTARY_FILE")
+            return import_archive(self.materializer, catalogue_id, payload, metadata)
         common = {"declared_license", "license_confirmed"}
         retrieved = datetime.now(UTC)
         if catalogue_id == "SRC-05":

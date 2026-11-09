@@ -95,6 +95,7 @@ class SearchConfig:
             "LOG_RETURNS",
             "Z_WINDOW",
             "CAUSAL_VOL",
+            "RELATIVE_OHLC",
         }:
             raise PatternError("Unknown normalization")
         bounded_int(self.paa_segments, 1, 64, "PAA segments")
@@ -243,6 +244,12 @@ class SearchEngine:
         if config.metric == "DTW" and work > 2_000_000:
             raise PatternError(
                 "Total exact DTW reranking budget exceeds 2,000,000 cells"
+            )
+        if config.normalization == "RELATIVE_OHLC" and query.provenance.features[
+            :4
+        ] != ("close", "open", "high", "low"):
+            raise PatternError(
+                "Relative OHLC requires declared close/open/high/low feature order"
             )
         self.query, self.config, self.decision_ns = query, config, decision_ns
         self._query_values = normalize(query.values, config.normalization)
@@ -468,7 +475,7 @@ class SearchEngine:
                     len(raw),
                     config.paa_segments,
                     length // config.paa_segments,
-                    values.shape[1],
+                    normalized.shape[2],
                 ).mean(axis=2)
                 scores = np.mean((compressed - self._query_paa) ** 2, axis=(1, 2))
                 for local in np.argsort(scores, kind="stable")[: config.candidate_cap]:

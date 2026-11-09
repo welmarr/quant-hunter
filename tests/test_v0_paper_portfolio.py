@@ -684,3 +684,23 @@ def test_workflow_bounds_precede_untrusted_payload_loading(
         portfolio.get(
             owner, identity
         ) if operation == "get" else portfolio.list_sessions(owner)
+
+
+def test_descriptive_performance_uses_only_verified_reported_native_observations(
+    case: tuple[PaperPortfolio, PaperAccess, User, str],
+) -> None:
+    reader, access, owner, identity = case
+    result = reader.get(owner, identity)
+    metrics = record(result["performance"])
+    current = record(result["current"])
+    assert metrics["engine_revision"] == result["reported_engine_revision"]
+    assert metrics["recorded_equity"] == current["recorded_equity"]
+    assert Decimal(cast(str, metrics["net_pnl"])) == Decimal(
+        cast(str, current["recorded_equity"])
+    ) - Decimal("10000")
+    assert record(metrics["sampled_volatility"])["interval_seconds"] == 60
+    assert record(metrics["closed_trades"])["predictive_probability"] is None
+    assert record(metrics["gross_cost_addback"])["frictionless_counterfactual"] is False
+    assert cast(str, result["performance_reader_source_digest"]).startswith("sha256:")
+    with access.state.connection() as db:
+        assert db.execute("SELECT COUNT(*) FROM resource_readers").fetchone()[0] == 0

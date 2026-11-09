@@ -9,12 +9,24 @@ import numpy as np
 from quant_hunter.patterns.contracts import Floats, PatternError, bounded_int, freeze
 
 type Normalization = Literal[
-    "RAW", "BASE100", "RETURNS", "LOG_RETURNS", "Z_WINDOW", "CAUSAL_VOL"
+    "RAW",
+    "BASE100",
+    "RETURNS",
+    "LOG_RETURNS",
+    "Z_WINDOW",
+    "CAUSAL_VOL",
+    "RELATIVE_OHLC",
 ]
 
 
 def normalize(values: Floats, mode: Normalization) -> Floats:
     x = freeze(values)
+    if mode == "RELATIVE_OHLC":
+        if x.shape[1] < 4:
+            raise PatternError(
+                "Relative OHLC requires canonical close/open/high/low columns"
+            )
+        return relative_candles(x[:, [1, 2, 3, 0]])
     if mode == "RAW":
         return x
     if mode == "Z_WINDOW":

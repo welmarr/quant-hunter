@@ -17,6 +17,7 @@ from quant_hunter.web.paper_access import (
     PaperConflictError,
     PaperWorkflowError,
     default_paper_config,
+    signal_paper_config,
 )
 from quant_hunter.web.state import AccessError, ResourceBusyError, Session, User
 
@@ -61,8 +62,18 @@ class PaperConfiguration(_Closed):
     max_orders_per_window: Annotated[int, Field(ge=1, le=100)]
 
 
+class SignalGeneration(_Closed):
+    profile: Literal["QH_PAPER_SIGNAL_V1"]
+    horizon_bars: Annotated[int, Field(ge=1, le=100)]
+    ttl_seconds: Annotated[int, Field(ge=1, le=3600)]
+
+
+class SignalPaperConfiguration(PaperConfiguration):
+    signal_generation: SignalGeneration
+
+
 class CreatePaper(_Closed):
-    configuration: PaperConfiguration
+    configuration: PaperConfiguration | SignalPaperConfiguration
 
 
 class Revision(_Closed):
@@ -150,6 +161,11 @@ def install_paper_routes(
                 "EQUITY": default_paper_config(),
                 "ETF": default_paper_config("ETF"),
                 "FX_SPOT": default_paper_config("FX_SPOT"),
+            },
+            "opt_in_signal_defaults": {
+                "EQUITY": signal_paper_config(),
+                "ETF": signal_paper_config("ETF"),
+                "FX_SPOT": signal_paper_config("FX_SPOT"),
             },
             "evidence_mode": "SYNTHETIC",
             "network_enabled": False,

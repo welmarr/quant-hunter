@@ -31,3 +31,10 @@ fees, split neutrality and ex-drop/distribution neutrality. Persistent workflow
 tests retain ETF metadata through actual Item8 registration, canonical instrument
 binding, causal fills and final INCONCLUSIVE output. These are software evidence,
 not empirical performance or source-quality approval.
+
+The optional offline Alpaca protocol exercise accepts the same actual paused
+ETF reservation and retains its canonical `SYNTH_ETF` identity. Only inside the
+fixed simulated protocol server is it mapped explicitly to `QHSYNTH`; quantity,
+side, market order and DAY policy are bound to the exact native intent. The test
+creates no real account, external request or economic fill. OANDA's FX-only
+guard continues to reject ETF reservations.

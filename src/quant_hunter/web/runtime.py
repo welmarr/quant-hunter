@@ -20,6 +20,7 @@ from quant_hunter.lab import LabService
 from quant_hunter.markets.registry import InstrumentRegistry
 from quant_hunter.notifications.telegram import FixedTelegramHTTPS
 from quant_hunter.notifications.types import TelegramPolicy
+from quant_hunter.paper_brokers.transport import FixedPaperHTTPS
 from quant_hunter.publications import PublicationService
 from quant_hunter.simulation import Costs, SimulationConfig, simulate, synthetic_fixture
 from quant_hunter.simulation.paper_engine import PaperEngine
@@ -40,6 +41,8 @@ from quant_hunter.web.paper_portfolio import PaperPortfolio
 from quant_hunter.web.pattern_access import PatternAccess
 from quant_hunter.web.publication_access import PublicationAccess
 from quant_hunter.web.quality_access import QualityAccess
+from quant_hunter.web.signals_access import SignalsAccess
+from quant_hunter.web.source_schedules import SourceSchedules
 from quant_hunter.web.state import AccessError, AppState, ResourceBusyError, User
 from quant_hunter.web.study_model_ids import StudyModelIds
 from quant_hunter.web.validation_access import ValidationAccess
@@ -156,6 +159,9 @@ class Runtime:
             providers,
         )
 
+        self.source_schedules = SourceSchedules(self.data)
+        self.collection_error: str | None = None
+        self._collection_due = 0.0
         self.publications = PublicationAccess(
             self.state,
             PublicationService(
@@ -196,12 +202,16 @@ class Runtime:
         self.paper_portfolio = PaperPortfolio(
             self.paper, inspection=self.quality.inspection
         )
+        self.signals = SignalsAccess(
+            self.paper, inspection=self.quality.inspection, patterns=self.patterns
+        )
         self.brokers = BrokerAccess(
             self.state,
             self.paper,
             self.lab.objects,
             private_root or default_private_root(root),
             repository,
+            read_transport=FixedPaperHTTPS(network_enabled=True),
             resource=lambda user, _operation: self.quality.inspection(user),
         )
         self._paper_turn = False
@@ -287,6 +297,7 @@ class Runtime:
     def recover(self) -> None:
         """Never rerun an unknown interrupted attempt. Retain failure and require retry."""
         self.data.recover()
+        self.source_schedules.recover()
         self.publications.recover()
         self.patterns.recover()
         self.paper.recover()
@@ -322,8 +333,21 @@ class Runtime:
             # backs off and retains every task; other failures stay fail-closed.
             return False
 
+    def _pump_collections(self) -> None:
+        """Queue one authorized occurrence; failure cannot stop paper protection."""
+        now = time.monotonic()
+        if now < self._collection_due:
+            return
+        self._collection_due = now + 5.0
+        try:
+            self.source_schedules.pump_due()
+            self.collection_error = None
+        except Exception:
+            self.collection_error = "COLLECTION_PUMP_UNAVAILABLE"
+
     def process_one(self) -> bool:
         self._project_notifications()
+        self._pump_collections()
         self._paper_turn = not self._paper_turn
         if self._paper_turn and self.paper_halt.has_pending() and self._process_paper():
             return True
@@ -332,6 +356,11 @@ class Runtime:
             return self._process_paper() if self.paper_halt.has_pending() else False
         experiment_id: str | None = None
         try:
+            if job.config.get("kind") == "SOURCE_COLLECTION":
+                # The service retains its own durable claim, fresh owner and
+                # capacity refusals before any provider acquisition or receipt.
+                self.source_schedules.execute_job(job)
+                return True
             user = self.state.user(job.owner_id)
             if user.role not in {"owner", "researcher"}:
                 raise AccessError("Current researcher role required")

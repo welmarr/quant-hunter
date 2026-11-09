@@ -1,4 +1,4 @@
-"""Native loopback entry point. No broker or live-money capability exists here."""
+"""Native loopback entry point. No live-money or network order capability."""
 
 from __future__ import annotations
 
@@ -54,6 +54,9 @@ def main() -> None:
             paper_portfolio=runner.paper_portfolio,
             brokers=runner.brokers,
             historical=runner.historical,
+            signals=runner.signals,
+            source_schedules=runner.source_schedules,
+            collection_error=lambda: runner.collection_error,
             notification_projection=runner.notification_projection,
             notification_projection_error=lambda: runner.notification_projection_error,
         )

@@ -9,11 +9,14 @@ from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, localcontext
+from hashlib import sha256
+from pathlib import Path
 from typing import cast
 
 from quant_hunter.config import JsonRecord, JsonValue, canonicalize_json
 from quant_hunter.simulation import accounting as a
 from quant_hunter.simulation import paper_engine as p
+from quant_hunter.simulation import portfolio_metrics as performance
 from quant_hunter.web import paper_access as workflow
 from quant_hunter.web.paper_access import PaperAccess, PaperWorkflowError
 from quant_hunter.web.state import AccessError, User
@@ -138,6 +141,9 @@ class PaperPortfolio:
     def __init__(self, access: PaperAccess, *, inspection: Inspection) -> None:
         self.access = access
         self.inspection = inspection
+        self.performance_source_digest = (
+            "sha256:" + sha256(Path(performance.__file__).read_bytes()).hexdigest()
+        )
 
     def _owns(self, user: User, session_id: str | None = None) -> None:
         with self.access.state.connection() as db:
@@ -344,6 +350,8 @@ class PaperPortfolio:
             "current": None,
             "timeline": [],
             "drawdown_duration": None,
+            "performance": None,
+            "performance_reader_source_digest": self.performance_source_digest,
             "report_anchors": [r.anchor for r in reports],
             "producer": {
                 key: workflow._record(run["bindings"])[key]
@@ -420,6 +428,11 @@ class PaperPortfolio:
                 (session_id,),
             ).fetchone()
             state = cast(p.PaperSnapshot, p._decode(json.loads(bytes(genesis[0]))))
+            metrics = performance.PaperPerformance(
+                state,
+                interval_seconds=cast(int, config["bar_seconds"]),
+                close_offset_seconds=cast(int, config["close_offset_seconds"]),
+            )
             timeline: list[JsonValue] = []
             peak_at = state.at
             longest = Decimal(0)
@@ -489,6 +502,7 @@ class PaperPortfolio:
                     p.PaperCommand, p._decode(json.loads(bytes(entry["payload"])))
                 )
                 state = p._advance(state, command)
+                metrics.observe(state, command)
                 observe(
                     state,
                     str(entry["state_hash"]),
@@ -498,6 +512,7 @@ class PaperPortfolio:
             output.update(
                 {
                     "timeline": timeline,
+                    "performance": metrics.to_record(),
                     "native_head_revision": current.revision,
                     "reported_engine_revision": limit,
                     "unreported_native_revisions": current.revision - limit,

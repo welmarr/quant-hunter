@@ -133,10 +133,89 @@ def default_paper_config(market: str = "EQUITY") -> JsonRecord:
     }
 
 
+def signal_paper_config(market: str = "EQUITY") -> JsonRecord:
+    """Explicit opt-in defaults; legacy defaults and records remain unchanged."""
+    return {
+        **default_paper_config(market),
+        "signal_generation": {
+            "profile": "QH_PAPER_SIGNAL_V1",
+            "horizon_bars": 4,
+            "ttl_seconds": 60,
+        },
+    }
+
+
+def signal_generation_contract(config: Mapping[str, JsonValue]) -> JsonRecord | None:
+    """Closed result-free contract. Absence preserves the original paper profile."""
+    if "signal_generation" not in config:
+        return None
+    value = config["signal_generation"]
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"profile", "horizon_bars", "ttl_seconds"}
+        or value["profile"] != "QH_PAPER_SIGNAL_V1"
+        or type(value["horizon_bars"]) is not int
+        or not 1 <= value["horizon_bars"] <= 100
+        or type(value["ttl_seconds"]) is not int
+        or not 1 <= value["ttl_seconds"] <= 3600
+        or value["ttl_seconds"] > value["horizon_bars"] * 60
+    ):
+        raise PaperWorkflowError("SIGNAL_GENERATION_CONFIGURATION")
+    return {
+        **value,
+        "bar_seconds": 60,
+        "clock": "SIMULATED_BAR_CLOSE",
+        "horizon_rule": "decision_at + horizon_bars * bar_seconds; no target outcome evaluated",
+        "expiry_rule": "decision_at + ttl_seconds; opened >= expires_at cancels before matching",
+        "supersession_rule": "Every later close cancels older unfilled remainder before the new decision",
+        "partial_fill_rule": "Filled positions and costs remain; cancellation affects only unfilled remainder",
+        "execution_authority": "LOCAL_SYNTHETIC_REPLAY_ONLY",
+        "external_actionable": False,
+        "confidence": None,
+        "empirical_validation": "MISSING",
+    }
+
+
+def paper_signal_fields(
+    frozen: Mapping[str, JsonValue], decision: datetime
+) -> JsonRecord | None:
+    """Pure causal fields from a preregistered contract, never from future prices."""
+    contract = signal_generation_contract(frozen)
+    if contract is None:
+        if "signal_generation_contract" in frozen:
+            raise PaperWorkflowError("SIGNAL_CONTRACT_WITHOUT_PROFILE")
+        return None
+    if frozen.get("signal_generation_contract") != contract:
+        raise PaperWorkflowError("SIGNAL_GENERATION_BINDING")
+    if decision.tzinfo is None or decision.utcoffset() != timedelta(0):
+        raise PaperWorkflowError("SIGNAL_DECISION_CLOCK")
+    horizon = decision + timedelta(seconds=cast(int, contract["horizon_bars"]) * 60)
+    return {
+        "profile": contract["profile"],
+        "contract_digest": _hash(canonicalize_json(contract)),
+        "clock": "SIMULATED_BAR_CLOSE",
+        "horizon_bars": contract["horizon_bars"],
+        "horizon_end_at": _stamp(horizon),
+        "horizon_evaluation": "NOT_EVALUATED",
+        "horizon_within_fixture": horizon < _at(frozen["dataset_end"]),
+        "ttl_seconds": contract["ttl_seconds"],
+        "expires_at": _stamp(
+            decision + timedelta(seconds=cast(int, contract["ttl_seconds"]))
+        ),
+        "expiry_boundary": "EXCLUSIVE",
+        "external_actionable": False,
+        "confidence": None,
+    }
+
+
 def validate_paper_config(value: Mapping[str, JsonValue]) -> JsonRecord:
     config = dict(value)
-    if set(config) != set(default_paper_config()):
+    if set(config) not in (
+        set(default_paper_config()),
+        set(default_paper_config()) | {"signal_generation"},
+    ):
         raise PaperWorkflowError("CLOSED_CONFIGURATION_REQUIRED")
+    signal_generation_contract(config)
     if not isinstance(config["market"], str) or not isinstance(config["mode"], str):
         raise PaperWorkflowError("UNSUPPORTED_PROFILE")
     if config["market"] not in {"EQUITY", "ETF", "FX_SPOT"} or config["mode"] not in {
@@ -158,6 +237,7 @@ def validate_paper_config(value: Mapping[str, JsonValue]) -> JsonRecord:
         "bars",
         "lookback",
         "max_orders_per_window",
+        "signal_generation",
     }:
         number = config[key]
         if not isinstance(number, str) or not re.fullmatch(
@@ -287,6 +367,19 @@ def _prepare(config: JsonRecord, instrument: JsonRecord) -> tuple[JsonRecord, by
             "cost_model": "Explicit executable bid/ask, tick-rounded adverse slippage and per-partial-fill commission; zero declared intraday financing",
         },
     }
+    generation = signal_generation_contract(config)
+    if generation is not None:
+        frozen["signal_generation_contract"] = generation
+        method = _record(frozen["software_method"])
+        method["implemented_scope"] = (
+            cast(str, method["implemented_scope"])
+            + "; opt-in QH_PAPER_SIGNAL_V1 with frozen horizon, exclusive replay expiry and later-close supersession"
+        )
+        method["assumptions"] = [
+            *cast(list[JsonValue], method["assumptions"]),
+            "Prediction horizon is a declared unevaluated target, not observed performance or calibrated confidence",
+            "Actual native cancellation applies before matching at expiry and to older remainder at each later close; filled exposure remains",
+        ]
     return frozen, canonicalize_json(
         {
             "format": "v0-paper-fixture-1",
@@ -896,6 +989,7 @@ class PaperAccess:
             or frozen.get("paper_owner_id") != row["owner_id"]
             or any(frozen.get(key) != value for key, value in original.items())
             or _hash(canonicalize_json(original)) != row["configuration_digest"]
+            or ("signal_generation" in frozen) != ("signal_generation" in original)
         ):
             raise PaperWorkflowError("CANONICAL_OWNER_BINDING")
         self._source(cast(str, manifest["environment_digest"]), current=current)
@@ -918,6 +1012,31 @@ class PaperAccess:
             if rev.digest == frozen["instrument_revision_digest"]
         ):
             raise PaperWorkflowError("INSTRUMENT_FIXTURE_BINDING")
+        generation = signal_generation_contract(frozen)
+        if generation != frozen.get("signal_generation_contract"):
+            raise PaperWorkflowError("SIGNAL_GENERATION_BINDING")
+        if row["report_digest"]:
+            report = self._object(cast(str, row["report_digest"]))
+            if generation is not None:
+                bars, signals = fixture.get("bars"), report.get("signals")
+                if (
+                    report.get("signal_generation_contract") != generation
+                    or not isinstance(bars, list)
+                    or not isinstance(signals, list)
+                    or len(signals) != row["cursor"]
+                    or len(signals) > len(bars)
+                ):
+                    raise PaperWorkflowError("SIGNAL_REPORT_BINDING")
+                for index, signal in enumerate(signals):
+                    if _record(signal).get("generation") != paper_signal_fields(
+                        frozen, _at(_record(bars[index])["close_at"])
+                    ):
+                        raise PaperWorkflowError("SIGNAL_REPORT_BINDING")
+            elif "signal_generation_contract" in report or any(
+                "generation" in _record(signal)
+                for signal in cast(list[JsonValue], report.get("signals", []))
+            ):
+                raise PaperWorkflowError("LEGACY_SIGNAL_PROFILE_CHANGED")
         return run, fixture
 
     def _snapshot(self, row: JsonRecord) -> p.PaperSnapshot:
@@ -1217,6 +1336,9 @@ class PaperAccess:
                 "Closing equity retains bid-marked positions, without assuming liquidation or an exit fee",
             ],
         }
+        generation = signal_generation_contract(_record(row["configuration"]))
+        if generation is not None:
+            report["signal_generation_contract"] = generation
         if snapshot:
             rejected = [o for o in snapshot.outcomes if o.status == "REJECTED"]
             with localcontext(a.CONTEXT):
@@ -1259,14 +1381,18 @@ class PaperAccess:
             command_ids.append(value.command_id)
             self.fault("AFTER_ENGINE_COMMAND")
 
-        def cancel_all(at: datetime) -> None:
+        def cancel_all(
+            at: datetime, *, only_order_id: str | None = None, reason: str = ""
+        ) -> None:
             for order in tuple(snapshot.book.orders):
-                if order.status in a.OPEN:
+                if order.status in a.OPEN and (
+                    only_order_id is None or order.order_id == only_order_id
+                ):
                     suffix = str(len(command_ids))
                     if order.status != "CANCEL_PENDING":
                         command(
                             p.Cancel(
-                                command_id=prefix + ".cancelrequest" + suffix,
+                                command_id=prefix + reason + ".cancelrequest" + suffix,
                                 at=at,
                                 order_id=order.order_id,
                                 action="REQUEST",
@@ -1274,12 +1400,20 @@ class PaperAccess:
                         )
                     command(
                         p.Cancel(
-                            command_id=prefix + ".cancelconfirm" + suffix,
+                            command_id=prefix + reason + ".cancelconfirm" + suffix,
                             at=at,
                             order_id=order.order_id,
                             action="CONFIRM",
                         )
                     )
+                    if reason and (
+                        any(r.order_id == order.order_id for r in snapshot.reservations)
+                        or any(
+                            item.order_id == order.order_id and item.status in a.OPEN
+                            for item in snapshot.book.orders
+                        )
+                    ):
+                        raise PaperWorkflowError("SIGNAL_CANCELLATION_UNCONFIRMED")
 
         if kind in {"CANCEL", "KILL", "RESET_KILL"}:
             if kind == "RESET_KILL":
@@ -1335,6 +1469,24 @@ class PaperAccess:
             command(
                 p.Mark(command_id=prefix + ".open", at=opened, quotes=(open_quote,))
             )
+            generation = signal_generation_contract(config)
+            if generation is not None:
+                originating = {
+                    cast(str, _record(signal)["order_id"]): _record(signal)
+                    for signal in signals
+                    if _record(signal).get("order_id") is not None
+                }
+                for reserve in tuple(snapshot.reservations):
+                    intent = originating.get(reserve.order_id)
+                    if intent is None:
+                        raise PaperWorkflowError("SIGNAL_RESERVATION_WITHOUT_INTENT")
+                    expiry = _at(_record(intent["generation"])["expires_at"])
+                    if opened >= expiry:
+                        cancel_all(
+                            opened,
+                            only_order_id=reserve.order_id,
+                            reason=".signalexpiry",
+                        )
             for reserve in tuple(snapshot.reservations):
                 command(
                     p.Match(
@@ -1354,6 +1506,19 @@ class PaperAccess:
             command(
                 p.Mark(command_id=prefix + ".close", at=closed, quotes=(close_quote,))
             )
+            if generation is not None:
+                for reserve in tuple(snapshot.reservations):
+                    intent = originating.get(reserve.order_id)
+                    if intent is None:
+                        raise PaperWorkflowError("SIGNAL_RESERVATION_WITHOUT_INTENT")
+                    expiry = _at(_record(intent["generation"])["expires_at"])
+                    cancel_all(
+                        closed,
+                        only_order_id=reserve.order_id,
+                        reason=".signalexpiry"
+                        if closed >= expiry
+                        else ".signalsuperseded",
+                    )
             lookback = cast(int, config["lookback"])
             comparison = (
                 D(cast(str, _record(bars[cursor - lookback])["close_bid"]))
@@ -1382,6 +1547,9 @@ class PaperAccess:
                 else "FLAT_NONPOSITIVE_MOMENTUM",
                 "order_id": None,
             }
+            fields = paper_signal_fields(config, closed)
+            if fields is not None:
+                signal["generation"] = fields
             if cursor + 1 < len(bars) and target != held and not snapshot.reservations:
                 quantity = abs(target - held)
                 with localcontext(a.CONTEXT):

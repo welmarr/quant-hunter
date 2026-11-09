@@ -226,7 +226,7 @@ def _method_input(config: PatternJobConfig, features: tuple[str, ...]) -> JsonRe
         selected = [features[column]]
     else:
         selected = list(features)
-    return {
+    record: JsonRecord = {
         "source_feature_columns": list(features),
         "feature_index": column,
         "method_feature_columns": cast(list[JsonValue], selected),
@@ -234,6 +234,15 @@ def _method_input(config: PatternJobConfig, features: tuple[str, ...]) -> JsonRe
         if column is not None
         else "ALL_SOURCE_COLUMNS",
     }
+    if config.normalization == "RELATIVE_OHLC":
+        record["search_representation"] = {
+            "normalization": "RELATIVE_OHLC",
+            "source_columns": ["close", "open", "high", "low"],
+            "output_columns": ["body", "upper_wick", "lower_wick", "opening_gap"],
+            "scope": "SEARCH_AND_OVERLAYS_ONLY; family method retains its declared transformation",
+            "omitted_source_columns": list(features[4:]),
+        }
+    return record
 
 
 def method_profile(config: PatternJobConfig, features: tuple[str, ...]) -> JsonRecord:

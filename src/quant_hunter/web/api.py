@@ -18,7 +18,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -51,6 +51,10 @@ from quant_hunter.web.publication_access import PublicationAccess
 from quant_hunter.web.publication_routes import install_publication_routes
 from quant_hunter.web.quality_access import QualityAccess
 from quant_hunter.web.quality_routes import install_quality_routes
+from quant_hunter.web.signals_access import SignalsAccess
+from quant_hunter.web.signals_routes import install_signals_routes
+from quant_hunter.web.source_schedule_routes import install_source_schedule_routes
+from quant_hunter.web.source_schedules import SourceSchedules
 from quant_hunter.web.state import (
     AccessError,
     AppState,
@@ -133,7 +137,26 @@ class SourceUpload(Input):
     series_metadata_base64: Annotated[
         str | None, Field(min_length=1, max_length=2_666_668)
     ] = None
-    metadata: dict[str, str | bool | int | None]
+    metadata: dict[str, str | bool | int | dict[str, str] | None]
+
+    @field_validator("metadata")
+    @classmethod
+    def bounded_vintage_units(
+        cls, value: dict[str, str | bool | int | dict[str, str] | None]
+    ) -> dict[str, str | bool | int | dict[str, str] | None]:
+        """Only the explicit RTDSM profile adds one bounded flat units map."""
+        for key, item in value.items():
+            if isinstance(item, dict) and (
+                key != "vintage_units"
+                or value.get("profile") != "RTDSM_QUARTERLY_CSV_V1"
+                or not 1 <= len(item) <= 127
+                or any(
+                    not 1 <= len(header) <= 64 or not 1 <= len(unit) <= 120
+                    for header, unit in item.items()
+                )
+            ):
+                raise ValueError("Unsupported or unbounded source metadata map")
+        return value
 
 
 class InstrumentInterval(Input):
@@ -295,6 +318,9 @@ def create_app(
     paper_portfolio: PaperPortfolio | None = None,
     brokers: BrokerAccess | None = None,
     historical: HistoricalPreviewAccess | None = None,
+    signals: SignalsAccess | None = None,
+    source_schedules: SourceSchedules | None = None,
+    collection_error: Callable[[], str | None] = lambda: None,
     notification_projection: NotificationProjection | None = None,
     notification_projection_error: Callable[[], str | None] = lambda: None,
 ) -> FastAPI:
@@ -362,6 +388,19 @@ def create_app(
     install_halt_routes(app, authenticated, paper_halt)
     install_paper_portfolio_routes(app, authenticated, paper_portfolio)
     install_broker_routes(app, authenticated, brokers)
+    install_signals_routes(app, authenticated, signals)
+    install_source_schedule_routes(app, authenticated, source_schedules)
+
+    @app.get("/api/collection-worker/status")
+    def collection_worker_status(request: Request) -> object:
+        authenticated(request)
+        return {
+            "configured": source_schedules is not None,
+            "error": "COLLECTION_PUMP_UNAVAILABLE" if collection_error() else None,
+            "minimum_pump_interval_seconds": 5,
+            "maximum_occurrences_per_pump": 1,
+        }
+
     install_operations_routes(
         app,
         authenticated,

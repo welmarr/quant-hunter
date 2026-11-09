@@ -57,7 +57,13 @@ class QueryConfig(_Closed):
     candidate_cutoff_ns: Nanoseconds
     purge_ns: Nanoseconds = "0"
     normalization: Literal[
-        "RAW", "BASE100", "RETURNS", "LOG_RETURNS", "Z_WINDOW", "CAUSAL_VOL"
+        "RAW",
+        "BASE100",
+        "RETURNS",
+        "LOG_RETURNS",
+        "Z_WINDOW",
+        "CAUSAL_VOL",
+        "RELATIVE_OHLC",
     ] = "Z_WINDOW"
     mode: Literal["EXACT_SMALL", "APPROXIMATE"] = "APPROXIMATE"
     metric: Literal["EUCLIDEAN", "DTW"] = "EUCLIDEAN"

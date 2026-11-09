@@ -275,7 +275,7 @@ def test_identity_and_reflected_secret_faults_do_not_claim_success(
 
 
 @pytest.mark.parametrize(
-    "provider,market", [("ALPACA", "EQUITY"), ("OANDA", "FX_SPOT")]
+    "provider,market", [("ALPACA", "EQUITY"), ("ALPACA", "ETF"), ("OANDA", "FX_SPOT")]
 )
 def test_actual_risk_reservation_drives_offline_client_and_durable_journal(
     tmp_path: Path, provider: str, market: str
@@ -295,6 +295,26 @@ def test_actual_risk_reservation_drives_offline_client_and_durable_journal(
         == 0
     )
     assert not access.private_root.exists()
+    if market == "ETF":
+        proof = module._record(
+            access.objects.read_bytes(cast(str, result(operation)["proof_digest"]))
+        )
+        assert proof["symbol_mapping"] == {
+            "canonical": "SYNTH_ETF",
+            "offline_protocol": "QHSYNTH",
+        }
+        contracts = cast(list[JsonRecord], proof["http_fixture_contracts"])
+        post = next(row for row in contracts if row["method"] == "POST")
+        assert post["provider"] == "ALPACA" and post["target"] == "/v2/orders"
+        request = module._record(
+            access.objects.read_bytes(cast(str, post["request_digest"]))
+        )
+        assert request["symbol"] == "QHSYNTH"
+        assert request["qty"] == str(before.reservations[0].remaining)
+        assert request["side"] == before.reservations[0].side.lower()
+        assert request["type"] == "market" and request["time_in_force"] == "day"
+        retained_book = cast(JsonRecord, cast(JsonRecord, proof["snapshot"])["book"])
+        assert cast(list[JsonRecord], retained_book["instruments"])[0]["kind"] == "ETF"
     assert access.evidence(owner, cast(str, operation["operation_id"]))[
         "verified_digests"
     ] == [result(operation)["proof_digest"]]
@@ -320,6 +340,21 @@ def test_actual_risk_reservation_drives_offline_client_and_durable_journal(
         owner, provider, paper_id, expected_revision=cast(int, job["revision"])
     )
     assert result(repeated)["reason"] == "RESERVATION_ALREADY_DEMONSTRATED_OR_UNKNOWN"
+
+
+def test_etf_cannot_be_routed_to_oanda_offline_protocol(tmp_path: Path) -> None:
+    access, owner = build(tmp_path)
+    job = paused(access, owner, "ETF")
+    identity = cast(str, job["id"])
+    before = access.paper.engine.load(identity, str(owner.id))
+    operation = access.dry_run(
+        owner, "OANDA", identity, expected_revision=cast(int, job["revision"])
+    )
+    assert result(operation)["status"] == "FAILED"
+    assert result(operation)["reason"] == "PAPER_PROVIDER_INSTRUMENT_MISMATCH"
+    assert result(operation)["external_requests"] == 0
+    assert result(operation)["proof_digest"] is None
+    assert access.paper.engine.load(identity, str(owner.id)) == before
 
 
 def test_owner_checks_and_resource_admission_precede_secret_and_protocol(

@@ -1284,7 +1284,7 @@ class BrokerAccess:
                     for spec in snapshot.book.instruments
                     if spec.instrument_id == reservation.instrument_id
                 )
-                if (provider == "ALPACA" and spec.kind != "EQUITY") or (
+                if (provider == "ALPACA" and spec.kind not in {"EQUITY", "ETF"}) or (
                     provider == "OANDA" and spec.kind != "FX_SPOT"
                 ):
                     raise BrokerError("PAPER_PROVIDER_INSTRUMENT_MISMATCH")
@@ -1309,7 +1309,7 @@ class BrokerAccess:
                 )
                 config = _fixture_config(provider, user.id)
                 account_id = config.account_id
-                # Canonical SYNTH_EQ is not an Alpaca symbol; this explicit alias
+                # Synthetic equity/ETF names are not broker symbols; this alias
                 # exists only in the fixed offline fake server, never in a URL to a broker.
                 symbol = "QHSYNTH" if provider == "ALPACA" else spec.symbol
                 intent = OrderIntent(

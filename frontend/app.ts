@@ -28,16 +28,16 @@ type Source = { catalogue_id: string; name: string; status: string; documentatio
 type DataOperation = { id: string; kind: string; catalogue_id: string | null; created_at_unix: number | string; status: string; result: unknown; error: unknown };
 type Dataset = { dataset_id: string; source_id: string; raw_digest: string; normalized_digest: string; row_count: number; columns: unknown; bounds: unknown; metadata: Record<string, unknown>; quality: unknown; limitations: unknown; [key: string]: unknown };
 type ConnectionId = "SRC-01" | "SRC-02" | "SRC-07" | "SRC-18" | "SRC-20";
-type SourceImportId = "SRC-05" | "SRC-07" | "SRC-09" | "SRC-19";
+type SourceImportId = "SRC-04" | "SRC-21" | "SRC-22" | "SRC-05" | "SRC-07" | "SRC-09" | "SRC-19";
 const connectionNames: Record<ConnectionId, string> = { "SRC-01": "SEC", "SRC-02": "Alpaca", "SRC-07": "FRED", "SRC-18": "Sharadar", "SRC-20": "Trading Economics" };
-const sourceImportNames: Record<SourceImportId, string> = { "SRC-05": "BEA NIPA", "SRC-07": "ALFRED vintages", "SRC-09": "Dukascopy daily BI5", "SRC-19": "EODHD daily" };
+const sourceImportNames: Record<SourceImportId, string> = { "SRC-04": "BLS CES archives", "SRC-21": "FX forwards", "SRC-22": "Macro vintages and surveys", "SRC-05": "BEA NIPA", "SRC-07": "ALFRED vintages", "SRC-09": "Dukascopy daily BI5", "SRC-19": "EODHD daily" };
 type Connection = { catalogue_id: ConnectionId; state: "NOT_CONFIGURED" | "CONFIGURED" | "REVOKED"; masked: string | null; revision: number | null; externally_validated: false };
 type Connections = { connections: Connection[]; private_root: string; initialized: boolean; live_credentials: string; limit: string };
 type InstrumentInterval = { start: string; end: string | null };
 type InstrumentMetadata = { instrument_id?: string; asset_class: "EQUITY" | "ETF" | "FX_SPOT"; venue: string; base_currency: string; quote_currency: string; price_precision: number; quantity_precision: number; lot_size: string; tick_size: string; multiplier: string; timezone: string; calendar_id: string; activity: InstrumentInterval[]; symbols: (InstrumentInterval & { symbol: string })[]; status: string };
 type InstrumentRecord = { instrument_id: string; revision: number; previous_revision_digest: string | null; schema_version: string; instrument: InstrumentMetadata; recorded_at: string; reason: string; evidence_mode: string; source_reference: string };
 type InstrumentDetail = { record: InstrumentRecord; digest: string; revision_count: number; historical_availability: string; empirically_validated: false };
-type View = "overview" | "sources" | "data" | "markets" | "backtests" | "studies" | "publications" | "quality" | "patterns" | "validation" | "notifications" | "operations" | "paper" | "historical" | "comparison" | "experiments" | "portfolio" | "settings" | "project";
+type View = "overview" | "sources" | "data" | "markets" | "backtests" | "studies" | "publications" | "quality" | "patterns" | "signals" | "validation" | "notifications" | "operations" | "paper" | "historical" | "comparison" | "experiments" | "portfolio" | "settings" | "project";
 type Child = Node | string | number | null | undefined;
 const SVG_NS = "http://www.w3.org/2000/svg";
 const root = document.getElementById("app")!;
@@ -61,7 +61,7 @@ let datasetRequest = 0;
 let datasetsLoading = false;
 let view: View = parseView();
 let draft: JobConfig = { market: "EQUITY", initial_cash: "10000", quantity: "10", lookback: 1, commission: "1", slippage_bps: "0", annual_financing_rate: "0" };
-const viewNames: Record<View, string> = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", publications: "Publications", quality: "Data quality", patterns: "PatternLab", validation: "Validation", notifications: "Notifications", operations: "Operations", paper: "Execution", historical: "Historical charts", comparison: "Compare runs", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
+const viewNames: Record<View, string> = { overview: "Overview", sources: "Sources", data: "Data", markets: "Markets", backtests: "Backtests", studies: "Studies", publications: "Publications", quality: "Data quality", patterns: "PatternLab", signals: "Signals", validation: "Validation", notifications: "Notifications", operations: "Operations", paper: "Execution", historical: "Historical charts", comparison: "Compare runs", experiments: "Experiments", portfolio: "Portfolio", settings: "Settings", project: "Project status" };
 const paths: Record<string, string> = {
   overview: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   sources: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
@@ -340,7 +340,7 @@ function renderView(focus = false): void {
   const crumb = document.getElementById("breadcrumb"); if (crumb) crumb.replaceChildren("Workspace", el("span", "", "/", el("span", "", viewNames[view])));
   region.replaceChildren();
   if (!dataLoaded) { region.append(heading("Connecting to your local installation", viewNames[view], "Loading the current account's workspace…")); return; }
-  const views: Record<View, (region: HTMLElement) => void> = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, publications: region => { region.append(publicationView()); }, quality: region => { region.append(qualityView()); }, patterns: region => { region.append(patternView()); }, validation: region => { region.append(validationView()); }, notifications: region => { region.append(notificationsView()); }, operations: region => { region.append(operationsView()); }, paper: region => { region.append(paperHaltPanel(), paperView(), paperBrokerPanel()); }, historical: region => { region.append(historicalView()); }, comparison: region => { region.append(comparisonView()); }, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
+  const views: Record<View, (region: HTMLElement) => void> = { overview: renderOverview, sources: renderSources, data: renderData, markets: renderMarkets, backtests: renderBacktests, studies: renderStudies, publications: region => { region.append(publicationView()); }, quality: region => { region.append(qualityView()); }, patterns: region => { region.append(patternView()); }, signals: region => { region.append(signalsView()); }, validation: region => { region.append(validationView()); }, notifications: region => { region.append(notificationsView()); }, operations: region => { region.append(operationsView(), sourceSchedulePanel()); }, paper: region => { region.append(paperHaltPanel(), paperView(), paperBrokerPanel()); }, historical: region => { region.append(historicalView()); }, comparison: region => { region.append(comparisonView()); }, experiments: renderExperiments, portfolio: renderPortfolio, settings: renderSettings, project: renderProject };
   views[view](region);
   if (focus) { const title = region.querySelector("h1"); if (title) { title.tabIndex = -1; title.focus({ preventScroll: true }); } }
 }
@@ -483,6 +483,7 @@ async function base64File(file: File): Promise<string> {
 }
 
 function sourceImportForm(id: SourceImportId, epoch: number, operations: HTMLElement): HTMLElement {
+  if (id === "SRC-04" || id === "SRC-21" || id === "SRC-22") return archiveImportForm(id, epoch, operations);
   const owner = session.user?.id;
   const form = el("form"); form.id = `source-import-${id}`;
   const title = sourceImportNames[id];
@@ -1789,7 +1790,8 @@ function patternView(): HTMLElement {
     { value: "BASELINE", text: "Baseline reference protocol" }, { value: "SELECTED", text: "Selected query and controls" }, { value: "POSITIVE", text: "Known synthetic fixture control" }, { value: "NULL", text: "No eligible past control" }, { value: "SENSITIVITY", text: "One prespecified sensitivity change" }
   ], "BASELINE");
   const mode = selectField("Search mode", "pattern-mode", [{ value: "APPROXIMATE", text: "Approximate candidates with exact reranking" }, { value: "EXACT_SMALL", text: "Exact small-corpus comparison" }], "APPROXIMATE");
-  const normal = selectField("Normalization", "pattern-normalization", ["RAW", "BASE100", "RETURNS", "LOG_RETURNS", "Z_WINDOW", "CAUSAL_VOL"].map(value => ({ value, text: value })), "Z_WINDOW");
+  const normal = selectField("Normalization", "pattern-normalization", ["RAW", "BASE100", "RETURNS", "LOG_RETURNS", "Z_WINDOW", "CAUSAL_VOL", "RELATIVE_OHLC"].map(value => ({ value, text: value })), "Z_WINDOW");
+  normal.box.append(el("p", "field-hint", "RELATIVE_OHLC compares body, upper/lower wick and opening-gap fractions. Only search and overlays use this four-column representation; family calculations and economic outcomes retain their original inputs."));
   const metric = selectField("Distance", "pattern-metric", [{ value: "EUCLIDEAN", text: "Euclidean" }, { value: "DTW", text: "Constrained DTW" }], "EUCLIDEAN");
   const queryStart = field("Query start row", "pattern-query-start", "208", { type: "number", min: "0", step: "1" });
   const queryStop = field("Query stop row (exclusive)", "pattern-query-stop", "240", { type: "number", min: "8", step: "1" });
@@ -2241,7 +2243,8 @@ function paperView(): HTMLElement {
   definitions.forEach(([name, title, min, max, step], index) => { const value = field(title, `paper-${name}`, "", { type: "number", min, max, step: ["bars", "lookback", "max_orders_per_window"].includes(name) ? step : "any" }); fields[name] = value.input; (index < 7 ? visible : riskFields).append(value.box); value.input.disabled = !editable; }); risk.append(riskFields);
   const form = el("form", "paper-form");
   const create = el("button", "button", "Create configured session"); create.type = "submit"; create.disabled = !editable;
-  form.append(visible, risk, el("div", "form-actions", create)); creation.body.append(form);
+  const signalProfile = paperSignalProfileFields(editable);
+  form.append(visible, signalProfile.box, risk, el("div", "form-actions", create)); creation.body.append(form);
   function resetDefaults(): void {
     const values = record(defaults[market.input.value]);
     for (const [name, input] of Object.entries(fields)) input.value = String(values[name] ?? "");
@@ -2253,6 +2256,8 @@ function paperView(): HTMLElement {
     try {
       const configuration: Record<string, unknown> = { market: market.input.value, mode: mode.input.value };
       for (const [name, input] of Object.entries(fields)) configuration[name] = ["bars", "lookback", "max_orders_per_window"].includes(name) ? Number(input.value) : input.value;
+      const generation = signalProfile.configuration();
+      if (generation) configuration.signal_generation = generation;
       const value = await api<Record<string, unknown>>("/paper/sessions", { configuration }); if (!alive()) return;
       await refresh(); await inspect(String(value.id));
     } catch (error) { errors(error); } finally { if (alive()) create.disabled = !editable; }
@@ -2763,6 +2768,7 @@ function paperPortfolioPanel(): HTMLElement {
           table(["Cash currency", "Amount"], rows(current.cash_balances).map(row => [String(row.currency), String(row.amount)]), "Recorded paper cash balances", [1]),
           table(["Instrument", "Quantity", "Cost basis", "Bid-marked value", "Fraction of equity", "Quote time", "Mark status"], rows(current.positions).map(row => [String(row.instrument_id), String(row.quantity), String(row.cost_basis), display(row.bid_marked_value), display(row.fraction_of_equity), display(row.quote_at), String(row.mark_status)]), "Recorded paper positions and exposures", [1,2,3,4]));
       }
+      detail.append(paperPerformancePanel(value));
       detail.append(patternJson("Observation-based drawdown duration", duration), notice("Duration uses retained command observations only. It does not interpolate unobserved recovery. A right-censored duration remains ongoing at the last recorded observation."));
       const timeline = rows(value.timeline), target = el("div"); let offset = 0;
       const render = (): void => {
@@ -2774,4 +2780,235 @@ function paperPortfolioPanel(): HTMLElement {
     } catch (error) { if (alive() && mine === generation) detail.replaceChildren(notice(readableError(error), "error")); }
   }
   queueMicrotask(() => { if (alive()) void load(); }); return area.box;
+}
+
+
+// Integrated host supplies existing safe DOM helpers, API and private-input cleanup.
+function archiveImportForm(id: "SRC-04" | "SRC-21" | "SRC-22", epoch: number, operations: HTMLElement): HTMLElement {
+  const owner = session.user?.id;
+  const form = el("form"); form.id = `source-import-${id}`;
+  const choices = id === "SRC-04" ? [{value:"QH_CES_RELEASE_MATRIX_CSV_V1",text:"CES release matrix"}] : id === "SRC-21" ? [{value:"QH_FX_FORWARD_QUOTES_CSV_V1",text:"FX forward quotes"}] : [{value:"RTDSM_QUARTERLY_CSV_V1",text:"RTDSM vintage matrix"},{value:"PHILADELPHIA_SPF_QUARTERLY_CSV_V1",text:"Philadelphia SPF quarterly levels"},{value:"ECB_SPF_POINT_CSV_V1",text:"ECB SPF individual points"}];
+  const profile = selectField("Archive file profile",`${id}-profile`,choices,choices[0]!.value);
+  const file = field("Archive CSV export",`${id}-file`,"",{type:"file",hint:"Explicit UTF-8 worksheet export, maximum 2,000,000 bytes. Native XLSX and ZIP files are not supported."}); file.input.accept=".csv,text/csv";file.input.dataset.privateField="true";
+  const start=field("Observation or survey start",`${id}-start`,"",{type:"date"}),end=field("Observation or survey end",`${id}-end`,"",{type:"date"}),vintage=field("Declared export vintage",`${id}-export-vintage`,"",{type:"date",hint:"Date of the submitted export; this does not verify original publication or availability."});
+  const common=el("div","form-grid",start.box,end.box,vintage.box);
+  const fields=el("div","form-grid"),schema=el("pre","code-block");
+  const inputs: Record<string,HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>={};
+  const add=(key:string,label:string,value="",hint="",type="text"): HTMLInputElement=>{const f=field(label,`${id}-${key}`,value,{type,hint}); f.input.maxLength=200;inputs[key]=f.input;fields.append(f.box);return f.input;};
+  const pick=(key:string,label:string,values:string[]):HTMLSelectElement=>{const f=selectField(label,`${id}-${key}`,values.map(value=>({value,text:value})),values[0]!);inputs[key]=f.input;fields.append(f.box);return f.input;};
+  const rebuild=():void=>{
+    fields.replaceChildren();Object.keys(inputs).forEach(key=>delete inputs[key]);
+    if(id==="SRC-04"){
+      add("series_id","CES employment series","CES0000000001","An employment-level CES/CEU series ending in01. Units: thousands of payroll jobs.");
+      schema.textContent="vintage_reference_month,2023-12,2024-01\n2024-01,157300,157500\n2024-02,157310,157520";
+    }else if(id==="SRC-21"){
+      const currencies=["EUR","USD","GBP","JPY","CHF","AUD","CAD","NZD","SEK","NOK","DKK","SGD","HKD","CNH","CNY","MXN","ZAR"];
+      pick("base_currency","Base currency",currencies);const quote=pick("quote_currency","Quote currency",currencies);quote.value="USD";
+      add("source_label","Declared source of quotes","","No dealer feed or executable-quote certification is implied.");
+      schema.textContent="quote_id,quote_at,base_currency,quote_currency,spot_date,settlement_date,tenor,quote_kind,spot_bid,spot_ask,forward_bid,forward_ask,point_scale,declared_available_at\nRates mean quote currency per one base currency. OUTRIGHT requires an empty scale. POINTS adds forward_bid/ask × point_scale to spot_bid/ask.";
+    }else if(profile.input.value==="RTDSM_QUARTERLY_CSV_V1"){
+      add("series_id","RTDSM series ID","ROUTPUT");const pivot=add("year_window_start","Two-digit year window start","1950","Fixed100-year parsing window; never inferred from today's date.","number");pivot.min="1900";pivot.max="2000";pivot.step="1";
+      const box=el("div","field form-full"),label=el("label","","Units for each vintage column"),units=el("textarea");units.id=`${id}-vintage-units`;label.htmlFor=units.id;units.required=true;units.maxLength=16000;units.rows=4;units.placeholder="ROUTPUT24Q1=BILLIONS_REAL_USD\nROUTPUT24Q2=BILLIONS_REAL_USD";units.dataset.privateField="true";inputs.vintage_units=units;box.append(label,units,el("p","field-hint","One exact header=unit per line. Every vintage column requires its own unit; changing base years remain distinct."));fields.append(box);
+      schema.textContent="DATE,ROUTPUT24Q1,ROUTPUT24Q2\n2023Q4,100,101\nQuarterly vintages identify the middle month; no release day or availability is inferred.";
+    }else{
+      const philadelphia=profile.input.value==="PHILADELPHIA_SPF_QUARTERLY_CSV_V1";
+      const units:Record<string,string>=philadelphia?{UNEMP:"PERCENT_LABOUR_FORCE",NGDP:"BILLIONS_USD_SAAR",RGDP:"BILLIONS_REAL_USD_SAAR_BASE_VARIES",EMP:"THOUSANDS_OF_JOBS",INDPROD:"INDEX_BASE_VARIES",TBILL:"PERCENT_PER_ANNUM",TBOND:"PERCENT_PER_ANNUM"}:{HICP:"PERCENT_YOY",HICPX:"PERCENT_YOY",RGDP:"PERCENT_YOY",UNEM:"PERCENT_LABOUR_FORCE"};
+      const variable=pick("variable","Survey variable",Object.keys(units)),unit=add("unit","Profile unit",units[variable.value]!);unit.readOnly=true;variable.addEventListener("change",()=>{unit.value=units[variable.value]!;schema.textContent=philadelphia?`YEAR,QUARTER,${variable.value}1,${variable.value}2,${variable.value}3,${variable.value}4,${variable.value}5,${variable.value}6\nColumn1 is a reported historical value; columns2–6 are distinct forecast horizons.`:"TARGET_PERIOD,FCT_SOURCE,POINT\nExport one variable and survey round's point forecasts. No probability distribution or consensus is inferred.";});
+      pick("statistic","Statistic",philadelphia?["MEDIAN","MEAN"]:["INDIVIDUAL_POINT"]);
+      if(!philadelphia)add("survey_round","Declared survey round","","For example2024Q1. Must match the original table.").pattern="[0-9]{4}Q[1-4]";
+      variable.dispatchEvent(new Event("change"));
+    }
+  };profile.input.addEventListener("change",rebuild);rebuild();
+  const rights=field("Provider export licence / access rights",`${id}-declared-license`,"",{hint:"State actual source rights and restrictions; a declaration is not independent verification."});rights.input.maxLength=200;
+  const confirm=declaration("I confirm my right to store and use this export and that it contains no credentials.",`${id}-license-confirmed`);
+  const feedback=el("div");feedback.setAttribute("aria-live","polite");const submit=el("button","button","Import archive export");submit.type="submit";
+  form.append(notice("Diagnostic file import only: exact submitted bytes and at most10 preview observations. Verified availability remains unknown, point-in-time eligibility stays false, and this does not unlock historical backtests."),profile.box,file.box,common,fields,el("details","data-disclosure",el("summary","","Required CSV profile and limits"),schema),rights.box,confirm.box,el("div","form-actions",submit),feedback);
+  form.addEventListener("submit",async event=>{
+    event.preventDefault();const selected=file.input.files?.[0];if(!selected)return;
+    if(selected.size<1||selected.size>2_000_000){feedback.replaceChildren(notice("Select a CSV file containing1 to2,000,000 bytes.","error"));return;}
+    const metadata:Record<string,unknown>={profile:profile.input.value,start:start.input.value,end:end.input.value,export_vintage:vintage.input.value,declared_license:rights.input.value.trim(),license_confirmed:confirm.input.checked};
+    try{for(const [key,input] of Object.entries(inputs)){
+      if(key==="vintage_units"){const map:Record<string,string>={};for(const line of input.value.trim().split(/\r?\n/)){const parts=line.split("=");if(parts.length!==2||!parts[0]?.trim()||!parts[1]?.trim()||Object.hasOwn(map,parts[0].trim()))throw new Error("Enter each vintage header=unit once.");map[parts[0].trim()]=parts[1].trim();}metadata[key]=map;}
+      else metadata[key]=key==="year_window_start"?Number(input.value):input.value.trim();
+    }if(profile.input.value==="PHILADELPHIA_SPF_QUARTERLY_CSV_V1")metadata.survey_round=null;
+    }catch(error){feedback.replaceChildren(notice(readableError(error),"error"));return;}
+    const current=():boolean=>pageEpoch===epoch&&form.isConnected&&session.user?.id===owner;
+    submit.disabled=true;form.setAttribute("aria-busy","true");feedback.replaceChildren(notice("Preserving and validating the selected export…"));
+    try{const content=await base64File(selected);if(!current())return;const response=await api<unknown>(`/sources/${id}/import`,{content_base64:content,metadata,series_metadata_base64:null});if(!current())return;feedback.replaceChildren(sourceOperationResult(response));clearPrivateInputs(form);}
+    catch(error){if(current())feedback.replaceChildren(notice(readableError(error),"error"));}
+    finally{submit.disabled=false;form.setAttribute("aria-busy","false");if(current())void loadDataOperations(operations,epoch);}
+  });
+  return el("details","data-disclosure",el("summary","",`Import ${id} archive file`),form);
+}
+
+
+/* Additive integration draft only. Root owns navigation and production app.ts. */
+type RetainedPaperSignal = {
+  reference: string; bar_index: number; generated_at: string; generated_clock: string;
+  decision_at: string; last_required_available_at: string; retained_at: string;
+  direction: string; target_quantity: string; explanation: string; data_status: string;
+  current_status: string; actionable: false; confidence: null;
+  horizon: { status: string; value: number | null; end_at?: string; within_fixture?: boolean }; expiry: { status: string; at: string | null; boundary?: string };
+  risk: { status: string; reason: string; order_id: string | null; order_status: string | null };
+  first_report_digest: string; first_workflow_revision: number;
+};
+type RetainedPaperSignals = {
+  session_id: string; workflow_revision: number; workflow_event_digest: string;
+  workflow_status: string; observed_at: string; availability: string; total: number;
+  limit: number; offset: number; signals: RetainedPaperSignal[]; provenance?: Record<string, unknown>;
+  report_digest?: string; risk_context?: Record<string, unknown>; signal_generation_contract?: Record<string, unknown>; limitations: string[];
+};
+type SignalSession = { id: string; status: string; revision: number; experiment_id: string | null; cursor: number; bars: number };
+type SignalResearchJob = { id: string; status: string; experiment_id: string | null };
+type SignalResearch = { classification: string; observed_at: string; job: SignalResearchJob; experiment_id: string | null; observations: Record<string, unknown> | null; limitations: string[]; [key: string]: unknown };
+
+function signalsView(): HTMLElement {
+  const region = el("section"); region.id = "signals-workspace";
+  const epoch = pageEpoch, actor = session.user?.id;
+  const alive = (): boolean => pageEpoch === epoch && session.user?.id === actor && region.isConnected;
+  let sessionOffset = 0, researchOffset = 0, sessionsGeneration = 0, signalsGeneration = 0, researchGeneration = 0, observationGeneration = 0;
+  const sessionsPanel = panel("Retained paper decisions", "Choose one private session. Listing verifies its workflow history; selecting verifies the frozen experiment and native journal.");
+  const signalDetail = el("div"); signalDetail.id = "signals-paper-detail";
+  const researchPanel = panel("Research observations", "Pattern matches and conditional returns remain research evidence. They are not order instructions, calibrated probabilities or forecasts.");
+  const observationDetail = el("div"); observationDetail.id = "signals-research-detail";
+  region.append(heading("Signals and observations", "Inspect what was actually recorded.", "Private, read-only provenance and status. Viewing this page never runs a strategy or submits an order."), notice("Legacy paper experiments keep Unknown horizon and expiry. Explicitly opted-in profiles show their frozen simulated horizon and exclusive expiry; outcomes remain unevaluated. Every retained decision is nonactionable. The 2024 synthetic fixtures are not current market observations."), sessionsPanel.box, signalDetail, researchPanel.box, observationDetail);
+
+  async function loadSessions(): Promise<void> {
+    const mine = ++sessionsGeneration, offset = sessionOffset;
+    sessionsPanel.body.setAttribute("aria-busy", "true");
+    try {
+      const result = await api<{ sessions: SignalSession[]; total: number }>(`/signals/paper/sessions?limit=25&offset=${offset}`);
+      if (!alive() || mine !== sessionsGeneration) return;
+      sessionsPanel.body.replaceChildren(result.sessions.length ? table(["Session", "State", "Recorded decisions", "Experiment"], result.sessions.map(item => [button(shortId(item.id), () => { void inspectPaper(item.id, 0); }, "link-button"), statusBadge(item.status), `${item.cursor} / ${item.bars}`, item.experiment_id ? shortId(item.experiment_id) : "Not registered yet"]), "Owned retained paper decision sessions") : empty("No sessions on this page", "Create an explicit synthetic session in Execution to record decisions. This view generates none."));
+      const previous = button("Previous signal sessions", () => { sessionOffset = Math.max(0, offset - 25); void loadSessions(); }, "secondary compact"); previous.disabled = offset === 0;
+      const next = button("Next signal sessions", () => { sessionOffset = offset + 25; void loadSessions(); }, "secondary compact"); next.disabled = offset + result.sessions.length >= result.total;
+      sessionsPanel.body.append(el("p", "muted", `${result.total} owned sessions; at most 25 per page.`), el("div", "form-actions", previous, next, button("Refresh signal sessions", () => { void loadSessions(); }, "tertiary compact")));
+    } catch (error) { if (alive() && mine === sessionsGeneration) sessionsPanel.body.replaceChildren(notice(readableError(error), "error"), button("Retry signal sessions", () => { void loadSessions(); }, "secondary")); }
+    finally { if (alive() && mine === sessionsGeneration) sessionsPanel.body.setAttribute("aria-busy", "false"); }
+  }
+
+  async function inspectPaper(id: string, offset: number): Promise<void> {
+    const mine = ++signalsGeneration;
+    signalDetail.replaceChildren(notice("Verifying the retained experiment, reports and native journal…")); signalDetail.setAttribute("aria-busy", "true");
+    try {
+      const result = await api<RetainedPaperSignals>(`/signals/paper/${encodeURIComponent(id)}?limit=25&offset=${offset}`);
+      if (!alive() || mine !== signalsGeneration) return;
+      if (result.session_id !== id || result.offset !== offset) throw new Error("The response does not match this private session selection.");
+      const card = panel("Verified retained decisions", `${id} · workflow revision ${result.workflow_revision}`, badge("SYNTHETIC · NONACTIONABLE"));
+      card.body.append(el("p", "", `Observed at ${result.observed_at}. ${result.workflow_status}; ${result.total} recorded decisions.`), notice(result.limitations.join(" ")));
+      if (!result.signals.length) card.body.append(empty("No decisions in this range", result.availability));
+      else card.body.append(table(["Bar / direction", "Decision UTC", "Last required availability UTC", "First retained UTC", "Target quantity", "Reason", "Current data status", "Current record status", "Historical risk admission", "Order status in reported snapshot", "Forecast horizon", "Signal expiry", "Profit confidence"], result.signals.map(signal => [
+        `${signal.bar_index} · ${signal.direction}`, signal.decision_at, signal.last_required_available_at, signal.retained_at, signal.target_quantity, signal.explanation, badge(signal.data_status), signal.current_status, `${signal.risk.status}: ${signal.risk.reason}`, signal.risk.order_status ?? "No verified order state", signal.horizon.value === null ? "Unknown — not frozen" : `${signal.horizon.value} bars; ends ${signal.horizon.end_at ?? "Unknown"}; NOT EVALUATED; ${signal.horizon.within_fixture ? "inside fixture time range" : "beyond fixture time range"}`, signal.expiry.at === null ? "Unknown — not frozen" : `${signal.expiry.at} · ${signal.expiry.status} · ${signal.expiry.boundary ?? "Unknown boundary"}`, "Unavailable — no calibrated probability",
+      ]), "Actual retained paper decisions and frozen or explicitly unknown horizon fields", [4]));
+      card.body.append(el("p", "muted", "Decision and generation times use the simulated source clock. First retained time is the local workflow receipt. Query UTC expiry labels do not assert a wall-clock cancellation service or disappearance of filled positions. Quote-age checks do not establish forecast validity or replace an unknown signal expiry."));
+      const previous = button("Previous retained decisions", () => { void inspectPaper(id, Math.max(0, offset - 25)); }, "secondary compact"); previous.disabled = offset === 0;
+      const next = button("Next retained decisions", () => { void inspectPaper(id, offset + 25); }, "secondary compact"); next.disabled = offset + result.signals.length >= result.total;
+      card.body.append(el("div", "form-actions", previous, next, button("Refresh selected decisions", () => { void inspectPaper(id, offset); }, "tertiary compact")), patternJson("Exact per-page strategy, source, instrument and experiment provenance", result.provenance ?? { availability: result.availability }), patternJson("Reported risk context and immutable signal receipts", { risk_context: result.risk_context, signal_generation_contract: result.signal_generation_contract, report_digest: result.report_digest, workflow_event_digest: result.workflow_event_digest, signals: result.signals }));
+      signalDetail.replaceChildren(card.box);
+    } catch (error) { if (alive() && mine === signalsGeneration) signalDetail.replaceChildren(notice(readableError(error), "error"), button("Retry selected decisions", () => { void inspectPaper(id, offset); }, "secondary")); }
+    finally { if (alive() && mine === signalsGeneration) signalDetail.setAttribute("aria-busy", "false"); }
+  }
+
+  async function loadResearch(): Promise<void> {
+    const mine = ++researchGeneration, offset = researchOffset;
+    researchPanel.body.setAttribute("aria-busy", "true");
+    try {
+      const result = await api<{ jobs: SignalResearchJob[]; has_more: boolean }>(`/signals/research/jobs?limit=25&offset=${offset}`);
+      if (!alive() || mine !== researchGeneration) return;
+      researchPanel.body.replaceChildren(result.jobs.length ? table(["Pattern job", "State", "Experiment"], result.jobs.map(item => [button(shortId(item.id), () => { void inspectResearch(item.id); }, "link-button"), statusBadge(item.status), item.experiment_id ? shortId(item.experiment_id) : "Not registered yet"]), "Owned research observations, not trading signals") : empty("No research observations on this page", "Only actual Pattern jobs appear here. No matching or evaluation runs during inspection."));
+      const previous = button("Previous research observations", () => { researchOffset = Math.max(0, offset - 25); void loadResearch(); }, "secondary compact"); previous.disabled = offset === 0;
+      const next = button("Next research observations", () => { researchOffset = offset + 25; void loadResearch(); }, "secondary compact"); next.disabled = !result.has_more || offset >= 9975;
+      researchPanel.body.append(el("div", "form-actions", previous, next, button("Refresh research observations", () => { void loadResearch(); }, "tertiary compact")));
+    } catch (error) { if (alive() && mine === researchGeneration) researchPanel.body.replaceChildren(notice(readableError(error), "error"), button("Retry research observations", () => { void loadResearch(); }, "secondary")); }
+    finally { if (alive() && mine === researchGeneration) researchPanel.body.setAttribute("aria-busy", "false"); }
+  }
+
+  async function inspectResearch(id: string): Promise<void> {
+    const mine = ++observationGeneration;
+    observationDetail.replaceChildren(notice("Verifying the owned research result and its frozen input graph…")); observationDetail.setAttribute("aria-busy", "true");
+    try {
+      const result = await api<SignalResearch>(`/signals/research/jobs/${encodeURIComponent(id)}`);
+      if (!alive() || mine !== observationGeneration) return;
+      if (result.job.id !== id || result.classification !== "RESEARCH_OBSERVATIONS_NOT_TRADING_SIGNALS") throw new Error("The response does not match the selected research observation.");
+      const card = panel("Retained research observation", `${id} · inspected ${result.observed_at}`, badge("RESEARCH · NONACTIONABLE"));
+      card.body.append(notice(result.limitations.join(" ")), result.observations ? patternJson("Measured results, negative cases and tested-window exposure", result.observations) : empty("No completed result available", `Operational state: ${result.job.status}`), patternJson("Exact frozen configuration, permanent model identities and experiment binding", result));
+      observationDetail.replaceChildren(card.box);
+    } catch (error) { if (alive() && mine === observationGeneration) observationDetail.replaceChildren(notice(readableError(error), "error"), button("Retry selected research observation", () => { void inspectResearch(id); }, "secondary")); }
+    finally { if (alive() && mine === observationGeneration) observationDetail.setAttribute("aria-busy", "false"); }
+  }
+  queueMicrotask(() => { if (alive()) { void loadSessions(); void loadResearch(); } });
+  return region;
+}
+
+
+function paperPerformancePanel(value: Record<string, unknown>): HTMLElement {
+  const box=el("section","portfolio-performance");box.append(el("h3","","Descriptive performance"));
+  const metrics=record(value.performance);
+  if(!Object.keys(metrics).length){box.append(notice("No verified reported economic snapshot is available for performance metrics."));return box;}
+  const gross=record(metrics.gross_cost_addback),costs=record(metrics.execution_costs),turnover=record(metrics.turnover),volatility=record(metrics.sampled_volatility),trades=record(metrics.closed_trades);
+  box.append(notice("Synthetic descriptive diagnostics from the verified native history. Cost addback uses the same actual fills and final marks; it is not a frictionless rerun. Returns and costs are not pooled across sessions."),
+    el("div","stats-grid",stat("Net return fraction",display(metrics.net_return),"Recorded equity / inception capital −1"),stat("Net P&L",display(metrics.net_pnl),"Same recorded equity and initial capital"),stat("Gross cost-addback fraction",display(gross.return),String(gross.reason??gross.status)),stat("Turnover multiple",display(turnover.multiple),"Both sides' executed notional / inception capital")));
+  box.append(table(["Cost component","Amount","Status"],[["Fill commissions",display(costs.commissions),String(costs.reason??costs.status)],["Adverse price slippage",display(costs.adverse_slippage),String(costs.reason??costs.status)],["Half-spread attribution",display(costs.half_spread_reference),String(costs.reason??costs.status)]],"Verified paper execution cost attribution",[1]),notice("Spread and slippage already enter execution prices. They are not subtracted again. Half-spread uses a midpoint only as an attribution reference."));
+  box.append(table(["Sampling statistic","Value"],[["Close interval (seconds)",display(volatility.interval_seconds)],["Close samples",display(volatility.sample_count)],["Close-to-close returns",display(volatility.return_count)],["Sample standard deviation",display(volatility.standard_deviation)],["Availability",String(volatility.reason??volatility.status)],["Annualization","None; ddof1, actual fixed-grid closes only"]],"Paper return sampling and volatility",[1]));
+  box.append(table(["Completed flat-to-flat episodes","Value","Availability"],[["Count",display(trades.count),String(trades.reason??trades.status)],["Wins / losses / breakeven",`${display(trades.wins)} / ${display(trades.losses)} / ${display(trades.breakeven)}`,String(trades.reason??trades.status)],["Observed win fraction",display(trades.win_fraction),String(trades.win_fraction_reason??trades.status)],["Profit factor",display(trades.profit_factor),String(trades.profit_factor_reason??trades.status)],["Average win / loss",display(trades.average_win_loss_ratio),String(trades.average_win_loss_reason??trades.status)],["Realized episode P&L",display(trades.realized_net_pnl),String(trades.reason??trades.status)],["Still-open episode units",display(trades.open_episode_quantity),String(trades.reason??trades.status)]],"Verified completed paper trade episodes",[1]),notice(`Uncertainty: ${String(trades.uncertainty)}. ${trades.small_sample===true?"Fewer than30 completed episodes; that display threshold does not certify sufficient evidence.":"No predictive probability is assigned."}`));
+  box.append(patternJson("Performance calculation identity and conventions",{source_digest:value.performance_reader_source_digest,...metrics}));return box;
+}
+
+
+function sourceSchedulePanel(): HTMLElement {
+  const area=panel("Scheduled public collection","Explicitly activated fixed historical diagnostic queries; not a live price feed.");
+  const epoch=pageEpoch,owner=session.user?.id;const alive=():boolean=>pageEpoch===epoch&&session.user?.id===owner&&area.box.isConnected;
+  const pumpStatus=el("div");area.body.append(pumpStatus);
+  const picker=selectField("Owned source schedule","source-schedule-choice",[],""),feedback=el("div"),detail=el("div");feedback.setAttribute("aria-live","polite");let generation=0;
+  const refresh=button("Refresh collection schedules",()=>{void load();},"secondary");
+  area.body.append(notice("Creation starts paused and makes no request. Activation authorizes only the displayed bounded public diagnostic profile at the chosen interval. Quotas still apply. Ambiguous failures pause collection and are never silently retried."));
+  if(session.user?.role==="owner"){
+    const form=el("form"),source=selectField("Fixed public source","source-schedule-profile",[{value:"SRC-04",text:"BLS ·2024 CES diagnostic"},{value:"SRC-06",text:"Federal Reserve G17 ·2025-01-17 release"},{value:"SRC-08",text:"ECB ·2024-01-02 through05"}],"SRC-04");
+    const interval=field("Collection interval (hours)","source-schedule-hours","24",{type:"number",hint:"1–168 hours. First request becomes due one full interval after activation."});interval.input.min="1";interval.input.max="168";interval.input.step="1";
+    const runs=field("Maximum collection occurrences","source-schedule-runs","1",{type:"number",hint:"1–30. Failures and interrupted occurrences remain retained."});runs.input.min="1";runs.input.max="30";runs.input.step="1";
+    const submit=el("button","button secondary","Create paused collection schedule");submit.type="submit";form.append(el("div","form-grid",source.box,interval.box,runs.box),submit);area.body.append(form);
+    form.addEventListener("submit",async event=>{event.preventDefault();submit.disabled=true;try{const result=await api<Record<string,unknown>>("/source-schedules",{catalogue_id:source.input.value,interval_seconds:Number(interval.input.value)*3600,maximum_runs:Number(runs.input.value)});if(alive()){feedback.replaceChildren(notice("Created paused. Inspect the frozen query before activating."));await load(String(result.id));}}catch(error){if(alive())feedback.replaceChildren(notice(readableError(error),"error"));}finally{submit.disabled=false;}});
+  }else area.body.append(notice("Only the owner can create, activate or cancel a public collection schedule."));
+  picker.input.addEventListener("change",()=>{void inspect(picker.input.value);});area.body.append(picker.box,refresh,feedback,detail);
+  async function load(selected=picker.input.value):Promise<void>{
+    const mine=++generation;refresh.disabled=true;
+    try{const pump=await api<Record<string,unknown>>("/collection-worker/status");if(!alive()||mine!==generation)return;pumpStatus.replaceChildren(notice(pump.error?"Collection worker could not verify or queue its latest sweep. Inspect retained schedule evidence; unrelated paper protection continues.":"Collection worker queues at most one due occurrence per five seconds. No collection is authorized by this status view.",pump.error?"error":"info"));const schedules=await api<Record<string,unknown>[]>("/source-schedules");if(!alive()||mine!==generation)return;picker.input.replaceChildren(...schedules.map(value=>{const item=el("option","",`${shortId(String(value.id))} · ${value.status}`);item.value=String(value.id);return item;}));if(schedules.some(value=>value.id===selected))picker.input.value=selected;
+      if(!schedules.length){detail.replaceChildren(notice("No owned collection schedule exists. No collection is activated by opening this page."));return;}await inspect(picker.input.value);
+    }catch(error){if(alive()&&mine===generation)feedback.replaceChildren(notice(readableError(error),"error"));}finally{if(alive())refresh.disabled=false;}
+  }
+  async function inspect(id:string):Promise<void>{
+    if(!id)return;const mine=++generation;detail.replaceChildren(el("p","loading-message","Verifying schedule history…"));
+    try{const schedule=await api<Record<string,unknown>>(`/source-schedules/${encodeURIComponent(id)}`),history=await api<Record<string,unknown>[]>(`/source-schedules/${encodeURIComponent(id)}/history`);if(!alive()||mine!==generation||id!==picker.input.value)return;
+      const config=record(schedule.configuration),profile=record(config.profile);detail.replaceChildren(el("div","status-row",badge(String(schedule.status)),badge("HISTORICAL DIAGNOSTIC")),table(["Recorded state","Value"],[["Source",display(profile.catalogue_id)],["Interval seconds",display(config.interval_seconds)],["Dispatched / maximum",`${display(schedule.dispatched)} / ${display(config.maximum_runs)}`],["Next due UTC",typeof schedule.next_due_unix==="number"?new Date(schedule.next_due_unix*1000).toISOString():"Not scheduled"],["Pending native job",display(schedule.pending_job_id)],["Reason",display(schedule.reason)]],"Source collection schedule state",[]),patternJson("Exact frozen public query and limits",config));
+      if(session.user?.role==="owner"&&!["CANCELLED","COMPLETED"].includes(String(schedule.status))){const controls=el("div","form-actions");const add=(action:string,label:string):void=>{const control=button(label,()=>{control.disabled=true;void api(`/source-schedules/${encodeURIComponent(id)}/control`,{action,expected_revision:schedule.revision}).then(()=>{if(alive())return load(id);}).catch(error=>{if(alive()){feedback.replaceChildren(notice(readableError(error),"error"));void inspect(id);}}).finally(()=>{control.disabled=false;});},"secondary");controls.append(control);};if(schedule.status==="PAUSED"&&!schedule.pending_job_id&&Number(schedule.dispatched)<Number(config.maximum_runs))add(schedule.reason==="EXPLICIT_ACTIVATION_REQUIRED"?"ACTIVATE":"RESUME","Activate displayed public collection");if(schedule.status==="ENABLED")add("PAUSE","Pause future collection");add("CANCEL","Cancel collection schedule");detail.append(controls,notice("Pause/cancel can remove a queued request; an already dispatched bounded HTTP read cannot be unsent. Any late result and unknown outcome remain recorded."));}
+      detail.append(history.length?patternJson("Retained collection occurrences and receipts",history):notice("No collection occurrence has been dispatched."),patternJson("Exact schedule identity and audit state",schedule));
+    }catch(error){if(alive()&&mine===generation)detail.replaceChildren(notice(readableError(error),"error"),button("Retry schedule inspection",()=>{void inspect(id);},"secondary"));}
+  }
+  queueMicrotask(()=>{if(alive())void load();});return area.box;
+}
+
+
+function paperSignalProfileFields(editable: boolean): { box: HTMLElement; configuration: () => Record<string, unknown> | null } {
+  const box = el("section", "paper-signal-profile");
+  const profile = selectField("Signal lifetime profile", "paper-signal-profile", [
+    { value: "LEGACY", text: "Legacy decisions · horizon and expiry unknown" },
+    { value: "QH_PAPER_SIGNAL_V1", text: "Explicit replay horizon and intent expiry" },
+  ], "LEGACY");
+  profile.input.disabled = !editable;
+  const horizon = field("Declared horizon (minute bars)", "paper-signal-horizon", "4", { type: "number", min: "1", max: "100", step: "1" });
+  const ttl = field("Intent lifetime (replay seconds)", "paper-signal-ttl", "60", { type: "number", min: "1", max: "3600", step: "1" });
+  const options = el("div", "form-grid", horizon.box, ttl.box);
+  const limit = (): void => {
+    const maximum = Math.min(3600, Number(horizon.input.value) * 60);
+    ttl.input.max = String(Number.isFinite(maximum) ? maximum : 3600);
+  };
+  const update = (): void => {
+    const enabled = profile.input.value === "QH_PAPER_SIGNAL_V1";
+    options.hidden = !enabled;
+    for (const input of [horizon.input, ttl.input]) { input.disabled = !editable || !enabled; input.required = enabled; }
+    limit();
+  };
+  profile.input.addEventListener("change", update); horizon.input.addEventListener("input", limit); update();
+  box.append(profile.box, options, notice("Opting in freezes a new method variant before evaluation. The clock is the synthetic replay, including in LOCAL_PAPER. Expiry cancels unfilled intent; later decisions supersede older remainders. Existing fills and position risk remain. The declared horizon is not an evaluated forecast or a profit probability."));
+  return { box, configuration: () => profile.input.value === "QH_PAPER_SIGNAL_V1" ? { profile: "QH_PAPER_SIGNAL_V1", horizon_bars: Number(horizon.input.value), ttl_seconds: Number(ttl.input.value) } : null };
 }

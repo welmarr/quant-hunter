@@ -6,7 +6,7 @@ import json
 import secrets
 import shutil
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Literal, Protocol, cast
 
@@ -288,7 +288,14 @@ class DataAccess:
             self._finish(operation_id, error=type(exc).__name__)
             raise
 
-    def probe(self, user: User, catalogue_id: str) -> JsonRecord:
+    def probe(
+        self,
+        user: User,
+        catalogue_id: str,
+        *,
+        worker_job_id: str | None = None,
+        operation_started: Callable[[str], None] | None = None,
+    ) -> JsonRecord:
         if (
             catalogue_id in ("SRC-01", "SRC-02", "SRC-07", "SRC-18", "SRC-20")
             and user.role != "owner"
@@ -305,8 +312,12 @@ class DataAccess:
             "SRC-20",
         ):
             raise AccessError("This connector is not implemented")
-        operation_id = self._begin(user, "PROBE", catalogue_id)
+        operation_id = self._begin(
+            user, "PROBE", catalogue_id, worker_job_id=worker_job_id
+        )
         try:
+            if operation_started is not None:
+                operation_started(operation_id)
             result = self.prober.probe(catalogue_id)
             # Probe datasets use their own format; they are not OHLC imports and
             # never enter the synthetic backtest or import ownership table.
@@ -336,6 +347,9 @@ class DataAccess:
             "SRC-07",
             "SRC-09",
             "SRC-19",
+            "SRC-04",
+            "SRC-21",
+            "SRC-22",
         ):
             raise AccessError("This source file importer is not implemented")
         if not 0 < len(payload) + len(series_metadata or b"") <= 2_000_000:
