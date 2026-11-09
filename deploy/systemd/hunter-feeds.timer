@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Hunter feed refresh after the US close, Tuesday to Saturday
+
+[Timer]
+# 22:30 UTC = 17:30 New York in winter, 18:30 in summer: after the NYSE close.
+OnCalendar=Tue..Sat *-*-* 22:30:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

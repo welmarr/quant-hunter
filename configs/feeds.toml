@@ -1,0 +1,65 @@
+# Hunter v2 - daily feed universe (phase 1, wave 1).
+# Refresh: D:\quant-hunter\.venv\Scripts\python.exe -m quant_hunter.feeds
+# Data lands under data_root; nothing is written to C:.
+
+[settings]
+data_root = ".local/data/feeds"
+history_start = "2000-01-01"
+
+[groups.etf_core]
+provider = "yahoo"
+kind = "etf"
+calendar = "XNYS"
+symbols = [
+  "SPY", "QQQ", "IWM", "DIA", "EFA", "EEM", "VGK", "EWJ", "FXI", "EWZ",
+  "SHY", "IEF", "TLT", "TIP", "LQD", "HYG", "EMB", "BIL",
+  "GLD", "SLV", "DBC", "USO", "UNG", "DBA", "VNQ", "UUP",
+]
+
+[groups.etf_sectors]
+provider = "yahoo"
+kind = "etf"
+calendar = "XNYS"
+symbols = ["XLK", "XLF", "XLE", "XLV", "XLY", "XLP", "XLI", "XLB", "XLU", "XLRE", "XLC", "SMH"]
+
+[groups.etf_factors]
+provider = "yahoo"
+kind = "etf"
+calendar = "XNYS"
+symbols = ["MTUM", "QUAL", "USMV", "VLUE", "SIZE", "SPLV", "VIXY"]
+
+[groups.fx_majors]
+provider = "yahoo"
+kind = "fx"
+symbols = [
+  "EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X", "USDCAD=X", "USDCHF=X",
+  "NZDUSD=X", "USDMXN=X", "USDZAR=X", "USDNOK=X", "USDSEK=X", "EURJPY=X",
+]
+
+[groups.macro_rates]
+provider = "fred"
+kind = "macro"
+symbols = [
+  "DFF", "DTB3", "DGS2", "DGS10", "DGS30", "T10Y2Y", "T10Y3M", "DFII10",
+  "BAMLH0A0HYM2", "BAMLC0A0CM", "VIXCLS", "NFCI",
+  "IR3TIB01DEM156N", "IR3TIB01GBM156N", "IR3TIB01JPM156N", "IR3TIB01AUM156N",
+  "IR3TIB01CAM156N", "IR3TIB01CHM156N", "IR3TIB01NZM156N", "IR3TIB01MXM156N",
+]
+
+[groups.macro_activity]
+provider = "fred"
+kind = "macro"
+symbols = [
+  "CPIAUCSL", "CPILFESL", "PCEPILFE", "UNRATE", "PAYEMS", "ICSA", "INDPRO",
+  "RSAFS", "HOUST", "UMCSENT", "M2SL", "WALCL", "DCOILWTICO", "DTWEXBGS",
+]
+
+[groups.crypto_spot]
+provider = "coinbase"
+kind = "crypto"
+symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "LTC-USD", "LINK-USD"]
+
+[groups.crypto_funding]
+provider = "kraken_funding"
+kind = "funding"
+symbols = ["PF_XBTUSD", "PF_ETHUSD", "PF_SOLUSD"]

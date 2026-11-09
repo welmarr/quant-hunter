@@ -1,0 +1,12 @@
+[Unit]
+Description=Hunter daily feed refresh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=hunter
+WorkingDirectory=/opt/hunter/app
+EnvironmentFile=-/opt/hunter/feeds.env
+ExecStart=/opt/hunter/app/.venv/bin/python -m quant_hunter.feeds --config configs/feeds.toml
+Nice=10

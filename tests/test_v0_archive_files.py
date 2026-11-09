@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from quant_hunter.sources.transport import SourceError
 from test_v0_materialize import setup
 
 from quant_hunter.config import JsonRecord, parse_json_document
@@ -30,6 +29,7 @@ from quant_hunter.sources.macro_surveys import (
     SurveyQuery,
 )
 from quant_hunter.sources.providers import ProviderService
+from quant_hunter.sources.transport import SourceError
 
 NOW = datetime(2025, 3, 1, tzinfo=UTC)
 CES = b"vintage_reference_month,2023-12,2024-01\n2023-12,100,\n2024-01,101,102\n2024-02,99,103\n"

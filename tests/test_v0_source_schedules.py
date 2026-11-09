@@ -608,7 +608,6 @@ def test_routes_require_owner_csrf_and_closed_bounded_payload(h: Harness) -> Non
 def test_actual_fixed_clients_publish_candidate_raw_and_dataset_through_schedule(
     h: Harness, tmp_path: Path, source: str
 ) -> None:
-    from quant_hunter.sources.providers import ProviderService
     from test_v0_sources import CSV_HEADER, CSV_ROW, FixtureTransport, bls_body
     from test_v0_sources_macro import G17
     from test_v0_sources_macro import Fixture as MacroFixture
@@ -622,6 +621,7 @@ def test_actual_fixed_clients_publish_candidate_raw_and_dataset_through_schedule
     )
     from quant_hunter.sources._equity_transport import EquityResponse
     from quant_hunter.sources.macro_g17 import G17Connector
+    from quant_hunter.sources.providers import ProviderService
     from quant_hunter.storage import ImmutableObjectStore
 
     schema_root = Path(__file__).resolve().parents[1] / "schemas/v1"

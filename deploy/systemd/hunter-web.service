@@ -1,0 +1,13 @@
+[Unit]
+Description=Hunter web application (loopback only)
+After=network-online.target
+
+[Service]
+User=hunter
+WorkingDirectory=/opt/hunter/app
+ExecStart=/bin/bash -lc 'exec /opt/hunter/app/.venv/bin/python -m quant_hunter.web.main --repository /opt/hunter/app --runtime /opt/hunter/runtime --private-root /opt/hunter/private --code-revision "$(git -C /opt/hunter/app rev-parse HEAD)" --port 8765'
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

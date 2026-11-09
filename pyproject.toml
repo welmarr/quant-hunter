@@ -40,6 +40,8 @@ packages = ["src/quant_hunter"]
 
 [tool.ruff]
 line-length = 88
+# Frozen research scripts keep their pre-registered bytes (hash-bound results).
+extend-exclude = ["research"]
 target-version = "py314"
 
 [tool.ruff.lint]

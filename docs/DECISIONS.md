@@ -932,3 +932,29 @@ stale or unrelated links do not create free capacity. Integrated tests exercise
 all eight reservations, two occupied readers, duplicate cross-links, failure
 cleanup and real worker survival. The focused19-test combined gate passed; the
 current full2 regression and exact hosted CI remain separate pending evidence.
+
+## DEC-0050 — Hunter v2 scope: windows host evidence optional, rolling feeds added
+
+Date: 2026-11-08. Status: accepted by the owner (Rymaa) in conversation with Claude.
+
+The owner accepted the Hunter v2 plan (`docs/HUNTER_STEPS.md`). Two decisions:
+
+1. Item 10B live Windows host enforcement (`HOST_ENFORCED` evidence for the sealed
+   out-of-sample folder) becomes optional. It stays implemented and may be completed
+   later. Until then, sealed-holdout discipline relies on a git-committed
+   pre-registration and frozen runner before any holdout evaluation, a runner that
+   refuses to overwrite an existing holdout result, and a ledger entry per opening
+   (as done for EXP-0001). This is weaker than host enforcement against a hostile
+   process and is recorded as such; it is not described as `HOST_ENFORCED`.
+2. A rolling daily feed layer (`quant_hunter.feeds`) is added beside the fixed
+   historical diagnostic probes of `quant_hunter.sources`. It keeps exact response
+   bytes (SHA-256) and writes an immutable curated snapshot per change, each row
+   carrying `available_at`. Where a provider gives no publication time, a stated
+   conservative rule is used and named in the snapshot `basis` (for example
+   `FRED_LATEST_VINTAGE/ASSUMED_LAG`, which is not point-in-time for revisions;
+   ALFRED vintages are used when a FRED key is configured). Feed data is research
+   input only; it grants no dataset approval, experiment or trading authority.
+
+Tests run with a pytest base temporary directory outside the repository
+(`D:\QuantHunterTmp`), because the credential vault correctly refuses a private
+root inside the application root.
