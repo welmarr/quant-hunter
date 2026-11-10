@@ -136,3 +136,12 @@ allocate or mutate an experiment. Simulation output cannot create
 - Variants counted: 2 (P1, S1).
 - Holdout 2017-01..2026-10 evaluated once: PASS on the pre-registered drawdown criterion; no Sharpe improvement vs buy-and-hold (CI spans 0).
 - Status: DECIDED — defensive overlay, not an edge. See `research/EXP-0001-etf-trend/RESULTS.md`.
+
+### EXP-0002 — FX carry and trend, 8 currencies vs USD
+
+- Registered/frozen: 2026-11-09, `research/EXP-0002-fx-carry-trend/PREREGISTRATION.md` (commit `2a43077`); runner `eecd3be`.
+- Data: Hunter feeds (Yahoo FX month-end closes, FRED OECD 3-month rates and DTB3), read point in time from the 2026-11-09 snapshots.
+- Variants counted: 3 (P1 carry, P2 trend, P3 combination). Cumulative Hunter count: 5.
+- Holdout 2017-01..2026-10 evaluated once: PASS on the pre-registered rule, but P3 earns 0.4%/yr with a deflated Sharpe of 0.20 — not evidence of a tradable edge.
+- Follow-up hypothesis: carry alone (Sharpe 0.64 in holdout, ~0 in 2007-2016) needs its own pre-registered test with better FX data.
+- Status: DECIDED. See `research/EXP-0002-fx-carry-trend/RESULTS.md`.
