@@ -4,38 +4,38 @@ Plan de finalisation de Quant Hunter (vision v2, novembre 2026). Mis à jour par
 
 Légende : `[x]` fait · `[~]` en cours · `[ ]` à faire · **(Toi)** = action qui dépend de Rymaa.
 
-**Avancement : 4 / 42 sous-étapes terminées, 1 en cours.** Dernière mise à jour : 2026-11-08.
+**Avancement : 13 / 42 sous-étapes terminées, 5 en cours.** Dernière mise à jour : 2026-11-09, 4 h 50.
 
 
-## Phase 0 — Reprise et stabilisation (3/10)
+## Phase 0 — Reprise et stabilisation (8/10)
 
 - [x] **0.1** Audit du projet de Codex — Rapport du 3 nov.
 - [x] **0.2** Sauvegarde du travail non commité — Branche snapshot/v0-wip-2026-11-03
 - [x] **0.3** Vérification du dernier test complet de Codex — 3 704 tests réussis, 93,2 % de couverture
-- [~] **0.4** Exécution des tests sur ton PC — Via PowerShell et l'environnement Python déjà sur D:
-- [ ] **0.5** Relance de la suite complète sur le snapshot
-- [ ] **0.6** Sauvegarde du lot non intégré de Codex sur une branche — 18 nouveaux fichiers, 18 modifiés
-- [ ] **0.7** Intégration du lot : signaux, métriques paper, archives, forwards FX, macro, planification
-- [ ] **0.8** Suite complète, commit et envoi sur GitHub
-- [ ] **0.9** Rangement de .tools dans une archive sur D:
-- [ ] **0.10** Preuve de sécurité Windows passée en option (décision inscrite) — Validé par toi le 8 nov.
+- [x] **0.4** Exécution des tests sur ton PC — Programme d'exécution sur ton PC, Python 3.14.7 et fichiers temporaires sur D:
+- [~] **0.5** Relance de la suite complète sur le snapshot — Interrompue par la mise en veille du PC, reprise ; environ 57 % le 9 nov. à 4 h 50
+- [x] **0.6** Sauvegarde du lot non intégré de Codex sur une branche — Branche integrate/v0-product-extension
+- [x] **0.7** Intégration du lot : signaux, métriques paper, archives, forwards FX, macro, planification — 42 fichiers intégrés, 400 tests ciblés réussis, mypy et ruff propres
+- [ ] **0.8** Suite complète, commit et envoi sur GitHub — Après la suite complète
+- [x] **0.9** Rangement de .tools dans une archive sur D: — Archivé dans D:\QuantHunterArchive\tools-2026-10
+- [x] **0.10** Preuve de sécurité Windows passée en option (décision inscrite) — Décision DEC-0050
 
-## Phase 1 — Données et serveur (0/7)
+## Phase 1 — Données et serveur (4/7)
 
-- [ ] **1.1** Choix de l'hébergeur (≈ 40 $/mois) **(Toi)** — Accord requis avant tout achat
-- [ ] **1.2** Déploiement de Hunter sur le serveur
-- [ ] **1.3** Connecteur prix actions/ETF — Yahoo, Stooq, Alpaca
-- [ ] **1.4** Connecteur forex — Dukascopy, OANDA
-- [ ] **1.5** Connecteur macro à date — FRED/ALFRED, BLS, BEA, BCE
-- [ ] **1.6** Connecteur crypto — Prix, taux de financement, open interest
-- [ ] **1.7** Mise à jour quotidienne et contrôle qualité
+- [ ] **1.1** Choix de l'hébergeur (≈ 40 $/mois) **(Toi)** — Proposition : Contabo Cloud VPS (24 Go, environ 17 $/mois) ; ton accord requis
+- [~] **1.2** Déploiement de Hunter sur le serveur — Scripts prêts dans deploy/, en attente du serveur
+- [x] **1.3** Connecteur prix actions/ETF — Yahoo quotidien : 45 ETF, depuis 1993 pour SPY
+- [x] **1.4** Connecteur forex — Yahoo quotidien, 12 paires ; qualité moyenne, Dukascopy/OANDA prévus
+- [x] **1.5** Connecteur macro à date — FRED, 34 séries ; vintages ALFRED dès qu'une clé FRED gratuite est fournie
+- [x] **1.6** Connecteur crypto — Coinbase (5 cryptos) et taux de financement Kraken (3)
+- [~] **1.7** Mise à jour quotidienne et contrôle qualité — Collecte et contrôles faits (99 séries, 0 échec) ; planification quotidienne sur le serveur
 
 ## Phase 2 — Stratégies et modèles (1/8)
 
 - [x] **2.1** EXP-0001 : tendance sur ETF — Réussi sur les pertes, pas d'avantage de Sharpe
 - [ ] **2.2** EXP-0001 inscrit au registre officiel du labo
-- [ ] **2.3** Filtres anti-hasard : Sharpe dégonflé, PBO
-- [ ] **2.4** EXP-0002 : carry et tendance FX
+- [~] **2.3** Filtres anti-hasard : Sharpe dégonflé, PBO — Sharpe dégonflé et PBO codés ; tests en attente sur ton PC
+- [~] **2.4** EXP-0002 : carry et tendance FX — Pré-enregistrement figé ; période de développement en attente
 - [ ] **2.5** Momentum multi-actifs et ciblage de volatilité
 - [ ] **2.6** Passerelle Qlib (Alpha158)
 - [ ] **2.7** Modèles LightGBM et CatBoost

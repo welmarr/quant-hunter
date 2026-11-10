@@ -153,8 +153,13 @@ def probability_of_backtest_overfitting(
         raise OverfittingError("need a rectangular matrix with >= 2 strategies")
     size = t // partitions
     blocks = [range(i * size, (i + 1) * size) for i in range(partitions)]
-    sums = [[math.fsum(matrix[r][j] for r in b) for j in range(n_strat)] for b in blocks]
-    sqs = [[math.fsum(matrix[r][j] ** 2 for r in b) for j in range(n_strat)] for b in blocks]
+    sums = [
+        [math.fsum(matrix[r][j] for r in b) for j in range(n_strat)] for b in blocks
+    ]
+    sqs = [
+        [math.fsum(matrix[r][j] ** 2 for r in b) for j in range(n_strat)]
+        for b in blocks
+    ]
     all_idx = frozenset(range(partitions))
     logits: list[float] = []
     is_sr: list[float] = []
@@ -179,7 +184,7 @@ def probability_of_backtest_overfitting(
             for j in range(n_strat)
         ]
         best = max(range(n_strat), key=lambda j: ins[j])
-        rank = 1 + sum(1 for v in outs if v < outs[best])
+        rank = 1.0 + sum(1 for v in outs if v < outs[best])
         rank += 0.5 * (sum(1 for v in outs if v == outs[best]) - 1)
         omega = rank / (n_strat + 1)
         logits.append(math.log(omega / (1 - omega)))

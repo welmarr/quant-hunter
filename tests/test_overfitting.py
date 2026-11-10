@@ -16,7 +16,7 @@ from quant_hunter.research_validation.overfitting import (
 
 
 def test_moments_of_normal_sample() -> None:
-    rng = random.Random(1)
+    rng = random.Random(1)  # noqa: S311
     m = moments([rng.gauss(0.001, 0.01) for _ in range(20000)])
     assert abs(m.skew) < 0.1
     assert abs(m.kurtosis - 3) < 0.2
@@ -51,7 +51,7 @@ def test_expected_max_sharpe_grows_with_trials() -> None:
 
 
 def test_dsr_penalises_many_trials() -> None:
-    rng = random.Random(7)
+    rng = random.Random(7)  # noqa: S311
     returns = [rng.gauss(0.0008, 0.01) for _ in range(2520)]
     one = deflated_sharpe_ratio(returns, n_trials=1, trial_sharpe_variance=0.0)
     many = deflated_sharpe_ratio(returns, n_trials=500, trial_sharpe_variance=0.0004)
@@ -62,7 +62,7 @@ def test_dsr_penalises_many_trials() -> None:
 
 
 def _matrix(skill: float, n_strat: int, t: int, seed: int) -> list[list[float]]:
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # noqa: S311
     rows = []
     for _ in range(t):
         row = [rng.gauss(0.0, 0.01) for _ in range(n_strat)]
@@ -79,7 +79,9 @@ def test_pbo_noise_is_near_half_and_skill_is_low() -> None:
     assert runs[0].n_splits == math.comb(8, 4)
     average = sum(r.pbo for r in runs) / len(runs)
     assert 0.35 <= average <= 0.65
-    skill = probability_of_backtest_overfitting(_matrix(0.004, 20, 800, 3), partitions=8)
+    skill = probability_of_backtest_overfitting(
+        _matrix(0.004, 20, 800, 3), partitions=8
+    )
     assert skill.pbo < 0.1
     assert skill.is_best_oos_sharpe_mean > 0
     assert len(skill.logits) == skill.n_splits

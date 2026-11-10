@@ -87,7 +87,8 @@ def test_catalogue_has_exact_mission_keys_and_no_fake_connections() -> None:
     ready = [
         source.catalogue_id for source in catalog if source.status == "READY_TO_TEST"
     ]
-    assert ready == ["SRC-04", "SRC-06", "SRC-08"]
+    # SRC-22 (RTDSM/SPF file exports) became ready with the V0 product extension.
+    assert ready == ["SRC-04", "SRC-06", "SRC-08", "SRC-22"]
     assert all(source.documentation_url.startswith("https://") for source in catalog)
     assert all(source.license_notes and source.pit_notes for source in catalog)
     assert all(source.coverage_verified.startswith("NONE") for source in catalog)
