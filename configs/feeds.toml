@@ -63,3 +63,18 @@ symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "LTC-USD", "LINK-USD"]
 provider = "kraken_funding"
 kind = "funding"
 symbols = ["PF_XBTUSD", "PF_ETHUSD", "PF_SOLUSD"]
+
+[groups.fx_oanda]
+provider = "oanda"
+kind = "fx"
+symbols = [
+  "EUR_USD", "GBP_USD", "USD_JPY", "AUD_USD", "USD_CAD", "USD_CHF",
+  "NZD_USD", "USD_MXN", "USD_NOK", "USD_SEK", "USD_ZAR", "EUR_JPY",
+  "EUR_GBP", "EUR_CHF", "AUD_JPY", "GBP_JPY",
+]
+
+[groups.etf_alpaca]
+provider = "alpaca"
+kind = "etf"
+calendar = "XNYS"
+symbols = ["SPY", "QQQ", "IWM", "TLT", "GLD", "EFA"]

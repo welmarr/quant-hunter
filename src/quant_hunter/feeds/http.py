@@ -17,6 +17,9 @@ ALLOWED_HOSTS: Final = frozenset(
         "api.stlouisfed.org",
         "api.exchange.coinbase.com",
         "futures.kraken.com",
+        "api-fxpractice.oanda.com",
+        "api-fxtrade.oanda.com",
+        "data.alpaca.markets",
     }
 )
 MAX_BYTES: Final = 50 * 1024 * 1024
@@ -35,7 +38,7 @@ class Response:
 
 
 class Transport(Protocol):
-    def get(self, url: str) -> Response: ...
+    def get(self, url: str, headers: dict[str, str] | None = None) -> Response: ...
 
 
 def check_url(url: str) -> None:
@@ -56,12 +59,13 @@ class HttpTransport:
         self._retries = retries
         self._pause = pause
 
-    def get(self, url: str) -> Response:
+    def get(self, url: str, headers: dict[str, str] | None = None) -> Response:
         check_url(url)
         last: Exception | None = None
         for attempt in range(self._retries + 1):
             request = urllib.request.Request(  # noqa: S310 - scheme checked above
-                url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"}
+                url,
+                headers={"User-Agent": USER_AGENT, "Accept": "*/*", **(headers or {})},
             )
             try:
                 with urllib.request.urlopen(  # noqa: S310 - scheme checked above

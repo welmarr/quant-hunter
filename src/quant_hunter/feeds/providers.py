@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 
 from quant_hunter.feeds.config import SeriesSpec
 from quant_hunter.feeds.http import FeedError, Transport
+from quant_hunter.feeds.secrets import credentials
 from quant_hunter.feeds.store import Row
 
 NEW_YORK: Final = ZoneInfo("America/New_York")
@@ -338,6 +339,175 @@ def fetch_kraken_funding(
     )
 
 
+# OANDA v20 (practice), daily mid/bid/ask candles closing 17:00 New York --------
+OANDA_FIELDS: Final = (
+    "open",
+    "high",
+    "low",
+    "close",
+    "bid_close",
+    "ask_close",
+    "volume",
+)
+OANDA_PAGE: Final = 5000
+OANDA_EARLIEST: Final = date(2005, 1, 1)
+
+
+def _rfc3339(value: str) -> datetime:
+    return datetime.fromisoformat(value[:19] + "+00:00")
+
+
+def oanda_url(instrument: str, start: datetime) -> str:
+    query = urlencode(
+        {
+            "price": "MBA",
+            "granularity": "D",
+            "from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "count": OANDA_PAGE,
+            "dailyAlignment": 17,
+            "alignmentTimezone": "America/New_York",
+        }
+    )
+    return (
+        "https://api-fxpractice.oanda.com/v3/instruments/"
+        f"{quote(instrument)}/candles?{query}"
+    )
+
+
+def parse_oanda(body: bytes, spec: SeriesSpec) -> tuple[list[Row], datetime | None]:
+    """Rows of complete candles, and the start time of the last candle seen."""
+    try:
+        candles = json.loads(body)["candles"]
+    except (KeyError, TypeError, ValueError) as error:
+        raise FeedError(f"unexpected OANDA response for {spec.symbol}") from error
+    rows: list[Row] = []
+    last: datetime | None = None
+    for candle in candles:
+        start = _rfc3339(str(candle["time"]))
+        last = start
+        if not candle.get("complete"):
+            continue
+        end = start + timedelta(days=1)
+        mid, bid, ask = candle["mid"], candle["bid"], candle["ask"]
+        rows.append(
+            {
+                "date": end.astimezone(NEW_YORK).date(),
+                "available_at": end,
+                "open": _float(mid["o"]),
+                "high": _float(mid["h"]),
+                "low": _float(mid["l"]),
+                "close": _float(mid["c"]),
+                "bid_close": _float(bid["c"]),
+                "ask_close": _float(ask["c"]),
+                "volume": _float(candle.get("volume")),
+            }
+        )
+    return rows, last
+
+
+def fetch_oanda(
+    spec: SeriesSpec, transport: Transport, now: datetime, start: date
+) -> Fetched:
+    token = credentials("oanda")["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    cursor = datetime.combine(max(start, OANDA_EARLIEST), time(0), tzinfo=UTC)
+    rows: list[Row] = []
+    raw: list[tuple[str, bytes]] = []
+    for _ in range(20):
+        url = oanda_url(spec.symbol, cursor)
+        response = transport.get(url, headers)
+        raw.append((url, response.body))
+        page, last = parse_oanda(response.body, spec)
+        rows.extend(page)
+        if last is None or last + timedelta(seconds=1) <= cursor:
+            break
+        cursor = last + timedelta(seconds=1)
+        if len(json.loads(response.body)["candles"]) < OANDA_PAGE:
+            break
+    rows = _dedupe(_closed(rows, now), lambda r: r["date"])
+    return Fetched(rows, OANDA_FIELDS, "OANDA_MBA_DAILY_NY17/CANDLE_END", raw)
+
+
+# Alpaca market data (daily bars, split and dividend adjusted) --------------
+ALPACA_FIELDS: Final = ("open", "high", "low", "close", "volume", "vwap")
+ALPACA_EARLIEST: Final = date(2016, 1, 1)
+
+
+def alpaca_url(symbol: str, start: date, feed: str, page_token: str | None) -> str:
+    params: dict[str, str | int] = {
+        "timeframe": "1Day",
+        "start": f"{start.isoformat()}T00:00:00Z",
+        "adjustment": "all",
+        "feed": feed,
+        "limit": 10000,
+    }
+    if page_token:
+        params["page_token"] = page_token
+    return f"https://data.alpaca.markets/v2/stocks/{quote(symbol)}/bars?" + urlencode(
+        params
+    )
+
+
+def parse_alpaca(body: bytes, spec: SeriesSpec) -> tuple[list[Row], str | None]:
+    try:
+        document = json.loads(body)
+        bars = document.get("bars") or []
+        token = document.get("next_page_token")
+    except (AttributeError, TypeError, ValueError) as error:
+        raise FeedError(f"unexpected Alpaca response for {spec.symbol}") from error
+    rows: list[Row] = []
+    for bar in bars:
+        day = _rfc3339(str(bar["t"])).astimezone(NEW_YORK).date()
+        rows.append(
+            {
+                "date": day,
+                "available_at": datetime.combine(
+                    day, time(16), tzinfo=NEW_YORK
+                ).astimezone(UTC),
+                "open": _float(bar.get("o")),
+                "high": _float(bar.get("h")),
+                "low": _float(bar.get("l")),
+                "close": _float(bar.get("c")),
+                "volume": _float(bar.get("v")),
+                "vwap": _float(bar.get("vw")),
+            }
+        )
+    return rows, str(token) if token else None
+
+
+def fetch_alpaca(
+    spec: SeriesSpec, transport: Transport, now: datetime, start: date
+) -> Fetched:
+    creds = credentials("alpaca")
+    headers = {"APCA-API-KEY-ID": creds["key"], "APCA-API-SECRET-KEY": creds["secret"]}
+    first = max(start, ALPACA_EARLIEST)
+    for feed in ("sip", "iex"):
+        rows: list[Row] = []
+        raw: list[tuple[str, bytes]] = []
+        token: str | None = None
+        try:
+            for _ in range(20):
+                url = alpaca_url(spec.symbol, first, feed, token)
+                response = transport.get(url, headers)
+                raw.append((url, response.body))
+                page, token = parse_alpaca(response.body, spec)
+                rows.extend(page)
+                if not token:
+                    break
+        except FeedError as error:
+            if feed == "sip" and "HTTP 403" in str(error):
+                continue
+            raise
+        rows = _dedupe(_closed(rows, now), lambda r: r["date"])
+        return Fetched(
+            rows,
+            ALPACA_FIELDS,
+            f"ALPACA_{feed.upper()}_DAILY_ADJ/BAR_CLOSE_NY_16H",
+            raw,
+        )
+    raise FeedError(f"Alpaca refused every data feed for {spec.symbol}")
+
+
 def fetch(
     spec: SeriesSpec, transport: Transport, now: datetime, start: date
 ) -> Fetched:
@@ -351,4 +521,8 @@ def fetch(
         return fetch_coinbase(spec, transport, now, start)
     if spec.provider == "kraken_funding":
         return fetch_kraken_funding(spec, transport, now)
+    if spec.provider == "oanda":
+        return fetch_oanda(spec, transport, now, start)
+    if spec.provider == "alpaca":
+        return fetch_alpaca(spec, transport, now, start)
     raise FeedError(f"unknown provider {spec.provider}")

@@ -9,7 +9,9 @@ from datetime import date
 from pathlib import Path
 from typing import Final
 
-PROVIDERS: Final = frozenset({"yahoo", "fred", "alfred", "coinbase", "kraken_funding"})
+PROVIDERS: Final = frozenset(
+    {"yahoo", "fred", "alfred", "coinbase", "kraken_funding", "oanda", "alpaca"}
+)
 KINDS: Final = frozenset({"etf", "equity", "fx", "crypto", "macro", "funding"})
 DEFAULT_MAX_JUMP: Final = {
     "etf": 0.25,

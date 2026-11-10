@@ -77,8 +77,9 @@ class FakeTransport:
         self.routes = routes
         self.calls: list[str] = []
 
-    def get(self, url: str) -> Response:
+    def get(self, url: str, headers: dict[str, str] | None = None) -> Response:
         self.calls.append(url)
+        self.headers = headers or {}
         for prefix, body in self.routes.items():
             if prefix in url:
                 return Response(url, 200, body)
@@ -525,3 +526,145 @@ def test_http_transport_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(FeedError, match="after retries"):
         HttpTransport(retries=1).get(url)
     assert len(calls) == 2
+
+
+# credentials, OANDA, Alpaca -------------------------------------------------
+def test_credentials_loose_names(tmp_path: Path) -> None:
+    from quant_hunter.feeds.secrets import credentials, parse_env
+
+    (tmp_path / "oanda.env").write_text(
+        "# demo\nOanda API key = 'tok'\nAccount ID=101-001-1-001\n"
+    )
+    (tmp_path / "alpaca.env").write_text("key=K\nsecret=S\nendpoint=https://x\n")
+    assert credentials("oanda", tmp_path) == {
+        "token": "tok",
+        "account": "101-001-1-001",
+    }
+    assert credentials("alpaca", tmp_path) == {"key": "K", "secret": "S"}
+    assert parse_env("no equals\n") == {}
+    with pytest.raises(FeedError, match="missing credential file"):
+        credentials("oanda", tmp_path / "nope")
+    (tmp_path / "bad").mkdir()
+    (tmp_path / "bad" / "alpaca.env").write_text("key=K\n")
+    with pytest.raises(FeedError, match="no value for secret"):
+        credentials("alpaca", tmp_path / "bad")
+    with pytest.raises(FeedError, match="no credential layout"):
+        credentials("other", tmp_path)
+
+
+def test_private_dir_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from quant_hunter.feeds.secrets import private_dir
+
+    monkeypatch.setenv("HUNTER_PRIVATE_DIR", str(tmp_path))
+    assert private_dir() == tmp_path
+    monkeypatch.delenv("HUNTER_PRIVATE_DIR")
+    assert isinstance(private_dir(), Path)
+
+
+def _oanda_candle(start: str, close: str, complete: bool = True) -> dict[str, object]:
+    px = {"o": close, "h": close, "l": close, "c": close}
+    return {
+        "complete": complete,
+        "volume": 10,
+        "time": start,
+        "mid": px,
+        "bid": px,
+        "ask": px,
+    }
+
+
+def test_oanda_candles(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "oanda.env").write_text("Oanda API key=tok\nAccount ID=1\n")
+    monkeypatch.setenv("HUNTER_PRIVATE_DIR", str(tmp_path))
+    body = json.dumps(
+        {
+            "candles": [
+                _oanda_candle("2026-11-04T22:00:00.000000000Z", "1.10"),
+                _oanda_candle("2026-11-05T22:00:00.000000000Z", "1.11"),
+                _oanda_candle("2026-11-06T22:00:00.000000000Z", "1.12", complete=False),
+            ]
+        }
+    ).encode()
+    transport = FakeTransport({"fxpractice": body})
+    fx = spec("oanda", "EUR_USD", "fx", None, 0.1)
+    fetched = fetch(fx, transport, NOW, date(2000, 1, 1))
+    assert [r["date"] for r in fetched.rows] == [date(2026, 11, 5), date(2026, 11, 6)]
+    assert fetched.rows[0]["available_at"] == datetime(2026, 11, 5, 22, tzinfo=UTC)
+    assert transport.headers == {"Authorization": "Bearer tok"}
+    assert "tok" not in transport.calls[0]
+    from quant_hunter.feeds.providers import parse_oanda
+
+    with pytest.raises(FeedError):
+        parse_oanda(b"{}", fx)
+
+
+def test_alpaca_bars_with_feed_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "alpaca.env").write_text("key=K\nsecret=S\n")
+    monkeypatch.setenv("HUNTER_PRIVATE_DIR", str(tmp_path))
+    page1 = json.dumps(
+        {
+            "bars": [
+                {
+                    "t": "2026-11-05T05:00:00Z",
+                    "o": 1,
+                    "h": 1,
+                    "l": 1,
+                    "c": 1,
+                    "v": 5,
+                    "vw": 1,
+                }
+            ],
+            "next_page_token": "abc",
+        }
+    ).encode()
+    page2 = json.dumps(
+        {
+            "bars": [
+                {
+                    "t": "2026-11-06T05:00:00Z",
+                    "o": 2,
+                    "h": 2,
+                    "l": 2,
+                    "c": 2,
+                    "v": 5,
+                    "vw": 2,
+                }
+            ],
+            "next_page_token": None,
+        }
+    ).encode()
+
+    class AlpacaTransport:
+        def __init__(self) -> None:
+            self.urls: list[str] = []
+
+        def get(self, url: str, headers: dict[str, str] | None = None) -> Response:
+            self.urls.append(url)
+            assert headers == {"APCA-API-KEY-ID": "K", "APCA-API-SECRET-KEY": "S"}
+            if "feed=sip" in url:
+                raise FeedError("HTTP 403 for x")
+            return Response(url, 200, page2 if "page_token" in url else page1)
+
+    transport = AlpacaTransport()
+    etf = spec("alpaca", "SPY")
+    fetched = fetch(etf, transport, NOW, date(2000, 1, 1))
+    assert [r["close"] for r in fetched.rows] == [1.0, 2.0]
+    assert fetched.basis.startswith("ALPACA_IEX")
+
+    class Broken:
+        def get(self, url: str, headers: dict[str, str] | None = None) -> Response:
+            raise FeedError("HTTP 401 for x")
+
+    with pytest.raises(FeedError, match="401"):
+        fetch(etf, Broken(), NOW, date(2000, 1, 1))
+
+    class Refused:
+        def get(self, url: str, headers: dict[str, str] | None = None) -> Response:
+            if "feed=iex" in url:
+                return Response(url, 200, b"[]")
+            raise FeedError("HTTP 403 for x")
+
+    with pytest.raises(FeedError):
+        fetch(etf, Refused(), NOW, date(2000, 1, 1))
